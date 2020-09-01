@@ -707,21 +707,26 @@ function settingsCheckbox(id, name) {
 settingsCheckbox("settings-pretokenise", "pretokenise");
 loadSettings();
 
-document.getElementById("defaultsettings").addEventListener("click",event=>{
+var btn;
+
+btn = document.getElementById("defaultsettings");
+if (btn) btn.addEventListener("click",event=>{
   SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
   saveSettings();
   loadSettings(); // update all settings
   refreshLibrary(); // favourites were in settings
 });
 
-document.getElementById("settime").addEventListener("click",event=>{
+btn = document.getElementById("settime");
+if (btn) btn.addEventListener("click",event=>{
   Comms.setTime().then(()=>{
     showToast("Time set successfully","success");
   }, err=>{
     showToast("Error setting time, "+err,"error");
   });
 });
-document.getElementById("removeall").addEventListener("click",event=>{
+btn = document.getElementById("removeall");
+if (btn) btn.addEventListener("click",event=>{
   showPrompt("Remove All","Really remove all apps?").then(() => {
     return Comms.removeAllApps();
   }).then(()=>{
@@ -735,7 +740,8 @@ document.getElementById("removeall").addEventListener("click",event=>{
   });
 });
 // Install all default apps in one go
-document.getElementById("installdefault").addEventListener("click",event=>{
+btn = document.getElementById("installdefault");
+if (btn) btn.addEventListener("click",event=>{
   httpGet("defaultapps.json").then(json=>{
     return installMultipleApps(JSON.parse(json), "default");
   }).catch(err=>{
@@ -745,7 +751,8 @@ document.getElementById("installdefault").addEventListener("click",event=>{
 });
 
 // Install all favourite apps in one go
-document.getElementById("installfavourite").addEventListener("click",event=>{
+btn = document.getElementById("installfavourite");
+if (btn) btn.addEventListener("click",event=>{
   let favApps = SETTINGS.favourites;
   installMultipleApps(favApps, "favourite").catch(err=>{
     Progress.hide({sticky:true});
