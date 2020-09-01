@@ -23,20 +23,39 @@ function toJS(txt) {
   let json = JSON.stringify(txt);
   let b64 = "atob("+JSON.stringify(btoa(txt))+")";
   let js = (isBinary || (b64.length < json.length)) ? b64 : json;
-  if (js.length>64 && typeof heatshrink !== "undefined") {
+  if (txt.length>64 && typeof heatshrink !== "undefined") {
     let ua = new Uint8Array(txt.length);
     for (let i=0;i<txt.length;i++)  ua[i] = txt.charCodeAt(i);
     let c = heatshrink.compress(ua);
-    let cs = "";
-    for (let i=0;i<c.length;i++)
-      cs += String.fromCharCode(c[i]);
-    cs = 'require("heatshrink").decompress(atob("'+btoa(cs)+'"))';
-    // if it's more than a little smaller, use compressed version
-    if (cs.length*4 < js.length*3)
-      js = cs;
+    if (c.length) {
+      // FIXME - why can heatshrink fail? Assert at heatshrink_wrapper.c:42 / heatshrink_wrapper.c:36
+      let cs = "";
+      for (let i=0;i<c.length;i++)
+        cs += String.fromCharCode(c[i]);
+      cs = 'require("heatshrink").decompress(atob("'+btoa(cs)+'"))';
+      // if it's more than a little smaller, use compressed version
+      if (cs.length*4 < js.length*3)
+        js = cs;
+    }
   }
 
   return js;
+}
+
+// Run JS through EspruinoTools to pull in modules/etc
+function parseJS(storageFile, options) {
+  if (storageFile.url && storageFile.url.endsWith(".js") && !storageFile.url.endsWith(".min.js")) { // if original file ends in '.js'...
+    return Espruino.transform(storageFile.content, {
+      SET_TIME_ON_WRITE : false,
+      PRETOKENISE : options.settings.pretokenise,
+      //MINIFICATION_LEVEL : "ESPRIMA", // disable due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
+      builtinModules : "Flash,Storage,heatshrink,tensorflow,locale,notify"
+    }).then(content => {
+      storageFile.content = content;
+      return storageFile;
+    });
+  } else
+    return Promise.resolve(storageFile);
 }
 
 const AppInfo = {
@@ -51,24 +70,14 @@ const AppInfo = {
       // Load all files
       Promise.all(app.storage.map(storageFile => {
         if (storageFile.content!==undefined)
-          return Promise.resolve(storageFile);
+          return Promise.resolve(storageFile).then(storageFile => parseJS(storageFile,options));
         else if (storageFile.url)
           return options.fileGetter(`apps/${app.id}/${storageFile.url}`).then(content => {
-            if (storageFile.url.endsWith(".js") && !storageFile.url.endsWith(".min.js")) { // if original file ends in '.js'...
-              return Espruino.transform(content, {
-                SET_TIME_ON_WRITE : false,
-                PRETOKENISE : options.settings.pretokenise,
-                //MINIFICATION_LEVEL : "ESPRIMA", // disable due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
-                builtinModules : "Flash,Storage,heatshrink,tensorflow,locale,notify"
-              });
-            } else
-              return content;
-          }).then(content => {
             return {
               name : storageFile.name,
               content : content,
               evaluate : storageFile.evaluate
-            }});
+            }}).then(storageFile => parseJS(storageFile,options));
         else return Promise.resolve();
       })).then(fileContents => { // now we just have a list of files + contents...
         // filter out empty files
