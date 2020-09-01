@@ -98,7 +98,7 @@ const Comms = {
         }
         let cmd;
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
-          cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"")+",0]")\n`;
+          cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"null")+",0]")\n`;
         else
           cmd = '\x10Bluetooth.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};j.id=f.slice(0,-5);Bluetooth.print(JSON.stringify(j)+",")});Bluetooth.println("0]")\n';
         Puck.write(cmd, (appList,err) => {
@@ -108,6 +108,8 @@ const Comms = {
             // remove last element since we added a final '0'
             // to make things easy on the Bangle.js side
             appList = appList.slice(0,-1);
+            if (appList.length==1 && appList[0]==null)
+              appList = [];
           } catch (e) {
             appList = null;
             err = e.toString();
