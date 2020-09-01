@@ -14,6 +14,7 @@
         "no-undef": "warn",
         "no-redeclare": "warn",
         "no-var": "warn",
+        "no-global-assign": "off", // we need this to hack around heatshrink/etc for node.js
         "no-unused-vars":"off" // we define stuff to use in other scripts
     },
     "env": {
