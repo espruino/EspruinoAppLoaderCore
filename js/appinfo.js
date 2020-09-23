@@ -90,7 +90,9 @@ const AppInfo = {
         // then map each file to a command to load into storage
         fileContents.forEach(storageFile => {
           // format ready for Espruino
-          if (storageFile.evaluate) {
+          if (storageFile.name=="RAM") {
+            storageFile.cmd = "\x10"+storageFile.content.trim();
+          } else if (storageFile.evaluate) {
             let js = storageFile.content.trim();
             if (js.endsWith(";"))
               js = js.slice(0,-1);
@@ -133,7 +135,7 @@ const AppInfo = {
         json.icon = app.id+".img";
       if (app.sortorder) json.sortorder = app.sortorder;
       if (app.version) json.version = app.version;
-      let fileList = fileContents.map(storageFile=>storageFile.name);
+      let fileList = fileContents.map(storageFile=>storageFile.name).filter(n=>n!="RAM");
       fileList.unshift(appInfoFileName); // do we want this? makes life easier!
       json.files = fileList.join(",");
       if ('data' in app) {
