@@ -75,6 +75,7 @@ const AppInfo = {
           return options.fileGetter(`apps/${app.id}/${storageFile.url}`).then(content => {
             return {
               name : storageFile.name,
+              url : storageFile.url,
               content : content,
               evaluate : storageFile.evaluate
             }}).then(storageFile => parseJS(storageFile,options));
