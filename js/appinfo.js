@@ -83,7 +83,8 @@ const AppInfo = {
       })).then(fileContents => { // now we just have a list of files + contents...
         // filter out empty files
         fileContents = fileContents.filter(x=>x!==undefined);
-        // What about minification?
+        // if it's a 'ram' app, don't add any app JSON file
+        if (app.type=="RAM") return fileContents;
         // Add app's info JSON
         return AppInfo.createAppJSON(app, fileContents);
       }).then(fileContents => {
