@@ -81,7 +81,7 @@ Puck.writeProgress = function(charsSent, charsTotal) {
 }
 
 /// Show a 'toast' message for status
-function showToast(message, type) {
+function showToast(message, type, timeout) {
   // toast-primary, toast-success, toast-warning or toast-error
   console.log("<TOAST>["+(type||"-")+"] "+message);
   let style = "toast-primary";
@@ -95,7 +95,7 @@ function showToast(message, type) {
   toastcontainer.append(msgDiv);
   setTimeout(function() {
     msgDiv.remove();
-  }, 5000);
+  }, timeout || 5000);
 }
 
 /// Show a yes/no prompt
