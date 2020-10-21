@@ -6,6 +6,10 @@ var Const = {
 
   /* Does our device have E.showMessage? */
   HAS_E_SHOWMESSAGE : true,
+
+  /* base URL, eg https://github.com/${username}/BangleApps/tree/master/apps for
+  links when people click on the GitHub link next to an app. undefined = no link*/
+  APP_SOURCECODE_URL : undefined,
 };
 
 function escapeHtml(text) {
