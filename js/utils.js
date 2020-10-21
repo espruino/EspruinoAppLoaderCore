@@ -3,6 +3,9 @@ var Const = {
   apps should all be saved as .bootcde and we write info
   about the current app into app.info */
   SINGLE_APP_ONLY : false,
+
+  /* Does our device have E.showMessage? */
+  HAS_E_SHOWMESSAGE : true,
 };
 
 function escapeHtml(text) {

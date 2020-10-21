@@ -3,8 +3,34 @@ console.log("=============================================")
 console.log("Type 'Puck.debug=3' for full BLE debug info")
 console.log("=============================================")
 
+// TODO: Add Comms.write/eval which return promises, and move over to using those
 // FIXME: use UART lib so that we handle errors properly
 const Comms = {
+  // Write the given data, returns a promise
+  write : (data) => new Promise((resolve,reject) => {
+    return Puck.write(data,function(result) {
+      if (result===null) return reject("");
+      resolve(result);
+    });
+  }),
+  // Show a message on the screen (if available)
+  showMessage : (txt) => {
+    console.log(`<COMMS> showMessage ${JSON.stringify(txt)}`);
+    if (!Const.HAS_E_SHOWMESSAGE) return Promise.resolve();
+    return Comms.write(`\x10E.showMessage(${JSON.stringify(txt)})\n`);
+  },
+  // Gets a text command to append to what's being sent to show progress. If progress==undefined, it's the first command
+  getProgressCmd : (progress) => {
+    console.log(`<COMMS> getProgressCmd ${JSON.stringify(progress)}`);
+    if (!Const.HAS_E_SHOWMESSAGE) {
+      if (progress===undefined) return "p=x=>digitalPulse(LED1,1,10);";
+      return "p();";
+    } else {
+      if (progress===undefined) return "g.drawRect(10,g.getHeight()-16,g.getWidth()-10,g.getHeight()-8).flip();p=x=>g.fillRect(10,g.getHeight()-16,10+(g.getWidth()-20)*x/100,g.getHeight()-8).flip();"
+      return `p(${Math.round(progress*100)});`
+    }
+  },
+  // Reset the device, if opt=="wipe" erase any saved code
   reset : (opt) => new Promise((resolve,reject) => {
     let tries = 8;
     console.log("<COMMS> reset");
@@ -20,6 +46,7 @@ const Comms = {
       }
     });
   }),
+  // Upload an app
   uploadApp : (app,skipReset) => { // expects an apps.json structure (i.e. with `storage`)
     Progress.show({title:`Uploading ${app.name}`,sticky:true});
     return AppInfo.getFiles(app, {
@@ -43,10 +70,11 @@ const Comms = {
         function doUploadFiles() {
         // No files left - print 'reboot' message
           if (fileContents.length==0) {
-            Puck.write(`\x10E.showMessage('Hold BTN3\\nto reload')\n`,(result) => {
+            Comms.showMessage('Hold BTN3\nto reload').then(() => {
               Progress.hide({sticky:true});
-              if (result===null) return reject("");
               resolve(appInfo);
+            }).catch(function() {
+              reject("");
             });
             return;
           }
@@ -62,7 +90,7 @@ const Comms = {
               min:currentBytes / maxBytes,
               max:(currentBytes+cmd.length) / maxBytes});
             currentBytes += cmd.length;
-            Puck.write(`${cmd};Bluetooth.println("OK")\n`,(result) => {
+            Puck.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}Bluetooth.println("OK")\n`,(result) => {
               if (!result || result.trim()!="OK") {
                 Progress.hide({sticky:true});
                 return reject("Unexpected response "+(result||""));
@@ -74,12 +102,13 @@ const Comms = {
         }
         // Start the upload
         function doUpload() {
-          Puck.write(`\x10E.showMessage('Uploading\\n${app.id}...')\n`,(result) => {
-            if (result===null) {
-              Progress.hide({sticky:true});
-              return reject("");
-            }
+          Comms.showMessage(`Uploading\n${app.id}...`).
+          then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n")).
+          then(() => {
             doUploadFiles();
+          }).catch(function() {
+            Progress.hide({sticky:true});
+            return reject("");
           });
         }
         if (skipReset) {
@@ -91,6 +120,7 @@ const Comms = {
       });
     });
   },
+  // Get a JSON list of installed apps
   getInstalledApps : () => {
     Progress.show({title:`Getting app list...`,sticky:true});
     return new Promise((resolve,reject) => {
@@ -124,6 +154,7 @@ const Comms = {
       });
     });
   },
+  // Remove an app given an appinfo.id structure as JSON
   removeApp : app => { // expects an appid.info structure (i.e. with `files`)
     if (!app.files && !app.data) return Promise.resolve(); // nothing to erase
     Progress.show({title:`Removing ${app.name}`,sticky:true});
@@ -150,17 +181,17 @@ const Comms = {
       return cmd.replace('\u0001', '\\x01')
     }).join("");
     console.log("<COMMS> removeApp", cmds);
-    return Comms.reset().then(() => new Promise((resolve,reject) => {
-      Puck.write(`\x03\x10E.showMessage('Erasing\\n${app.id}...')${cmds}\x10E.showMessage('Hold BTN3\\nto reload')\n`,(result) => {
+    return Comms.reset().
+      then(()=>Comms.showMessage(`Erasing\\n${app.id}...`)).
+      then(()=>Comms.write(cmds)).
+      then(()=>Comms.showMessage('Hold BTN3\\nto reload')).
+      then(()=>Progress.hide({sticky:true})).
+      catch(function(reason) {
         Progress.hide({sticky:true});
-        if (result===null) return reject("");
-        resolve();
+        return Promise.reject(reason);
       });
-    })).catch(function(reason) {
-      Progress.hide({sticky:true});
-      return Promise.reject(reason);
-    });
   },
+  // Remove all apps from the device
   removeAllApps : () => {
     console.log("<COMMS> removeAllApps start");
     Progress.show({title:"Removing all apps",percent:"animate",sticky:true});
@@ -186,27 +217,23 @@ const Comms = {
       Puck.write(cmd, handleResult, true /* wait for newline */);
     });
   },
+  // Set the time on the device
   setTime : () => {
-    return new Promise((resolve,reject) => {
-      let d = new Date();
-      let tz = d.getTimezoneOffset()/-60
-      let cmd = '\x03\x10setTime('+(d.getTime()/1000)+');';
-      // in 1v93 we have timezones too
-      cmd += 'E.setTimeZone('+tz+');';
-      cmd += "(s=>{s&&(s.timezone="+tz+")&&require('Storage').write('setting.json',s);})(require('Storage').readJSON('setting.json',1))\n";
-      Puck.write(cmd, (result) => {
-        if (result===null) return reject("");
-        resolve();
-      });
-    });
+    let d = new Date();
+    let tz = d.getTimezoneOffset()/-60
+    let cmd = '\x03\x10setTime('+(d.getTime()/1000)+');';
+    // in 1v93 we have timezones too
+    cmd += 'E.setTimeZone('+tz+');';
+    cmd += "(s=>{s&&(s.timezone="+tz+")&&require('Storage').write('setting.json',s);})(require('Storage').readJSON('setting.json',1))\n";
+    return Comms.write(cmd);
   },
+  // Force a disconnect from the device
   disconnectDevice: () => {
     let connection = Puck.getConnection();
-
     if (!connection) return;
-
     connection.close();
   },
+  // call back when the connection state changes
   watchConnectionChange : cb => {
     let connected = Puck.isConnected();
 
@@ -223,6 +250,7 @@ const Comms = {
       clearInterval(interval);
     };
   },
+  // List all files on the device
   listFiles : () => {
     return new Promise((resolve,reject) => {
       Puck.write("\x03",(result) => {
@@ -237,6 +265,7 @@ const Comms = {
       });
     });
   },
+  // Read a non-storagefile file
   readFile : (file) => {
     return new Promise((resolve,reject) => {
     //encode name to avoid serialization issue due to octal sequence
@@ -253,6 +282,7 @@ const Comms = {
       });
     });
   },
+  // Read a storagefile
   readStorageFile : (filename) => { // StorageFiles are different to normal storage entries
     return new Promise((resolve,reject) => {
     // Use "\xFF" to signal end of file (can't occur in files anyway)
