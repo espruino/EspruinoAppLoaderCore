@@ -176,7 +176,6 @@ function handleAppInterface(app) {
 }
 
 function changeAppFavourite(favourite, app) {
-  let favourites = SETTINGS.favourites;
   if (favourite) {
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
   } else {
@@ -200,6 +199,43 @@ function showTab(tabname) {
   });
   document.getElementById("tab-"+tabname).classList.add("active");
   document.getElementById(tabname).style.display = "inherit";
+}
+
+// =========================================== App Info
+
+function getAppHTML(app, appInstalled, forInterface) {
+  let version = getVersionInfo(app, appInstalled);
+  let versionInfo = version.text;
+  if (versionInfo) versionInfo = " <small>("+versionInfo+")</small>";
+  let readme = `<a class="c-hand" onclick="showReadme('${app.id}')">Read more...</a>`;
+  let favourite = SETTINGS.favourites.find(e => e == app.id);
+  let githubLink = Const.APP_SOURCECODE_URL ?
+    `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
+  let appurl = window.location.origin + window.location.pathname + "#" + encodeURIComponent(app.id);
+
+  var html = `<div class="tile column col-6 col-sm-12 col-xs-12">
+  <div class="tile-icon">
+    <figure class="avatar"><img src="apps/${app.icon?`${app.id}/${app.icon}`:"unknown.png"}" alt="${escapeHtml(app.name)}"></figure><br/>
+  </div>
+  <div class="tile-content">
+    <p class="tile-title text-bold"><a name="${appurl}"></a>${escapeHtml(app.name)} ${versionInfo}</p>
+    <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`<br/>${readme}`:""}</p>
+    ${githubLink}
+  </div>
+  <div class="tile-action">`;
+  if (forInterface=="library") html += `
+    <button class="btn btn-link btn-action btn-lg ${!app.custom?"text-error":"d-hide"}" appid="${app.id}" title="Favorite"><i class="icon"></i>${favourite?"&#x2665;":"&#x2661;"}</button>
+    <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-download"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-share"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${(!appInstalled && !app.custom)?"":"d-hide"}" appid="${app.id}" title="Upload App"><i class="icon icon-upload"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${appInstalled?"":"d-hide"}" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${app.custom?"":"d-hide"}" appid="${app.id}" title="Customise and Upload App"><i class="icon icon-menu"></i></button>`;
+  if (forInterface=="myapps") html += `
+    <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-download"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${version.canUpdate?'':'d-hide'}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
+    <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>`;
+  return html+`</div></div>`;
 }
 
 // =========================================== Library
@@ -229,11 +265,10 @@ function refreshSort(){
 function refreshLibrary() {
   let panelbody = document.querySelector("#librarycontainer .panel-body");
   let visibleApps = appJSON.slice(); // clone so we don't mess with the original
-  let favourites = SETTINGS.favourites;
 
   if (activeFilter) {
     if ( activeFilter == "favourites" ) {
-      visibleApps = visibleApps.filter(app => app.id && (favourites.filter( e => e == app.id).length));
+      visibleApps = visibleApps.filter(app => app.id && (SETTINGS.favourites.filter( e => e == app.id).length));
     } else {
       visibleApps = visibleApps.filter(app => app.tags && app.tags.split(',').includes(activeFilter));
     }
@@ -252,36 +287,8 @@ function refreshLibrary() {
 
   panelbody.innerHTML = visibleApps.map((app,idx) => {
     let appInstalled = appsInstalled.find(a=>a.id==app.id);
-    let version = getVersionInfo(app, appInstalled);
-    let versionInfo = version.text;
-    if (versionInfo) versionInfo = " <small>("+versionInfo+")</small>";
-    let readme = `<a class="c-hand" onclick="showReadme('${app.id}')">Read more...</a>`;
-    let favourite = favourites.find(e => e == app.id);
-
-    let githubLink = Const.APP_SOURCECODE_URL ?
-      `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
-    let appurl = window.location.origin + window.location.pathname + "#" + encodeURIComponent(app.id);
-
-    return `<div class="tile column col-6 col-sm-12 col-xs-12">
-    <div class="tile-icon">
-      <figure class="avatar"><img src="apps/${app.icon?`${app.id}/${app.icon}`:"unknown.png"}" alt="${escapeHtml(app.name)}"></figure><br/>
-    </div>
-    <div class="tile-content">
-      <p class="tile-title text-bold"><a name="${appurl}"></a>${escapeHtml(app.name)} ${versionInfo}</p>
-      <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`<br/>${readme}`:""}</p>
-      ${githubLink}
-    </div>
-    <div class="tile-action">
-      <button class="btn btn-link btn-action btn-lg ${!app.custom?"text-error":"d-hide"}" appid="${app.id}" title="Favorite"><i class="icon"></i>${favourite?"&#x2665;":"&#x2661;"}</button>
-      <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-download"></i></button>
-      <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-share"></i></button>
-      <button class="btn btn-link btn-action btn-lg ${version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
-      <button class="btn btn-link btn-action btn-lg ${(!appInstalled && !app.custom)?"":"d-hide"}" appid="${app.id}" title="Upload App"><i class="icon icon-upload"></i></button>
-      <button class="btn btn-link btn-action btn-lg ${appInstalled?"":"d-hide"}" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
-      <button class="btn btn-link btn-action btn-lg ${app.custom?"":"d-hide"}" appid="${app.id}" title="Customise and Upload App"><i class="icon icon-menu"></i></button>
-    </div>
-  </div>
-  `;}).join("");
+    return getAppHTML(app, appInstalled, "library");
+  }).join("");
   // set badge up top
   let tab = document.querySelector("#tab-librarycontainer a");
   tab.classList.add("badge");
@@ -501,25 +508,8 @@ function refreshMyApps() {
   let panelbody = document.querySelector("#myappscontainer .panel-body");
   panelbody.innerHTML = appsInstalled.map(appInstalled => {
     let app = appNameToApp(appInstalled.id);
-    let version = getVersionInfo(app, appInstalled);
-    let githubLink = Const.APP_SOURCECODE_URL ?
-      `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
-    return `<div class="tile column col-6 col-sm-12 col-xs-12">
-    <div class="tile-icon">
-      <figure class="avatar"><img src="apps/${app.icon?`${app.id}/${app.icon}`:"unknown.png"}" alt="${escapeHtml(app.name)}"></figure>
-    </div>
-    <div class="tile-content">
-      <p class="tile-title text-bold">${escapeHtml(app.name)} <small>(${version.text})</small></p>
-      <p class="tile-subtitle">${getAppDescription(app)}</p>
-      ${githubLink}
-    </div>
-    <div class="tile-action">
-      <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-download"></i></button>
-      <button class="btn btn-link btn-action btn-lg ${version.canUpdate?'':'d-hide'}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
-      <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
-    </div>
-  </div>
-  `}).join("");
+    return getAppHTML(app, appInstalled, "myapps");
+  }).join("");
   htmlToArray(panelbody.getElementsByTagName("button")).forEach(button => {
     button.addEventListener("click",event => {
       let button = event.currentTarget;
@@ -758,8 +748,7 @@ if (btn) btn.addEventListener("click",event=>{
 // Install all favourite apps in one go
 btn = document.getElementById("installfavourite");
 if (btn) btn.addEventListener("click",event=>{
-  let favApps = SETTINGS.favourites;
-  installMultipleApps(favApps, "favourite").catch(err=>{
+  installMultipleApps(SETTINGS.favourites, "favourite").catch(err=>{
     Progress.hide({sticky:true});
     showToast("App Install failed, "+err,"error");
   });
