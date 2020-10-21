@@ -106,6 +106,7 @@ function showPrompt(title, text, buttons, shouldEscapeHtml) {
   return new Promise((resolve,reject) => {
     let modal = htmlElement(`<div class="modal active">
       <!--<a href="#close" class="modal-overlay" aria-label="Close"></a>-->
+      <div class="modal-overlay"></div>
       <div class="modal-container">
         <div class="modal-header">
           <a href="#close" class="btn btn-clear float-right" aria-label="Close"></a>
@@ -116,13 +117,13 @@ function showPrompt(title, text, buttons, shouldEscapeHtml) {
             ${(shouldEscapeHtml) ? escapeHtml(text).replace(/\n/g,'<br/>') : text}
           </div>
         </div>
-        <div class="modal-footer">
+        ${Object.keys(buttons).length ? `<div class="modal-footer">
           <div class="modal-footer">
             ${buttons.yes?'<button class="btn btn-primary" isyes="1">Yes</button>':''}
             ${buttons.no?'<button class="btn" isyes="0">No</button>':''}
             ${buttons.ok?'<button class="btn" isyes="1">Ok</button>':''}
           </div>
-        </div>
+        </div>`:``}
       </div>
     </div>`);
     document.body.append(modal);
@@ -141,4 +142,10 @@ function showPrompt(title, text, buttons, shouldEscapeHtml) {
       });
     });
   });
+}
+
+/// Remove a model prompt
+function hidePrompt() {
+  var modal = document.querySelector(".modal.active");
+  if (modal!==null) modal.remove();
 }
