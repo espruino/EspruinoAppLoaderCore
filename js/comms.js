@@ -120,8 +120,8 @@ const Comms = {
       });
     });
   },
-  // Get a JSON list of installed apps
-  getInstalledApps : () => {
+  // Get Device ID and version, plus a JSON list of installed apps
+  getDeviceInfo : () => {
     Progress.show({title:`Getting app list...`,sticky:true});
     return new Promise((resolve,reject) => {
       Puck.write("\x03",(result) => {
@@ -129,27 +129,31 @@ const Comms = {
           Progress.hide({sticky:true});
           return reject("");
         }
-        let cmd;
+        let cmd, finalJS = `E.toJS([process.env.BOARD,process.env.VERSION]).substr(1)`;
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
-          cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"null")+",0]")\n`;
+          cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
         else
-          cmd = '\x10Bluetooth.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};j.id=f.slice(0,-5);Bluetooth.print(JSON.stringify(j)+",")});Bluetooth.println("0]")\n';
+          cmd = `\x10Bluetooth.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};j.id=f.slice(0,-5);Bluetooth.print(JSON.stringify(j)+",")});Bluetooth.println(${finalJS})\n`;
         Puck.write(cmd, (appList,err) => {
           Progress.hide({sticky:true});
+          var info = {};
           try {
             appList = JSON.parse(appList);
-            // remove last element since we added a final '0'
-            // to make things easy on the Bangle.js side
-            appList = appList.slice(0,-1);
+            // unpack the last 2 elements which are board info
+            info.version = appList.pop();
+            info.id = appList.pop();
+            // if we just have 'null' then it means we have no apps
             if (appList.length==1 && appList[0]==null)
               appList = [];
           } catch (e) {
             appList = null;
-            err = e.toString();
+            console.log("<COMMS> ERROR Parsing JSON",e.toString());
+            err = "Invalid JSON";
           }
           if (appList===null) return reject(err || "");
-          console.log("<COMMS> getInstalledApps", appList);
-          resolve(appList);
+          info.apps = appList;
+          console.log("<COMMS> getDeviceInfo", info);
+          resolve(info);
         }, true /* callback on newline */);
       });
     });

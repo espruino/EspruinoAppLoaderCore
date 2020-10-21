@@ -7,6 +7,8 @@ let DEFAULTSETTINGS = {
   favourites : ["boot","launch","setting"]
 };
 let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
+let DEVICE_ID; // The Espruino device ID of this device, eg. BANGLEJS
+let DEVICE_VERSION; // The Espruino device version, eg 2v08
 
 httpGet("apps.json").then(apps=>{
   try {
@@ -549,18 +551,19 @@ function getInstalledApps(refresh) {
   }
   showLoadingIndicator("myappscontainer");
   // Get apps and files
-  return Comms.getInstalledApps()
-    .then(appJSON => {
-      appsInstalled = appJSON;
+  return Comms.getDeviceInfo()
+    .then(info => {
+      DEVICE_ID = info.id;
+      DEVICE_VERSION = info.version;
+      appsInstalled = info.apps;
       haveInstalledApps = true;
+      if ("function"==typeof onFoundDeviceInfo)
+        onFoundDeviceInfo(DEVICE_ID, DEVICE_VERSION);
       refreshMyApps();
       refreshLibrary();
     })
     .then(() => handleConnectionChange(true))
-    .then(() => appsInstalled)
-    .catch(err=>{
-      return Promise.reject();
-    });
+    .then(() => appsInstalled);
 }
 
 /// Removes everything and install the given apps, eg: installMultipleApps(["boot","mclock"], "minimal")
