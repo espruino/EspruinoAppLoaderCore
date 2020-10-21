@@ -41,7 +41,7 @@ function httpGet(url) {
     let oReq = new XMLHttpRequest();
     oReq.addEventListener("load", () => {
       if (oReq.status!=200) {
-        resolve(oReq.status+" - "+oReq.statusText)
+        reject(oReq.status+" - "+oReq.statusText)
         return;
       }
       if (!isBinary) {
