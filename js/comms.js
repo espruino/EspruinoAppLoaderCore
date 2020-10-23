@@ -19,6 +19,11 @@ const Comms = {
     if (!Const.HAS_E_SHOWMESSAGE) return Promise.resolve();
     return Comms.write(`\x10E.showMessage(${JSON.stringify(txt)})\n`);
   },
+  // When upload is finished, show a message (or reload)
+  showUploadFinished : () => {
+    if (Const.SINGLE_APP_ONLY) return Comms.write("\x10load()\n");
+    else return Comms.showMessage('Hold BTN3\\nto reload');
+  },
   // Gets a text command to append to what's being sent to show progress. If progress==undefined, it's the first command
   getProgressCmd : (progress) => {
     console.log(`<COMMS> getProgressCmd ${JSON.stringify(progress)}`);
@@ -70,7 +75,7 @@ const Comms = {
         function doUploadFiles() {
         // No files left - print 'reboot' message
           if (fileContents.length==0) {
-            Comms.showMessage('Hold BTN3\nto reload').then(() => {
+            Comms.showUploadFinished().then(() => {
               Progress.hide({sticky:true});
               resolve(appInfo);
             }).catch(function() {
@@ -188,7 +193,7 @@ const Comms = {
     return Comms.reset().
       then(()=>Comms.showMessage(`Erasing\\n${app.id}...`)).
       then(()=>Comms.write(cmds)).
-      then(()=>Comms.showMessage('Hold BTN3\\nto reload')).
+      then(()=>Comms.showUploadFinished()).
       then(()=>Progress.hide({sticky:true})).
       catch(function(reason) {
         Progress.hide({sticky:true});
