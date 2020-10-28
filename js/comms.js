@@ -22,7 +22,7 @@ const Comms = {
   // When upload is finished, show a message (or reload)
   showUploadFinished : () => {
     if (Const.SINGLE_APP_ONLY) return Comms.write("\x10load()\n");
-    else return Comms.showMessage('Hold BTN3\\nto reload');
+    else return Comms.showMessage('Hold BTN3\nto reload');
   },
   // Gets a text command to append to what's being sent to show progress. If progress==undefined, it's the first command
   getProgressCmd : (progress) => {
