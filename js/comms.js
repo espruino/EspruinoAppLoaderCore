@@ -191,7 +191,7 @@ const Comms = {
     }).join("");
     console.log("<COMMS> removeApp", cmds);
     return Comms.reset().
-      then(()=>Comms.showMessage(`Erasing\\n${app.id}...`)).
+      then(()=>Comms.showMessage(`Erasing\n${app.id}...`)).
       then(()=>Comms.write(cmds)).
       then(()=>Comms.showUploadFinished()).
       then(()=>Progress.hide({sticky:true})).
