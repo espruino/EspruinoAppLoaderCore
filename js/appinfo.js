@@ -44,10 +44,13 @@ function toJS(txt) {
 
 // Run JS through EspruinoTools to pull in modules/etc
 function parseJS(storageFile, options) {
-  if (storageFile.url && storageFile.url.endsWith(".js") && !storageFile.url.endsWith(".min.js")) { // if original file ends in '.js'...
+  if (storageFile.url && storageFile.url.endsWith(".js") && !storageFile.url.endsWith(".min.js")) {
+    // if original file ends in '.js'...
+    var localModulesURL = window.location.origin + window.location.pathname.replace(/[^\/]*$/,"") + "modules";
     return Espruino.transform(storageFile.content, {
       SET_TIME_ON_WRITE : false,
       PRETOKENISE : options.settings.pretokenise,
+      MODULE_URL : localModulesURL+"|https://www.espruino.com/modules",
       //MINIFICATION_LEVEL : "ESPRIMA", // disable due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
       builtinModules : "Flash,Storage,heatshrink,tensorflow,locale,notify"
     }).then(content => {
