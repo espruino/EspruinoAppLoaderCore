@@ -275,7 +275,7 @@ function refreshLibrary() {
   }
 
   if (currentSearch) {
-    visibleApps = visibleApps.filter(app => app.name.toLowerCase().includes(currentSearch) || app.tags.includes(currentSearch) || app.id.toLowerCase().includes(currentSearch));
+    visibleApps = visibleApps.filter(app => app.name.toLowerCase().includes(currentSearch) || (app.tags && app.tags.includes(currentSearch)) || app.id.toLowerCase().includes(currentSearch));
   }
 
   visibleApps.sort(appSorter);
