@@ -9,6 +9,9 @@ let DEFAULTSETTINGS = {
 let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 let DEVICE_ID; // The Espruino device ID of this device, eg. BANGLEJS
 let DEVICE_VERSION; // The Espruino device version, eg 2v08
+let FAVOURITE_INACTIVE_ICON = 0x2606; // 0x2661 = empty heart; 0x2606 = empty star
+let FAVOURITE_ACTIVE_ICON = 0x2605; // 0x2665 = solid heart; 0x2605 = solid star
+
 
 httpGet("apps.json").then(apps=>{
   try {
@@ -224,7 +227,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   </div>
   <div class="tile-action">`;
   if (forInterface=="library") html += `
-    <button class="btn btn-link btn-action btn-lg ${!app.custom?"text-error":"d-hide"}" appid="${app.id}" title="Favorite"><i class="icon"></i>${favourite?"&#x2665;":"&#x2661;"}</button>
+    <button class="btn btn-link btn-action btn-lg ${!app.custom?"":"d-hide"} btn-favourite" appid="${app.id}" title="Favorite"><i class="icon"></i>${favourite?Const.FAVOURITE_ACTIVE_ICON:Const.FAVOURITE_INACTIVE_ICON}</button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-download"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-share"></i></button>
     <button class="btn btn-link btn-action btn-lg ${version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
@@ -334,10 +337,9 @@ function refreshLibrary() {
         updateApp(app);
       } else if (icon.classList.contains("icon-download")) {
         handleAppInterface(app);
-      } else if ( button.innerText == String.fromCharCode(0x2661)) {
-        changeAppFavourite(true, app);
-      } else if ( button.innerText == String.fromCharCode(0x2665) ) {
-        changeAppFavourite(false, app);
+      } else if ( button.classList.contains("btn-favourite")) {
+	let favourite = SETTINGS.favourites.find(e => e == app.id);
+        changeAppFavourite(!favourite, app);
       }
     });
   });
@@ -712,6 +714,14 @@ if (btn) btn.addEventListener("click",event=>{
   refreshLibrary(); // favourites were in settings
 });
 
+btn = document.getElementById("resetwatch");
+if (btn) btn.addEventListener("click",event=>{
+  Comms.resetDevice().then(()=>{
+    showToast("Reset watch successfully","success");
+  }, err=>{
+    showToast("Error resetting watch: "+err,"error");
+  });
+});
 btn = document.getElementById("settime");
 if (btn) btn.addEventListener("click",event=>{
   Comms.setTime().then(()=>{

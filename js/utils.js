@@ -4,12 +4,28 @@ var Const = {
   about the current app into app.info */
   SINGLE_APP_ONLY : false,
 
+  /* Should the app loader call 'load' after apps have
+  been uploaded? On Bangle.js we don't do this because we don't
+  trust the default clock app not to use too many resources.
+  Note: SINGLE_APP_ONLY=true enables LOAD_APP_AFTER_UPLOAD regardless */
+  LOAD_APP_AFTER_UPLOAD : false,
+
   /* Does our device have E.showMessage? */
   HAS_E_SHOWMESSAGE : true,
 
   /* base URL, eg https://github.com/${username}/BangleApps/tree/master/apps for
   links when people click on the GitHub link next to an app. undefined = no link*/
   APP_SOURCECODE_URL : undefined,
+
+  /* Message to display when an app has been loaded */
+  MESSAGE_RELOAD : 'Hold BTN3\nto reload',
+
+  /* The code to upload to the device show a progress bar on the screen (should define a fn. called 'p') */
+  CODE_PROGRESSBAR : "g.drawRect(10,g.getHeight()-16,g.getWidth()-10,g.getHeight()-8).flip();p=x=>g.fillRect(10,g.getHeight()-16,10+(g.getWidth()-20)*x/100,g.getHeight()-8).flip();",
+
+  /* Icons to use in the UI for favourite (usually a heart) */
+  FAVOURITE_INACTIVE_ICON : "&#x2661;",
+  FAVOURITE_ACTIVE_ICON : "&#x2665;",
 };
 
 function escapeHtml(text) {

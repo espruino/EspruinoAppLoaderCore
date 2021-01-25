@@ -21,8 +21,8 @@ const Comms = {
   },
   // When upload is finished, show a message (or reload)
   showUploadFinished : () => {
-    if (Const.SINGLE_APP_ONLY) return Comms.write("\x10load()\n");
-    else return Comms.showMessage('Hold BTN3\nto reload');
+    if (Const.LOAD_APP_AFTER_UPLOAD || Const.SINGLE_APP_ONLY) return Comms.write("\x10load()\n");
+    else return Comms.showMessage(Const.MESSAGE_RELOAD);
   },
   // Gets a text command to append to what's being sent to show progress. If progress==undefined, it's the first command
   getProgressCmd : (progress) => {
@@ -31,7 +31,7 @@ const Comms = {
       if (progress===undefined) return "p=x=>digitalPulse(LED1,1,10);";
       return "p();";
     } else {
-      if (progress===undefined) return "g.drawRect(10,g.getHeight()-16,g.getWidth()-10,g.getHeight()-8).flip();p=x=>g.fillRect(10,g.getHeight()-16,10+(g.getWidth()-20)*x/100,g.getHeight()-8).flip();"
+      if (progress===undefined) return Const.CODE_PROGRESSBAR;
       return `p(${Math.round(progress*100)});`
     }
   },
@@ -234,6 +234,11 @@ const Comms = {
     // in 1v93 we have timezones too
     cmd += 'E.setTimeZone('+tz+');';
     cmd += "(s=>{s&&(s.timezone="+tz+")&&require('Storage').write('setting.json',s);})(require('Storage').readJSON('setting.json',1))\n";
+    return Comms.write(cmd);
+  },
+  // Reset the device
+  resetDevice : () => {
+    let cmd = "reset();load()\n";
     return Comms.write(cmd);
   },
   // Force a disconnect from the device
