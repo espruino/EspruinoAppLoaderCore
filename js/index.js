@@ -213,7 +213,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
   let appurl = window.location.origin + window.location.pathname + "#" + encodeURIComponent(app.id);
 
-  var html = `<div class="tile column col-6 col-sm-12 col-xs-12">
+  let html = `<div class="tile column col-6 col-sm-12 col-xs-12">
   <div class="tile-icon">
     <figure class="avatar"><img src="apps/${app.icon?`${app.id}/${app.icon}`:"unknown.png"}" alt="${escapeHtml(app.name)}"></figure><br/>
   </div>
@@ -702,7 +702,7 @@ function settingsCheckbox(id, name) {
 settingsCheckbox("settings-pretokenise", "pretokenise");
 loadSettings();
 
-var btn;
+let btn;
 
 btn = document.getElementById("defaultsettings");
 if (btn) btn.addEventListener("click",event=>{

@@ -108,13 +108,13 @@ const Comms = {
         // Start the upload
         function doUpload() {
           Comms.showMessage(`Uploading\n${app.id}...`).
-          then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n")).
-          then(() => {
-            doUploadFiles();
-          }).catch(function() {
-            Progress.hide({sticky:true});
-            return reject("");
-          });
+            then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n")).
+            then(() => {
+              doUploadFiles();
+            }).catch(function() {
+              Progress.hide({sticky:true});
+              return reject("");
+            });
         }
         if (skipReset) {
           doUpload();
@@ -141,7 +141,7 @@ const Comms = {
           cmd = `\x10Bluetooth.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};j.id=f.slice(0,-5);Bluetooth.print(JSON.stringify(j)+",")});Bluetooth.println(${finalJS})\n`;
         Puck.write(cmd, (appList,err) => {
           Progress.hide({sticky:true});
-          var info = {};
+          let info = {};
           try {
             appList = JSON.parse(appList);
             // unpack the last 2 elements which are board info

@@ -146,6 +146,6 @@ function showPrompt(title, text, buttons, shouldEscapeHtml) {
 
 /// Remove a model prompt
 function hidePrompt() {
-  var modal = document.querySelector(".modal.active");
+  let modal = document.querySelector(".modal.active");
   if (modal!==null) modal.remove();
 }
