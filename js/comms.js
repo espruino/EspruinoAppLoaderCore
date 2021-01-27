@@ -139,11 +139,14 @@ const Comms = {
           cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
         else
           cmd = `\x10Bluetooth.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};j.id=f.slice(0,-5);Bluetooth.print(JSON.stringify(j)+",")});Bluetooth.println(${finalJS})\n`;
-        Puck.write(cmd, (appList,err) => {
+        Puck.write(cmd, (appListStr,err) => {
           Progress.hide({sticky:true});
+          if (appListStr=="") {
+            return reject("No response from device. Is 'Programmable' set to 'Off'?");
+          }
           let info = {};
           try {
-            appList = JSON.parse(appList);
+            appList = JSON.parse(appListStr);
             // unpack the last 2 elements which are board info
             info.version = appList.pop();
             info.id = appList.pop();
@@ -153,6 +156,7 @@ const Comms = {
           } catch (e) {
             appList = null;
             console.log("<COMMS> ERROR Parsing JSON",e.toString());
+            console.log("<COMMS> Actual response: ",JSON.stringify(appListStr));
             err = "Invalid JSON";
           }
           if (appList===null) return reject(err || "");
