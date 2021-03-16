@@ -126,7 +126,7 @@ const Comms = {
     });
   },
   // Get Device ID and version, plus a JSON list of installed apps
-  getDeviceInfo : () => {
+  getDeviceInfo : (noReset) => {
     Progress.show({title:`Getting app list...`,sticky:true});
     return new Promise((resolve,reject) => {
       Puck.write("\x03",(result) => {
@@ -134,6 +134,19 @@ const Comms = {
           Progress.hide({sticky:true});
           return reject("");
         }
+        console.log("<COMMS> Ctrl-C gave",JSON.stringify(result));
+        if (result.includes("ERROR") && !noReset) {
+          console.log("<COMMS> Got error, resetting to be sure.");
+          // If the ctrl-c gave an error, just reset totally and
+          // try again (need to display 'BTN3' message)
+          var info;
+          Comms.reset().
+            then(()=>Comms.showMessage(Const.MESSAGE_RELOAD)).
+            then(()=>Comms.getDeviceInfo(true)).
+            then(resolve);
+          return;
+        }
+
         let cmd, finalJS = `E.toJS([process.env.BOARD,process.env.VERSION]).substr(1)`;
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
           cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
