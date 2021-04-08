@@ -75,8 +75,8 @@ const AppInfo = {
       // Load all files
       var appFiles = [].concat(
         app.storage,
-        app.data.filter(f=>f.url||f.content).map(f=>(f.noOverwrite=true,f))||[]);
-      console.log(appFiles)
+        app.data&&app.data.filter(f=>f.url||f.content).map(f=>(f.noOverwrite=true,f))||[]);
+      //console.log(appFiles)
 
       Promise.all(appFiles.map(storageFile => {
         if (storageFile.content!==undefined)
