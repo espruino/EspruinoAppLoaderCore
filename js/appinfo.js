@@ -46,7 +46,9 @@ function toJS(txt) {
 function parseJS(storageFile, options) {
   if (storageFile.url && storageFile.url.endsWith(".js") && !storageFile.url.endsWith(".min.js")) {
     // if original file ends in '.js'...
-    let localModulesURL = window.location.origin + window.location.pathname.replace(/[^/]*$/,"") + "modules";
+    let localModulesURL = "modules";
+    if (typeof window!=="undefined")
+      localModulesURL = window.location.origin + window.location.pathname.replace(/[^/]*$/,"") + "modules";
     return Espruino.transform(storageFile.content, {
       SET_TIME_ON_WRITE : false,
       PRETOKENISE : options.settings.pretokenise,
@@ -71,7 +73,12 @@ const AppInfo = {
   getFiles : (app,options) => {
     return new Promise((resolve,reject) => {
       // Load all files
-      Promise.all(app.storage.map(storageFile => {
+      var appFiles = [].concat(
+        app.storage,
+        app.data.filter(f=>f.url||f.content).map(f=>(f.noOverwrite=true,f))||[]);
+      console.log(appFiles)
+
+      Promise.all(appFiles.map(storageFile => {
         if (storageFile.content!==undefined)
           return Promise.resolve(storageFile).then(storageFile => parseJS(storageFile,options));
         else if (storageFile.url)
@@ -80,7 +87,8 @@ const AppInfo = {
               name : storageFile.name,
               url : storageFile.url,
               content : content,
-              evaluate : storageFile.evaluate
+              evaluate : storageFile.evaluate,
+              noOverwrite : storageFile.noOverwrite
             }}).then(storageFile => parseJS(storageFile,options));
         else return Promise.resolve();
       })).then(fileContents => { // now we just have a list of files + contents...
@@ -108,6 +116,12 @@ const AppInfo = {
             storageFile.cmd = `\x10require('Storage').write(${JSON.stringify(storageFile.name)},${toJS(code.substr(0,CHUNKSIZE))},0,${code.length});`;
             for (let i=CHUNKSIZE;i<code.length;i+=CHUNKSIZE)
               storageFile.cmd += `\n\x10require('Storage').write(${JSON.stringify(storageFile.name)},${toJS(code.substr(i,CHUNKSIZE))},${i});`;
+          }
+          // if we're not supposed to overwrite this file... this gets set
+          // automatically for data files that are loaded
+          if (storageFile.noOverwrite) {
+            storageFile.cmd = `\x10var _e = require('Storage').read(${JSON.stringify(storageFile.name)})===undefined;\n` +
+                              storageFile.cmd.replace(/\x10/g,"\x10if(_e)") + "delete _e;";
           }
         });
         resolve(fileContents);
