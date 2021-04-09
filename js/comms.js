@@ -87,7 +87,13 @@ const Comms = {
           console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content)}`);
           // Chould check CRC here if needed instead of returning 'OK'...
           // E.CRC32(require("Storage").read(${JSON.stringify(app.name)}))
-          let cmds = f.cmd.split("\n");
+
+          /* we can't just split on newline, because some commands (like
+          an upload when evaluate:true) may contain newline in the command.
+          In the absence of bracket counting/etc we'll just use the \x10
+          char we use to signify echo(0) for a line */
+          let cmds = f.cmd.split("\x10").filter(l=>l!="").map(l=>"\x10"+l.trim());
+          // Function to upload a single line and wait for an 'OK' response
           function uploadCmd() {
             if (!cmds.length) return doUploadFiles();
             let cmd = cmds.shift();
