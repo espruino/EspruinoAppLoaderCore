@@ -139,7 +139,6 @@ const Comms = {
           console.log("<COMMS> Got error, resetting to be sure.");
           // If the ctrl-c gave an error, just reset totally and
           // try again (need to display 'BTN3' message)
-          var info;
           Comms.reset().
             then(()=>Comms.showMessage(Const.MESSAGE_RELOAD)).
             then(()=>Comms.getDeviceInfo(true)).

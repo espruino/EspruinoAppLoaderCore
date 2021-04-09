@@ -15,7 +15,8 @@
         "no-redeclare": "warn",
         "no-var": "warn",
         "no-global-assign": "off", // we need this to hack around heatshrink/etc for node.js
-        "no-unused-vars":"off" // we define stuff to use in other scripts
+        "no-unused-vars":"off", // we define stuff to use in other scripts
+        "no-control-regex" : "off"
     },
     "env": {
         "browser": true,
@@ -34,6 +35,7 @@
         "Puck": "readonly",
         "Promise": "readonly",
         "Comms": "readonly",
+        "Const": "readonly",
         "Progress": "readonly",
         "showToast": "readonly",
         "showPrompt": "readonly",

@@ -1,4 +1,4 @@
-var Const = {
+const Const = {
   /* Are we only putting a single app on a device? If so
   apps should all be saved as .bootcde and we write info
   about the current app into app.info */

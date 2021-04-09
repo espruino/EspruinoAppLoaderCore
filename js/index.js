@@ -338,7 +338,7 @@ function refreshLibrary() {
       } else if (icon.classList.contains("icon-download")) {
         handleAppInterface(app);
       } else if ( button.classList.contains("btn-favourite")) {
-	let favourite = SETTINGS.favourites.find(e => e == app.id);
+        let favourite = SETTINGS.favourites.find(e => e == app.id);
         changeAppFavourite(!favourite, app);
       }
     });

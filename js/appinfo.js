@@ -73,7 +73,7 @@ const AppInfo = {
   getFiles : (app,options) => {
     return new Promise((resolve,reject) => {
       // Load all files
-      var appFiles = [].concat(
+      const appFiles = [].concat(
         app.storage,
         app.data&&app.data.filter(f=>f.url||f.content).map(f=>(f.noOverwrite=true,f))||[]);
       //console.log(appFiles)
