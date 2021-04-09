@@ -371,6 +371,9 @@ function uploadApp(app) {
       });
   }).catch(err => {
     showToast("Device connection failed, "+err,"error");
+    // remove loading indicator
+    refreshMyApps();
+    refreshLibrary();
   });
 }
 
