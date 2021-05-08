@@ -4,6 +4,7 @@ let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, m
 let files = []; // list of files on the Espruimo Device
 let DEFAULTSETTINGS = {
   pretokenise : true,
+  darkmode : false,
   favourites : ["boot","launch","setting"]
 };
 let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
@@ -704,6 +705,7 @@ function settingsCheckbox(id, name) {
     saveSettings();
   });
 }
+settingsCheckbox("settings-darkmode", "darkmode");
 settingsCheckbox("settings-pretokenise", "pretokenise");
 loadSettings();
 
