@@ -136,3 +136,17 @@ function versionLess(a,b) {
   let v = x => x.split(/[v.]/).reduce((a,b,c)=>a+parseInt(b,10)/Math.pow(1000,c),0);
   return v(a) < v(b);
 }
+
+function debounce(actualFunction, delayInMs) {
+  let timeout;
+
+  return function debounced(...args) {
+    const later = function() {
+      clearTimeout(timeout);
+      actualFunction(...args);
+    };
+
+    clearTimeout(timeout);
+    timeout = setTimeout(later, delayInMs);
+  };
+};

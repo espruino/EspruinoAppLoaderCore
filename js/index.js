@@ -653,10 +653,11 @@ filtersContainer.addEventListener('click', ({ target }) => {
 
 let librarySearchInput = document.querySelector("#searchform input");
 librarySearchInput.value = currentSearch;
+const searchInputChangedDebounced = debounce(refreshLibrary, 300);
 librarySearchInput.addEventListener('input', evt => {
   currentSearch = evt.target.value.toLowerCase();
   window.location.hash = "#"+encodeURIComponent(currentSearch);
-  refreshLibrary();
+  searchInputChangedDebounced();
 });
 
 let sortContainer = document.querySelector("#librarycontainer .sort-nav");
