@@ -137,6 +137,9 @@ function versionLess(a,b) {
   return v(a) < v(b);
 }
 
+/* Ensure actualFunction is called after delayInMs,
+but don't call it more often than needed if 'debounce'
+is called multiple times. */
 function debounce(actualFunction, delayInMs) {
   let timeout;
 
@@ -149,4 +152,4 @@ function debounce(actualFunction, delayInMs) {
     clearTimeout(timeout);
     timeout = setTimeout(later, delayInMs);
   };
-};
+}
