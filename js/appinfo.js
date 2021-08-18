@@ -153,6 +153,7 @@ const AppInfo = {
         json.icon = app.id+".img";
       if (app.sortorder) json.sortorder = app.sortorder;
       if (app.version) json.version = app.version;
+      if (app.tags) json.tags = app.tags;
       let fileList = fileContents.map(storageFile=>storageFile.name).filter(n=>n!="RAM");
       fileList.unshift(appInfoFileName); // do we want this? makes life easier!
       json.files = fileList.join(",");
