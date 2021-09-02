@@ -37,7 +37,7 @@ let DEVICEINFO = [
     img : "https://www.espruino.com/img/BANGLEJS_thumb.jpg"
   }, {
     id : "BANGLEJS2",
-    name : "Bangle.js",
+    name : "Bangle.js 2",
     features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG","PRESSURE","TOUCH"],
     g : { width : 176, height : 176, bpp : 3 },
     img : "https://www.espruino.com/img/BANGLEJS2_thumb.jpg"
