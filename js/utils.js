@@ -28,6 +28,43 @@ const Const = {
   FAVOURITE_ACTIVE_ICON : "&#x2665;",
 };
 
+var DEVICEINFO = [
+  {
+    id : "BANGLEJS",
+    name : "Bangle.js",
+    features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG"],
+    g : { width : 240, height : 240, bpp : 16 },
+    img : "https://www.espruino.com/img/BANGLEJS_thumb.jpg"
+  }, {
+    id : "BANGLEJS2",
+    name : "Bangle.js",
+    features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG","PRESSURE","TOUCH"],
+    g : { width : 176, height : 176, bpp : 3 },
+    img : "https://www.espruino.com/img/BANGLEJS2_thumb.jpg"
+  }, {
+    id : "PUCKJS",
+    name : "Puck.js",
+    features : ["BLE","BLEHID","NFC","GYRO","ACCEL","MAG"],
+    img : "https://www.espruino.com/img/PUCKJS_thumb.jpg"
+  }, {
+    id : "PIXLJS",
+    name : "Pixl.js",
+    features : ["BLE","BLEHID","NFC","GRAPHICS"],
+    g : { width : 128, height : 64, bpp : 1 },
+    img : "https://www.espruino.com/img/PIXLJS_thumb.jpg"
+  }, {
+    id : "MDBT42Q",
+    name : "MDBT42Q",
+    features : ["BLE","BLEHID"],
+    img : "https://www.espruino.com/img/MDBT42Q_thumb.jpg"
+  }/*, {
+    id : "MICROBIT",
+    name : "micro:bit",
+    features : ["BLE","BLEHID"],
+    img : "https://www.espruino.com/img/MICROBIT_thumb.jpg"
+  }*/
+];
+
 function escapeHtml(text) {
   let map = {
     '&': '&amp;',
