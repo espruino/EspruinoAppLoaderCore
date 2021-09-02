@@ -132,7 +132,7 @@ function handleCustomApp(appTemplate) {
             Progress.hide({sticky:true});
             reject(e);
           });
-        }
+      }
     }, false);
   });
 }

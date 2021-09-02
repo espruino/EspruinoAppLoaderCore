@@ -28,7 +28,7 @@ const Const = {
   FAVOURITE_ACTIVE_ICON : "&#x2665;",
 };
 
-var DEVICEINFO = [
+let DEVICEINFO = [
   {
     id : "BANGLEJS",
     name : "Bangle.js",

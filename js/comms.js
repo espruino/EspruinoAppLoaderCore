@@ -163,6 +163,7 @@ const Comms = {
             return reject("No response from device. Is 'Programmable' set to 'Off'?");
           }
           let info = {};
+          let appList;
           try {
             appList = JSON.parse(appListStr);
             // unpack the last 2 elements which are board info

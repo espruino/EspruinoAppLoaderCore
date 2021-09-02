@@ -46,6 +46,10 @@
         "appSorter": "readonly",
         "Uint8Array" : "readonly",
         "SETTINGS" : "readonly",
+        "DEVICEINFO" : "readonly",
+        "onFoundDeviceInfo" : "readonly",
+        "appList" : "readonly",
+        "debounce" : "readonly",
         "globToRegex" : "readonly",
         "toJS" : "readonly"
      }
