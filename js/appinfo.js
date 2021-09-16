@@ -185,7 +185,8 @@ const AppInfo = {
    */
   parseDataString(data) {
     data = data || '';
-    let [files = [], storage = []] = data.split(';').map(d => d.split(','))
+    let [files = [], storage = []] = data.split(';').map(d => d.split(','));
+    if (files.length==1 && files[0]=="") files = []; // hack for above code
     return {dataFiles: files, storageFiles: storage}
   },
   /**
