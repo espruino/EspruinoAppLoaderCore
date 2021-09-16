@@ -459,9 +459,8 @@ function checkDependencies(app, uploadOptions) {
 
 function updateApp(app) {
   if (app.custom) return customApp(app);
-  return getInstalledApps().then(() => {
-    // a = from appid.info, app = from apps.json
-    let remove = device.appsInstalled.find(a => a.id === app.id);
+  return Comms.getAppInfo(app).then(remove => {
+    // remove = from appid.info, app = from apps.json
     if (remove.files===undefined) remove.files="";
     // no need to remove files which will be overwritten anyway
     remove.files = remove.files.split(',')
@@ -476,7 +475,7 @@ function updateApp(app) {
       data.storageFiles = data.storageFiles.filter(removeData)
     }
     remove.data = AppInfo.makeDataString(data)
-    return Comms.removeApp(remove);
+    return Comms.removeApp(remove, true);
   }).then(()=>{
     showToast(`Updating ${app.name}...`);
     device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
