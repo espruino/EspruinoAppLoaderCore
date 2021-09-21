@@ -187,10 +187,10 @@ const Comms = {
     });
   },
   // Get an app's info file from Bangle.js
-  getAppInfo : app => { 
+  getAppInfo : app => {
     return Comms.write(`\x10Bluetooth.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`).
-      then(appJSON=>{    
-      var app;    
+      then(appJSON=>{
+      var app;
         try {
           app = JSON.parse(appJSON);
         } catch (e) {
@@ -203,16 +203,16 @@ const Comms = {
       });
   },
   // Remove an app given an appinfo.id structure as JSON
-  removeApp : (app, containsFileList) => { 
+  removeApp : (app, containsFileList) => {
     // expects an appid.info structure with minimum app.id
     // if containsFileList is true, don't get data from watch
-    Progress.show({title:`Removing ${app.name}`,sticky:true});
+    Progress.show({title:`Removing ${app.id}`,sticky:true});
     /* App Info now doesn't contain .files, so to erase, we need to
     read the info file ourselves. */
     return Comms.reset().
       then(()=>Comms.showMessage(`Erasing\n${app.id}...`)).
       then(()=>containsFileList ? app : Comms.getAppInfo(app)).
-      then(app=>{        
+      then(app=>{
         let cmds = '\x10const s=require("Storage");\n';
         // remove App files: regular files, exact names only
         cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10s.erase(${toJS(file)});\n`).join("");

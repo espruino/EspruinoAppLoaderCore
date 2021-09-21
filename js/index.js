@@ -449,6 +449,7 @@ function checkDependencies(app, uploadOptions) {
           console.log(`Install dependency '${dependency}':'${found.id}'`);
           return Comms.uploadApp(found).then(appJSON => {
             if (appJSON) device.appsInstalled.push(appJSON);
+            resolve();
           });
         }));
       }
