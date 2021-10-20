@@ -31,7 +31,7 @@ const Const = {
 let DEVICEINFO = [
   {
     id : "BANGLEJS",
-    name : "Bangle.js",
+    name : "Bangle.js 1",
     features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG"],
     g : { width : 240, height : 240, bpp : 16 },
     img : "https://www.espruino.com/img/BANGLEJS_thumb.jpg"
