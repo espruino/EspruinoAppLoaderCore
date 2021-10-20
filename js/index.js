@@ -306,7 +306,9 @@ function refreshLibrary() {
   visibleApps.sort(appSorter);
   if (activeSort) {
     if (activeSort=="created" || activeSort=="modified") {
-      visibleApps = visibleApps.sort((a,b) => appSortInfo[b.id][activeSort] - appSortInfo[a.id][activeSort]);
+      visibleApps = visibleApps.sort((a,b) =>
+         (appSortInfo[b.id]||{})[activeSort] -
+         (appSortInfo[a.id]||{})[activeSort]);
     } else throw new Error("Unknown sort type "+activeSort);
   }
 
