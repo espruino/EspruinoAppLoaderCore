@@ -270,17 +270,25 @@ const Comms = {
       // Use write with newline here so we wait for it to finish
       let cmd = '\x10E.showMessage("Erasing...");require("Storage").eraseAll();Bluetooth.println("OK");reset()\n';
       Puck.write(cmd, handleResult, true /* wait for newline */);
-    });
+    }).then(() => new Promise(resolve => {
+      console.log("<COMMS> removeAllApps: Erase complete, waiting 500ms for 'reset()'");
+      setTimeout(resolve, 500);
+    })); // now wait a second for the reset to complete
   },
   // Set the time on the device
   setTime : () => {
-    let d = new Date();
-    let tz = d.getTimezoneOffset()/-60
-    let cmd = '\x03\x10setTime('+(d.getTime()/1000)+');';
-    // in 1v93 we have timezones too
-    cmd += 'E.setTimeZone('+tz+');';
-    cmd += "(s=>{s&&(s.timezone="+tz+")&&require('Storage').write('setting.json',s);})(require('Storage').readJSON('setting.json',1))\n";
-    return Comms.write(cmd);
+    /* connect FIRST, then work out the time - otherwise
+    we end up with a delay dependent on how long it took
+    to open the device chooser. */
+    return Comms.write("\x03").then(() => {
+      let d = new Date();
+      let tz = d.getTimezoneOffset()/-60
+      let cmd = '\x10setTime('+(d.getTime()/1000)+');';
+      // in 1v93 we have timezones too
+      cmd += 'E.setTimeZone('+tz+');';
+      cmd += "(s=>{s&&(s.timezone="+tz+")&&require('Storage').write('setting.json',s);})(require('Storage').readJSON('setting.json',1))\n";
+      Comms.write(cmd);
+    });
   },
   // Reset the device
   resetDevice : () => {
