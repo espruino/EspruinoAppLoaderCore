@@ -72,7 +72,7 @@ function handleCustomApp(appTemplate) {
   if (!appTemplate.custom) throw new Error("App doesn't have custom HTML");
   // if it needs a connection, do that first
   if (appTemplate.customConnect && !device.connected)
-    return getInstalledApps(true).then(() => handleCustomApp(appTemplate));
+    return getInstalledApps().then(() => handleCustomApp(appTemplate));
   // otherwise continue
   return new Promise((resolve,reject) => {
     let modal = htmlElement(`<div class="modal active">
@@ -592,7 +592,7 @@ function getInstalledApps(refresh) {
 function installMultipleApps(appIds, promptName) {
   let apps = appIds.map( appid => appJSON.find(app=>app.id==appid) );
   if (apps.some(x=>x===undefined))
-    return Promise.reject("Not all apps found");
+    return Promise.reject("Not all apps found, missing "+appIds.filter(appid => appJSON.find(app=>app.id==appid)===undefined ).join(","));
   let appCount = apps.length;
   return showPrompt("Install Defaults",`Remove everything and install ${promptName} apps?`).then(() => {
     return Comms.removeAllApps();
@@ -633,6 +633,12 @@ function handleConnectionChange(connected) {
   device.connected = connected;
   connectMyDeviceBtn.textContent = connected ? 'Disconnect' : 'Connect';
   connectMyDeviceBtn.classList.toggle('is-connected', connected);
+  if (!connected) {
+    haveInstalledApps = false;
+    device.appsInstalled = [];
+    refreshMyApps();
+    refreshLibrary();
+  }
 }
 
 htmlToArray(document.querySelectorAll(".btn.refresh")).map(button => button.addEventListener("click", () => {
@@ -772,16 +778,6 @@ if (btn) btn.addEventListener("click",event=>{
   }).catch(err=>{
     Progress.hide({sticky:true});
     showToast("App removal failed, "+err,"error");
-  });
-});
-// Install all default apps in one go
-btn = document.getElementById("installdefault");
-if (btn) btn.addEventListener("click",event=>{
-  httpGet("defaultapps.json").then(json=>{
-    return installMultipleApps(JSON.parse(json), "default");
-  }).catch(err=>{
-    Progress.hide({sticky:true});
-    showToast("App Install failed, "+err,"error");
   });
 });
 
