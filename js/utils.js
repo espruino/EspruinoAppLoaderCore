@@ -22,10 +22,6 @@ const Const = {
 
   /* The code to upload to the device show a progress bar on the screen (should define a fn. called 'p') */
   CODE_PROGRESSBAR : "g.drawRect(10,g.getHeight()-16,g.getWidth()-10,g.getHeight()-8).flip();p=x=>g.fillRect(10,g.getHeight()-16,10+(g.getWidth()-20)*x/100,g.getHeight()-8).flip();",
-
-  /* Icons to use in the UI for favourite (usually a heart) */
-  FAVOURITE_INACTIVE_ICON : "&#x2661;",
-  FAVOURITE_ACTIVE_ICON : "&#x2665;",
 };
 
 let DEVICEINFO = [

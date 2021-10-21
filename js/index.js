@@ -6,8 +6,6 @@ let DEFAULTSETTINGS = {
   favourites : ["boot","launch","setting"]
 };
 let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
-let FAVOURITE_INACTIVE_ICON = 0x2606; // 0x2661 = empty heart; 0x2606 = empty star
-let FAVOURITE_ACTIVE_ICON = 0x2605; // 0x2665 = solid heart; 0x2605 = solid star
 
 let device = {
   id : undefined,     // The Espruino device ID of this device, eg. BANGLEJS
@@ -249,15 +247,15 @@ function getAppHTML(app, appInstalled, forInterface) {
   </div>
   <div class="tile-action">`;
   if (forInterface=="library") html += `
-    <button class="btn btn-link btn-action btn-lg ${!app.custom?"":"d-hide"} btn-favourite" appid="${app.id}" title="Favorite"><i class="icon"></i>${favourite?Const.FAVOURITE_ACTIVE_ICON:Const.FAVOURITE_INACTIVE_ICON}</button>
-    <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-download"></i></button>
-    <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-share"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${!app.custom?"":"d-hide"} btn-favourite" appid="${app.id}" title="Favorite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
     <button class="btn btn-link btn-action btn-lg ${version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(!appInstalled && !app.custom)?"":"d-hide"}" appid="${app.id}" title="Upload App"><i class="icon icon-upload"></i></button>
     <button class="btn btn-link btn-action btn-lg ${appInstalled?"":"d-hide"}" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.custom?"":"d-hide"}" appid="${app.id}" title="Customise and Upload App"><i class="icon icon-menu"></i></button>`;
   if (forInterface=="myapps") html += `
-    <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-download"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
     <button class="btn btn-link btn-action btn-lg ${version.canUpdate?'':'d-hide'}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>`;
   return html+`</div></div>`;
@@ -328,7 +326,7 @@ function refreshLibrary() {
       let app = appNameToApp(appid);
       if (!app) throw new Error("App "+appid+" not found");
       // check icon to figure out what we should do
-      if (icon.classList.contains("icon-share")) {
+      if (icon.classList.contains("icon-emulator")) {
         // emulator
         let file = app.storage.find(f=>f.name.endsWith('.js'));
         if (!file) {
@@ -359,7 +357,7 @@ function refreshLibrary() {
         icon.classList.remove("icon-refresh");
         icon.classList.add("loading");
         updateApp(app);
-      } else if (icon.classList.contains("icon-download")) {
+      } else if (icon.classList.contains("icon-interface")) {
         handleAppInterface(app);
       } else if ( button.classList.contains("btn-favourite")) {
         let favourite = SETTINGS.favourites.find(e => e == app.id);
@@ -549,7 +547,7 @@ function refreshMyApps() {
       // check icon to figure out what we should do
       if (icon.classList.contains("icon-delete")) removeApp(app);
       if (icon.classList.contains("icon-refresh")) updateApp(app);
-      if (icon.classList.contains("icon-download")) handleAppInterface(app);
+      if (icon.classList.contains("icon-interface")) handleAppInterface(app);
     });
   });
   let appsToUpdate = getAppsToUpdate();
