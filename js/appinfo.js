@@ -63,7 +63,7 @@ function parseJS(storageFile, options) {
     return Promise.resolve(storageFile);
 }
 
-const AppInfo = {
+var AppInfo = {
   /* Get files needed for app.
      options = {
         fileGetter : callback for getting URL,
