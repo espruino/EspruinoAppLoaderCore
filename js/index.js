@@ -24,8 +24,21 @@ httpGet("apps.json").then(apps=>{
     console.log(e);
     showToast("App List Corrupted","error");
   }
-  refreshLibrary();
-  refreshFilter();
+  // fix up the JSON
+  appJSON.forEach(app => {
+    if (app.screenshots)
+      app.screenshots.forEach(s => {
+        if (s.url) s.url = "apps/"+app.id+"/"+s.url;
+      });
+  });
+  var promise = Promise.resolve();
+  if ("undefined" != typeof onAppJSONLoaded)
+    promise = promise.then(onAppJSONLoaded);
+  // finally update what we're showing
+  promise.then(function() {
+    refreshLibrary();
+    refreshFilter();
+  });
 });
 
 httpGet("appdates.csv").then(csv=>{
@@ -258,7 +271,13 @@ function getAppHTML(app, appInstalled, forInterface) {
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
     <button class="btn btn-link btn-action btn-lg ${version.canUpdate?'':'d-hide'}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>`;
-  return html+`</div></div>`;
+  html += "</div>";
+  if (forInterface=="library") {
+    var screenshots = (app.screenshots || []).filter(s=>s.url);
+    if (screenshots.length)
+      html += `<img class="tile-screenshot" appid="${app.id}" src="${screenshots[0].url}" alt="Screenshot"/>`;
+  }
+  return html+`</div>`;
 }
 
 // =========================================== Library
@@ -362,9 +381,34 @@ function refreshLibrary() {
       } else if ( button.classList.contains("btn-favourite")) {
         let favourite = SETTINGS.favourites.find(e => e == app.id);
         changeAppFavourite(!favourite, app);
+      } else if ( button.classList.contains("tile-screenshot")) {
+        console.log("Boo")
       }
     });
   });
+  htmlToArray(panelbody.getElementsByClassName("tile-screenshot")).forEach(screenshot => {
+    screenshot.addEventListener("click",event => {
+      let icon = event.currentTarget;
+      let appid = icon.getAttribute("appid");
+      showScreenshots(appid);
+    });
+  });
+}
+
+function showScreenshots(appId) {
+  let app = appJSON.find(app=>app.id==appId);
+  if (!app || !app.screenshots) return;
+  var screenshots = app.screenshots.filter(s=>s.url);
+  showPrompt(app.name+" Screenshots",`<div class="columns">
+    ${screenshots.map(s=>`
+    <div class="column col-4">
+      <div class="card">
+        <div class="card-image">
+          <img src="${s.url}" alt="Screenshot" class="img-responsive">
+        </div>
+      </div>
+    </div>`).join("\n")}
+  </div>`,{ok:true},false);
 }
 
 refreshFilter();
