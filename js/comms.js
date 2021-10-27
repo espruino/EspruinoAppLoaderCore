@@ -152,7 +152,7 @@ const Comms = {
           return;
         }
 
-        let cmd, finalJS = `E.toJS([process.env.BOARD,process.env.VERSION]).substr(1)`;
+        let cmd, finalJS = `E.toJS([process.env.BOARD,process.env.VERSION,0|getTime()]).substr(1)`;
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
           cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
         else
@@ -166,7 +166,8 @@ const Comms = {
           let appList;
           try {
             appList = JSON.parse(appListStr);
-            // unpack the last 2 elements which are board info
+            // unpack the last 3 elements which are board info (See finalJS above)
+            info.currentTime = appList.pop()*1000; // time in ms
             info.version = appList.pop();
             info.id = appList.pop();
             // if we just have 'null' then it means we have no apps
