@@ -52,11 +52,17 @@ const Comms = {
     });
   }),
   // Upload an app
-  uploadApp : (app,skipReset) => { // expects an apps.json structure (i.e. with `storage`)
+  uploadApp : (app,options) => {
+    options = options||{};
+    /* app : an apps.json structure (i.e. with `storage`)
+       options : { skipReset : bool, // don't reset first
+                   device : { id : ..., version : ... } info about the currently connected device
+       } */
     Progress.show({title:`Uploading ${app.name}`,sticky:true});
     return AppInfo.getFiles(app, {
       fileGetter : httpGet,
-      settings : SETTINGS
+      settings : SETTINGS,
+      device : options.device
     }).then(fileContents => {
       return new Promise((resolve,reject) => {
         console.log("<COMMS> uploadApp:",fileContents.map(f=>f.name).join(", "));
@@ -122,7 +128,7 @@ const Comms = {
               return reject("");
             });
         }
-        if (skipReset) {
+        if (options.skipReset) {
           doUpload();
         } else {
         // reset to ensure we have enough memory to upload what we need to

@@ -68,15 +68,26 @@ var AppInfo = {
      options = {
         fileGetter : callback for getting URL,
         settings : global settings object
+        device : { id : ..., version : ... } info about the currently connected device
       }
       */
   getFiles : (app,options) => {
+    options = options||{};
     return new Promise((resolve,reject) => {
       // Load all files
-      const appFiles = [].concat(
+      var appFiles = [].concat(
         app.storage,
         app.data&&app.data.filter(f=>f.url||f.content).map(f=>(f.noOverwrite=true,f))||[]);
       //console.log(appFiles)
+      // does the app's file list have a 'supports' entry?
+      if (appFiles.some(file=>file.supports)) {
+        if (!options.device || !options.device.id)
+          return reject("App storage contains a 'supports' field, but no device ID found");
+        appFiles = appFiles.filter(file=>{
+          if (!file.supports) return true;
+          return file.supports.includes(options.device.id);
+        });
+      }
 
       Promise.all(appFiles.map(storageFile => {
         if (storageFile.content!==undefined)

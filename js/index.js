@@ -135,7 +135,7 @@ function handleCustomApp(appTemplate) {
         console.log("Received custom app", app);
         modal.remove();
         checkDependencies(app)
-          .then(()=>Comms.uploadApp(app))
+          .then(()=>Comms.uploadApp(app,{device:device}))
           .then(()=>{
             Progress.hide({sticky:true});
             resolve();
@@ -421,7 +421,7 @@ function uploadApp(app) {
       return updateApp(app);
     }
     checkDependencies(app)
-      .then(()=>Comms.uploadApp(app))
+      .then(()=>Comms.uploadApp(app,{device:device}))
       .then((appJSON) => {
         Progress.hide({ sticky: true });
         if (appJSON) {
@@ -491,7 +491,7 @@ function checkDependencies(app, uploadOptions) {
         console.log(`Dependency not installed. Installing app id '${found.id}'`);
         promise = promise.then(()=>new Promise((resolve,reject)=>{
           console.log(`Install dependency '${dependency}':'${found.id}'`);
-          return Comms.uploadApp(found).then(appJSON => {
+          return Comms.uploadApp(found,{device:device}).then(appJSON => {
             if (appJSON) device.appsInstalled.push(appJSON);
             resolve();
           });
@@ -525,7 +525,7 @@ function updateApp(app) {
     showToast(`Updating ${app.name}...`);
     device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
     return checkDependencies(app);
-  }).then(()=>Comms.uploadApp(app)
+  }).then(()=>Comms.uploadApp(app,{device:device})
   ).then((appJSON) => {
     if (appJSON) device.appsInstalled.push(appJSON);
     showToast(app.name+" Updated!", "success");
@@ -658,7 +658,7 @@ function installMultipleApps(appIds, promptName) {
         if (app===undefined) return resolve();
         Progress.show({title:`${app.name} (${appCount-apps.length}/${appCount})`,sticky:true});
         checkDependencies(app,"skip_reset")
-          .then(()=>Comms.uploadApp(app,"skip_reset"))
+          .then(()=>Comms.uploadApp(app,{device:device, skipReset:true}))
           .then((appJSON) => {
             Progress.hide({sticky:true});
             if (appJSON) device.appsInstalled.push(appJSON);
