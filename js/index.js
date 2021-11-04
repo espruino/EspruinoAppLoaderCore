@@ -477,26 +477,36 @@ function checkDependencies(app, uploadOptions) {
   let promise = Promise.resolve();
   if (app.dependencies) {
     Object.keys(app.dependencies).forEach(dependency=>{
-      if (app.dependencies[dependency]!="type")
-        throw new Error("Only supporting dependencies on app types right now");
-      console.log(`Searching for dependency on app type '${dependency}'`);
-      let found = device.appsInstalled.find(app=>app.type==dependency);
-      if (found)
-        console.log(`Found dependency in installed app '${found.id}'`);
-      else {
-        let foundApps = appJSON.filter(app=>app.type==dependency);
-        if (!foundApps.length) throw new Error(`Dependency of '${dependency}' listed, but nothing satisfies it!`);
-        console.log(`Apps ${foundApps.map(f=>`'${f.id}'`).join("/")} implement '${dependency}'`);
-        found = foundApps[0]; // choose first app in list
-        console.log(`Dependency not installed. Installing app id '${found.id}'`);
-        promise = promise.then(()=>new Promise((resolve,reject)=>{
-          console.log(`Install dependency '${dependency}':'${found.id}'`);
-          return Comms.uploadApp(found,{device:device}).then(appJSON => {
-            if (appJSON) device.appsInstalled.push(appJSON);
-            resolve();
-          });
-        }));
+      var dependencyType = app.dependencies[dependency];
+      function handleDependency(dependencyChecker) {
+        let found = device.appsInstalled.find(dependencyChecker);
+        if (found)
+          console.log(`Found dependency in installed app '${found.id}'`);
+        else {
+          let foundApps = appJSON.filter(dependencyChecker);
+          if (!foundApps.length) throw new Error(`Dependency of '${dependency}' listed, but nothing satisfies it!`);
+          console.log(`Apps ${foundApps.map(f=>`'${f.id}'`).join("/")} implements '${dependencyType}:${dependency}'`);
+          found = foundApps[0]; // choose first app in list
+          console.log(`Dependency not installed. Installing app id '${found.id}'`);
+          promise = promise.then(()=>new Promise((resolve,reject)=>{
+            console.log(`Install dependency '${dependency}':'${found.id}'`);
+            return Comms.uploadApp(found,{device:device}).then(appJSON => {
+              if (appJSON) device.appsInstalled.push(appJSON);
+              resolve();
+            });
+          }));
+        }
       }
+
+      if (dependencyType=="type") {
+        console.log(`Searching for dependency on app TYPE '${dependency}'`);
+        handleDependency(app=>app.type==dependency);
+      } else if (dependencyType=="app") {
+        console.log(`Searching for dependency on app ID '${dependency}'`);
+        handleDependency(app=>app.id==dependency);
+      } else
+        throw new Error(`Dependency type '${dependencyType}' not supported`);
+
     });
   }
   return promise;
