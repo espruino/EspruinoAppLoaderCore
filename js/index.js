@@ -579,7 +579,7 @@ function getAppsToUpdate() {
   let appsToUpdate = [];
   device.appsInstalled.forEach(appInstalled => {
     let app = appNameToApp(appInstalled.id);
-    if (app.version != appInstalled.version)
+    if (app.version && app.version != appInstalled.version)
       appsToUpdate.push(app);
   });
   return appsToUpdate;
