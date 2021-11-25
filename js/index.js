@@ -575,11 +575,14 @@ function showLoadingIndicator(id) {
   panelbody.innerHTML = '<div class="tile column col-12"><div class="tile-content" style="min-height:48px;"><div class="loading loading-lg"></div></div></div>';
 }
 
-function getAppsToUpdate() {
+function getAppsToUpdate(options) {
+  options = options||{};  // excludeCustomApps
   let appsToUpdate = [];
   device.appsInstalled.forEach(appInstalled => {
     let app = appNameToApp(appInstalled.id);
-    if (app.version && app.version != appInstalled.version)
+    if (app.version &&
+        app.version != appInstalled.version &&
+        (!options.excludeCustomApps || app.custom===undefined))
       appsToUpdate.push(app);
   });
   return appsToUpdate;
@@ -709,10 +712,12 @@ htmlToArray(document.querySelectorAll(".btn.refresh")).map(button => button.addE
   });
 }));
 htmlToArray(document.querySelectorAll(".btn.updateapps")).map(button => button.addEventListener("click", () => {
-  let appsToUpdate = getAppsToUpdate();
+  let appsToUpdate = getAppsToUpdate({excludeCustomApps:true});
+  // get apps - don't auto-update custom apps since they need the
+  // customiser page running
   let count = appsToUpdate.length;
   function updater() {
-    if (!appsToUpdate.length) return;
+    if (!appsToUpdate.length) return Promise.reject("No apps can be updated");
     let app = appsToUpdate.pop();
     return updateApp(app).then(function() {
       return updater();
