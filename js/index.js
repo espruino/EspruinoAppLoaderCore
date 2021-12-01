@@ -268,6 +268,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     <button class="btn btn-link btn-action btn-lg ${appInstalled?"":"d-hide"}" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.custom?"":"d-hide"}" appid="${app.id}" title="Customise and Upload App"><i class="icon icon-menu"></i></button>`;
   if (forInterface=="myapps") html += `
+    <button class="btn btn-link btn-action btn-lg ${!app.custom?"":"d-hide"} btn-favourite" appid="${app.id}" title="Favorite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
     <button class="btn btn-link btn-action btn-lg ${version.canUpdate?'':'d-hide'}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>`;
