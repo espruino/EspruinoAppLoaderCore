@@ -223,6 +223,7 @@ function changeAppFavourite(favourite, app) {
   }
   saveSettings();
   refreshLibrary();
+  refreshMyApps();
 }
 
 // ===========================================  Top Navigation
@@ -606,6 +607,10 @@ function refreshMyApps() {
       if (icon.classList.contains("icon-delete")) removeApp(app);
       if (icon.classList.contains("icon-refresh")) updateApp(app);
       if (icon.classList.contains("icon-interface")) handleAppInterface(app);
+      if (icon.classList.contains("icon-favourite")) {
+          let favourite = SETTINGS.favourites.find(e => e == app.id);
+          changeAppFavourite(!favourite, app);
+      }
     });
   });
   let appsToUpdate = getAppsToUpdate();
