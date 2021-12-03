@@ -54,7 +54,7 @@ function parseJS(storageFile, options) {
       PRETOKENISE : options.settings.pretokenise,
       MODULE_URL : localModulesURL+"|https://www.espruino.com/modules",
       //MINIFICATION_LEVEL : "ESPRIMA", // disable due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
-      builtinModules : "Flash,Storage,heatshrink,tensorflow,locale,notify"
+      builtinModules : "Flash,Storage,heatshrink,tensorflow,locale,notify,crypto"
     }).then(content => {
       storageFile.content = content;
       return storageFile;
