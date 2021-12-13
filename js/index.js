@@ -722,14 +722,18 @@ htmlToArray(document.querySelectorAll(".btn.updateapps")).map(button => button.a
   // get apps - don't auto-update custom apps since they need the
   // customiser page running
   let count = appsToUpdate.length;
+  if (!count) {
+    showToast("Update failed, no apps can be updated","error");
+    return;
+  }
   function updater() {
-    if (!appsToUpdate.length) return Promise.reject("No apps can be updated");
+    if (!appsToUpdate.length) return Promise.resolve("Success");
     let app = appsToUpdate.pop();
     return updateApp(app).then(function() {
       return updater();
     });
   }
-  updater().then(err => {
+  updater().then(msg => {
     showToast(`Updated ${count} apps`,"success");
   }).catch(err => {
     showToast("Update failed, "+err,"error");
