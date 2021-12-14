@@ -1,11 +1,11 @@
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let files = []; // list of files on the Espruimo Device
-let DEFAULTSETTINGS = {
+const DEFAULTSETTINGS = {
   pretokenise : true,
   favourites : ["boot","launch","setting"]
 };
-let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
+var SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
 let device = {
   id : undefined,     // The Espruino device ID of this device, eg. BANGLEJS
@@ -14,7 +14,23 @@ let device = {
   connected : false,   // are we connected via BLE right now?
   appsInstalled : []  // list of app {id,version} of installed apps
 };
-
+// FOR TESTING ONLY
+/*let LANGUAGE = {
+  "//":"German language translations",
+  "GLOBAL": {
+    "//":"Translations that apply for all apps",
+    "Alarm" : "Wecker",
+    "Hours" : "Stunden",
+    "Minutes" : "Minuten",
+    "Enabled" : "Aktiviert",
+    "Settings" : "Einstellungen"
+  },
+  "alarm": {
+    "//":"App-specific overrides",
+    "Alarm" : "Alarm"
+  }
+};*/
+var LANGUAGE = undefined;
 
 
 httpGet("apps.json").then(apps=>{
@@ -135,7 +151,7 @@ function handleCustomApp(appTemplate) {
         console.log("Received custom app", app);
         modal.remove();
         checkDependencies(app)
-          .then(()=>Comms.uploadApp(app,{device:device}))
+          .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
           .then(()=>{
             Progress.hide({sticky:true});
             resolve();
@@ -423,7 +439,7 @@ function uploadApp(app) {
       return updateApp(app);
     }
     checkDependencies(app)
-      .then(()=>Comms.uploadApp(app,{device:device}))
+      .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
       .then((appJSON) => {
         Progress.hide({ sticky: true });
         if (appJSON) {

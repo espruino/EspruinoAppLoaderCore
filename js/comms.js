@@ -57,11 +57,13 @@ const Comms = {
     /* app : an apps.json structure (i.e. with `storage`)
        options : { skipReset : bool, // don't reset first
                    device : { id : ..., version : ... } info about the currently connected device
+                   language : object of translations, eg 'lang/de_DE.json'
        } */
     Progress.show({title:`Uploading ${app.name}`,sticky:true});
     return AppInfo.getFiles(app, {
       fileGetter : httpGet,
       settings : SETTINGS,
+      language : options.language,
       device : options.device
     }).then(fileContents => {
       return new Promise((resolve,reject) => {

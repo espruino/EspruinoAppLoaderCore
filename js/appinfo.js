@@ -42,14 +42,53 @@ function toJS(txt) {
   return js;
 }
 
+// Translate any strings in the app that are prefixed with /*LANG*/
+// see https://github.com/espruino/BangleApps/issues/136
+function translateJS(options, app, code) {
+  var lex = Espruino.Core.Utils.getLexer(code);
+  var outjs = "";
+  var lastIdx = 0;
+  var tok = lex.next();
+  while (tok!==undefined) {
+    var previousString = code.substring(lastIdx, tok.startIdx);
+    var tokenString = code.substring(tok.startIdx, tok.endIdx);
+    if (tok.type=="STRING" && previousString.includes("/*LANG*/")) {
+      previousString=previousString.replace("/*LANG*/","");
+      var language = options.language;
+      if (language[app.id] && language[app.id][tok.value]) {
+        tokenString = JSON.stringify(language.GLOBAL[tok.value]);
+      } else if (language.GLOBAL[tok.value]) {
+        tokenString = JSON.stringify(language.GLOBAL[tok.value]);
+      } else {
+        // Unhandled translation...
+        //console.log("Untranslated ",tokenString);
+      }
+    }
+    outjs += previousString+tokenString;
+    lastIdx = tok.endIdx;
+    tok = lex.next();
+  }
+
+  /*console.log("==================== IN");
+  console.log(code);
+  console.log("==================== OUT");
+  console.log(outjs);*/
+  return outjs;
+}
+
 // Run JS through EspruinoTools to pull in modules/etc
-function parseJS(storageFile, options) {
+function parseJS(storageFile, options, app) {
   if (storageFile.url && storageFile.url.endsWith(".js") && !storageFile.url.endsWith(".min.js")) {
     // if original file ends in '.js'...
+    var js = storageFile.content;
+    // check for language translations
+    if (options.language)
+      js = translateJS(options, app, js);
+    // handle modules
     let localModulesURL = "modules";
     if (typeof window!=="undefined")
       localModulesURL = window.location.origin + window.location.pathname.replace(/[^/]*$/,"") + "modules";
-    return Espruino.transform(storageFile.content, {
+    return Espruino.transform(js, {
       SET_TIME_ON_WRITE : false,
       PRETOKENISE : options.settings.pretokenise,
       MODULE_URL : localModulesURL+"|https://www.espruino.com/modules",
@@ -69,6 +108,7 @@ var AppInfo = {
         fileGetter : callback for getting URL,
         settings : global settings object
         device : { id : ..., version : ... } info about the currently connected device
+        language : object of translations, eg 'lang/de_DE.json'
       }
       */
   getFiles : (app,options) => {
@@ -91,7 +131,7 @@ var AppInfo = {
 
       Promise.all(appFiles.map(storageFile => {
         if (storageFile.content!==undefined)
-          return Promise.resolve(storageFile).then(storageFile => parseJS(storageFile,options));
+          return Promise.resolve(storageFile).then(storageFile => parseJS(storageFile,options,app));
         else if (storageFile.url)
           return options.fileGetter(`apps/${app.id}/${storageFile.url}`).then(content => {
             return {
@@ -100,7 +140,7 @@ var AppInfo = {
               content : content,
               evaluate : storageFile.evaluate,
               noOverwrite : storageFile.noOverwrite
-            }}).then(storageFile => parseJS(storageFile,options));
+            }}).then(storageFile => parseJS(storageFile,options,app));
         else return Promise.resolve();
       })).then(fileContents => { // now we just have a list of files + contents...
         // filter out empty files
