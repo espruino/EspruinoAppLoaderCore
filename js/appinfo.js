@@ -4,15 +4,6 @@ if ("undefined"!=typeof module) {
   heatshrink = require("../lib/heatshrink.js");
 }
 
-if (typeof btoa==="undefined") {
-  // Don't define btoa as a function here because Apple's
-  // iOS browser defines the function even though it's in
-  // an IF statement that is never executed
-  btoa = function(d) {
-    return Buffer.from(d,'binary').toString('base64');
-  }
-}
-
 // Converts a string into most efficient way to send to Espruino (either json, base64, or compressed base64)
 function toJS(txt) {
   let isBinary = false;
@@ -21,7 +12,7 @@ function toJS(txt) {
     if (ch==0 || ch>127) isBinary=true;
   }
   let json = JSON.stringify(txt);
-  let b64 = "atob("+JSON.stringify(btoa(txt))+")";
+  let b64 = "atob("+JSON.stringify(Espruino.Core.Utils.btoa(txt))+")";
   let js = (isBinary || (b64.length < json.length)) ? b64 : json;
   if (txt.length>64 && typeof heatshrink !== "undefined") {
     let ua = new Uint8Array(txt.length);
@@ -32,7 +23,7 @@ function toJS(txt) {
       let cs = "";
       for (let i=0;i<c.length;i++)
         cs += String.fromCharCode(c[i]);
-      cs = 'require("heatshrink").decompress(atob("'+btoa(cs)+'"))';
+      cs = 'require("heatshrink").decompress(atob("'+Espruino.Core.Utils.btoa(cs)+'"))';
       // if it's more than a little smaller, use compressed version
       if (cs.length*4 < js.length*3)
         js = cs;
