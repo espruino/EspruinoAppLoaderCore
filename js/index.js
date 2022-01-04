@@ -152,9 +152,9 @@ function handleCustomApp(appTemplate) {
         modal.remove();
         checkDependencies(app)
           .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
-          .then(()=>{
+          .then((appInfo)=>{
             Progress.hide({sticky:true});
-            resolve();
+            resolve(appInfo);
           }).catch(e => {
             Progress.hide({sticky:true});
             reject(e);
