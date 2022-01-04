@@ -108,7 +108,7 @@ var AppInfo = {
       // Load all files
       var appFiles = [].concat(
         app.storage,
-        app.data&&app.data.filter(f=>f.url||f.content).map(f=>(f.noOverwrite=true,f))||[]);
+        app.data&&app.data.filter(f=>f.url||f.content).map(f=>(f.noOverwrite=true,f.dataFile=true,f))||[]);
       //console.log(appFiles)
       // does the app's file list have a 'supports' entry?
       if (appFiles.some(file=>file.supports)) {
@@ -130,7 +130,8 @@ var AppInfo = {
               url : storageFile.url,
               content : content,
               evaluate : storageFile.evaluate,
-              noOverwrite : storageFile.noOverwrite
+              noOverwrite : storageFile.noOverwrite,
+              dataFile : !!storageFile.dataFile
             }}).then(storageFile => parseJS(storageFile,options,app));
         else return Promise.resolve();
       })).then(fileContents => { // now we just have a list of files + contents...
@@ -196,7 +197,7 @@ var AppInfo = {
       if (app.sortorder) json.sortorder = app.sortorder;
       if (app.version) json.version = app.version;
       if (app.tags) json.tags = app.tags;
-      let fileList = fileContents.map(storageFile=>storageFile.name).filter(n=>n!="RAM");
+      let fileList = fileContents.filter(storageFile=>!storageFile.dataFile).map(storageFile=>storageFile.name).filter(n=>n!="RAM");
       fileList.unshift(appInfoFileName); // do we want this? makes life easier!
       json.files = fileList.join(",");
       if ('data' in app) {
