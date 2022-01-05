@@ -205,7 +205,7 @@ const Comms = {
         } catch (e) {
           app = null;
           console.log("<COMMS> ERROR Parsing JSON",e.toString());
-          console.log("<COMMS> Actual response: ",JSON.stringify(appListStr));
+          console.log("<COMMS> Actual response: ",JSON.stringify(appJSON));
           throw new Error("Invalid JSON");
         }
         return app;
