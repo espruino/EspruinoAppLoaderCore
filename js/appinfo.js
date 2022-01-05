@@ -79,12 +79,15 @@ function parseJS(storageFile, options, app) {
     let localModulesURL = "modules";
     if (typeof window!=="undefined")
       localModulesURL = window.location.origin + window.location.pathname.replace(/[^/]*$/,"") + "modules";
+    var builtinModules = ["Flash","Storage","heatshrink","tensorflow","locale","notify"];
+    if (options && options.device && options.device.id=="BANGLEJS2")
+      builtinModules.push("crypto");
     return Espruino.transform(js, {
       SET_TIME_ON_WRITE : false,
       PRETOKENISE : options.settings.pretokenise,
       MODULE_URL : localModulesURL+"|https://www.espruino.com/modules",
       //MINIFICATION_LEVEL : "ESPRIMA", // disable due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
-      builtinModules : "Flash,Storage,heatshrink,tensorflow,locale,notify,crypto"
+      builtinModules : builtinModules.join(",")
     }).then(content => {
       storageFile.content = content;
       return storageFile;
