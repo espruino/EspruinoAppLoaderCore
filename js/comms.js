@@ -109,13 +109,41 @@ const Comms = {
               min:currentBytes / maxBytes,
               max:(currentBytes+cmd.length) / maxBytes});
             currentBytes += cmd.length;
-            Puck.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}Bluetooth.println("OK")\n`,(result) => {
-              if (!result || result.trim()!="OK") {
-                Progress.hide({sticky:true});
-                return reject("Unexpected response "+(result||""));
+            function responseHandler(result) {
+              console.log("<COMMS> Response: ",JSON.stringify(result));
+              if (result) {
+                result=result.trim();
+                if (result=="OK") {
+                  uploadCmd(); // all as expected - send next
+                  return;
+                }
+                if (result.startsWith("{") && result.endsWith("}")) {
+                  console.log("<COMMS> JSON response received (Gadgetbridge?) - ignoring...");
+                  /* Here we have to poke around inside the Puck.js library internals. Basically
+                  it just gave us the first line in the input buffer, but there may have been more.
+                  We take the next line (or undefined) and call ourselves again to handle that.
+
+                  Just in case, delay a little to give our previous command time to finish.*/
+                  setTimeout(function() {
+                    var connection = Puck.getConnection();
+                    var newLineIdx = connection.received.indexOf("\n");
+                    var l = undefined;
+                    if (newLineIdx>=0) {
+                      l = connection.received.substr(0,newLineIdx);
+                      connection.received = connection.received.substr(newLineIdx+1);
+                    }
+                     responseHandler(l);
+                  }, 500);
+                  return;
+                }
               }
-              uploadCmd();
-            }, true); // wait for a newline
+              // Not an response we expected!
+              Progress.hide({sticky:true});
+              return reject("Unexpected response "+(result?JSON.stringify(result):"<empty>"));
+            }
+            // Actually write the command with a 'print OK' at the end, and use responseHandler
+            // to deal with the response. If OK we call uploadCmd to upload the next block
+            Puck.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}Bluetooth.println("OK")\n`,responseHandler, true /* wait for a newline*/);
           }
           uploadCmd();
         }
