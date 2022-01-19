@@ -3,7 +3,8 @@ let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, m
 let files = []; // list of files on the Espruimo Device
 const DEFAULTSETTINGS = {
   pretokenise : true,
-  favourites : ["boot","launch","setting"]
+  favourites : ["boot","launch","setting"],
+  language : ""
 };
 var SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 

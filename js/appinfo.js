@@ -46,10 +46,14 @@ function translateJS(options, app, code) {
     if (tok.type=="STRING" && previousString.includes("/*LANG*/")) {
       previousString=previousString.replace("/*LANG*/","");
       var language = options.language;
-      if (language[app.id] && language[app.id][tok.value]) {
-        tokenString = JSON.stringify(language.GLOBAL[tok.value]);
-      } else if (language.GLOBAL[tok.value]) {
-        tokenString = JSON.stringify(language.GLOBAL[tok.value]);
+      // strip out formatting at beginning/end
+      var match = tok.value.match(/^([.<>\- ]*)([^<>\!\?]*?)([.<>\!\?\- ]*)$/);
+      var textToTranslate = match[2];
+      // now translate
+      if (language[app.id] && language[app.id][textToTranslate]) {
+        tokenString = JSON.stringify(match[1]+language.GLOBAL[textToTranslate]+match[3]);
+      } else if (language.GLOBAL[textToTranslate]) {
+        tokenString = JSON.stringify(match[1]+language.GLOBAL[textToTranslate]+match[3]);
       } else {
         // Unhandled translation...
         //console.log("Untranslated ",tokenString);
