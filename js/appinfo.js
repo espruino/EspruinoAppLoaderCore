@@ -33,6 +33,70 @@ function toJS(txt) {
   return js;
 }
 
+/* When it's not in the codepage, try and use
+these conversions */
+const charFallbacks = {
+  "ą":"a",
+  "ā":"a",
+  "č":"c",
+  "ć":"c",
+  "ě":"e",
+  "ę":"e",
+  "ē":"e",
+  "ģ":"g",
+  "i":"ī",
+  "í":"i",
+  "ķ":"k",
+  "ļ":"l",
+  "ł":"l",
+  "ń":"n",
+  "ņ":"n",
+  "ő":"o",
+  "ó":"o",
+  "ř":"r",
+  "ś":"s",
+  "š":"s",
+  "ū":"u",
+  "ż":"z",
+  "ź":"z",
+  "ž":"z",
+  "Ą":"A",
+  "Ā":"A",
+  "Č":"C",
+  "Ć":"C",
+  "Ě":"E",
+  "Ę":"E",
+  "Ē":"E",
+  "Ģ":"G",
+  "I":"Ī",
+  "Í":"I",
+  "Ķ":"K",
+  "Ļ":"L",
+  "Ł":"L",
+  "Ń":"N",
+  "Ņ":"N",
+  "Ő":"O",
+  "Ó":"O",
+  "Ř":"R",
+  "Ś":"S",
+  "Š":"S",
+  "Ū":"U",
+  "Ż":"Z",
+  "Ź":"Z",
+  "Ž":"Z",
+ };
+
+
+function sanitizeChars(str) {
+	str=str.split('');
+	for (var i = 0; i < str.length; i++) {
+		var ch=str[i];
+		if (charFallbacks[ch])
+			str[i]=charFallbacks[ch];
+	}
+	return (str.join(''));
+}
+
 // Translate any strings in the app that are prefixed with /*LANG*/
 // see https://github.com/espruino/BangleApps/issues/136
 function translateJS(options, app, code) {
@@ -58,6 +122,7 @@ function translateJS(options, app, code) {
         // Unhandled translation...
         //console.log("Untranslated ",tokenString);
       }
+	  tokenString=sanitizeChars(tokenString);
     }
     outjs += previousString+tokenString;
     lastIdx = tok.endIdx;
