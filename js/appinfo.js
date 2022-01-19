@@ -51,7 +51,7 @@ function translateJS(options, app, code) {
       var textToTranslate = match[2];
       // now translate
       if (language[app.id] && language[app.id][textToTranslate]) {
-        tokenString = JSON.stringify(match[1]+language.GLOBAL[textToTranslate]+match[3]);
+        tokenString = JSON.stringify(match[1]+language[app.id][textToTranslate]+match[3]);
       } else if (language.GLOBAL[textToTranslate]) {
         tokenString = JSON.stringify(match[1]+language.GLOBAL[textToTranslate]+match[3]);
       } else {
