@@ -40,8 +40,10 @@ httpGet("apps.json").then(apps=>{
   } catch(e) {
     console.log(e);
     showToast("App List Corrupted","error");
-  }
+  }  
   // fix up the JSON
+  if (appJSON.length && appJSON[appJSON.length-1]===null)
+    appJSON.pop(); // remove trailing null added to make auto-generation of apps.json easier
   appJSON.forEach(app => {
     if (app.screenshots)
       app.screenshots.forEach(s => {
