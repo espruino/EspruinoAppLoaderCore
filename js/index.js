@@ -34,7 +34,7 @@ let device = {
 var LANGUAGE = undefined;
 
 
-httpGet("apps.json").then(apps=>{
+httpGet(Const.APPS_JSON_FILE).then(apps=>{
   try {
     appJSON = JSON.parse(apps);
   } catch(e) {

@@ -13,6 +13,9 @@ const Const = {
   /* Does our device have E.showMessage? */
   HAS_E_SHOWMESSAGE : true,
 
+  /* JSON file containing all app metadata */
+  APPS_JSON_FILE: 'apps.json',
+
   /* base URL, eg https://github.com/${username}/BangleApps/tree/master/apps for
   links when people click on the GitHub link next to an app. undefined = no link*/
   APP_SOURCECODE_URL : undefined,
