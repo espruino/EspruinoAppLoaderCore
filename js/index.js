@@ -40,7 +40,7 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
   } catch(e) {
     console.log(e);
     showToast("App List Corrupted","error");
-  }  
+  }
   // fix up the JSON
   if (appJSON.length && appJSON[appJSON.length-1]===null)
     appJSON.pop(); // remove trailing null added to make auto-generation of apps.json easier
@@ -74,10 +74,27 @@ httpGet("appdates.csv").then(csv=>{
 });
 
 // ===========================================  Top Navigation
-function showChangeLog(appid) {
+function showChangeLog(appid, installedVersion) {
   let app = appNameToApp(appid);
   function show(contents) {
-    showPrompt(app.name+" Change Log",contents,{ok:true}).catch(()=>{});
+    let shouldEscapeHtml = true;
+    if (contents && installedVersion) {
+      let lines = contents.split("\n");
+      for(let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        if (line.startsWith(installedVersion)) {
+          line = '<a id="' + installedVersion + '"></a>' + line;
+          lines[i] = line;
+        }
+      }
+      contents = lines.join("<br>");
+      shouldEscapeHtml = false;
+    }
+    showPrompt(app.name+" ChangeLog",contents,{ok:true}, shouldEscapeHtml).catch(()=>{});
+    if (installedVersion) {
+      var elem = document.getElementById(installedVersion);
+      if (elem) elem.scrollIntoView();
+    }
   }
   httpGet(`apps/${appid}/ChangeLog`).
     then(show).catch(()=>show("No Change Log available"));
