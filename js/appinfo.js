@@ -36,19 +36,19 @@ function toJS(txt) {
 // Translate any strings in the app that are prefixed with /*LANG*/
 // see https://github.com/espruino/BangleApps/issues/136
 function translateJS(options, app, code) {
-  var lex = Espruino.Core.Utils.getLexer(code);
-  var outjs = "";
-  var lastIdx = 0;
-  var tok = lex.next();
+  let lex = Espruino.Core.Utils.getLexer(code);
+  let outjs = "";
+  let lastIdx = 0;
+  let tok = lex.next();
   while (tok!==undefined) {
-    var previousString = code.substring(lastIdx, tok.startIdx);
-    var tokenString = code.substring(tok.startIdx, tok.endIdx);
+    let previousString = code.substring(lastIdx, tok.startIdx);
+    let tokenString = code.substring(tok.startIdx, tok.endIdx);
     if (tok.type=="STRING" && previousString.includes("/*LANG*/")) {
       previousString=previousString.replace("/*LANG*/","");
-      var language = options.language;
+      let language = options.language;
       // strip out formatting at beginning/end
-      var match = tok.value.match(/^([.<>\- ]*)([^<>\!\?]*?)([.<>\!\?\- ]*)$/);
-      var textToTranslate = match[2];
+      let match = tok.value.match(/^([.<>\- ]*)([^<>!?]*?)([.<>!?\- ]*)$/);
+      let textToTranslate = match[2];
       // now translate
       if (language[app.id] && language[app.id][textToTranslate]) {
         tokenString = JSON.stringify(match[1]+language[app.id][textToTranslate]+match[3]);
@@ -75,7 +75,7 @@ function translateJS(options, app, code) {
 function parseJS(storageFile, options, app) {
   if (storageFile.url && storageFile.url.endsWith(".js") && !storageFile.url.endsWith(".min.js")) {
     // if original file ends in '.js'...
-    var js = storageFile.content;
+    let js = storageFile.content;
     // check for language translations
     if (options.language)
       js = translateJS(options, app, js);
@@ -83,7 +83,7 @@ function parseJS(storageFile, options, app) {
     let localModulesURL = "modules";
     if (typeof window!=="undefined")
       localModulesURL = window.location.origin + window.location.pathname.replace(/[^/]*$/,"") + "modules";
-    var builtinModules = ["Flash","Storage","heatshrink","tensorflow","locale","notify"];
+    let builtinModules = ["Flash","Storage","heatshrink","tensorflow","locale","notify"];
     if (options && options.device && options.device.id=="BANGLEJS2")
       builtinModules.push("crypto");
     return Espruino.transform(js, {
@@ -113,7 +113,7 @@ var AppInfo = {
     options = options||{};
     return new Promise((resolve,reject) => {
       // Load all files
-      var appFiles = [].concat(
+      let appFiles = [].concat(
         app.storage,
         app.data&&app.data.filter(f=>f.url||f.content).map(f=>(f.noOverwrite=true,f.dataFile=true,f))||[]);
       //console.log(appFiles)
