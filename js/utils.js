@@ -149,6 +149,8 @@ function getVersionInfo(appListing, appInstalled) {
   let versionText = "";
   let canUpdate = false;
   function clicky(v) {
+    if (appInstalled)
+      return `<a class="c-hand" onclick="showChangeLog('${appListing.id}', '${appInstalled.version}')">${v}</a>`;
     return `<a class="c-hand" onclick="showChangeLog('${appListing.id}')">${v}</a>`;
   }
 
