@@ -114,6 +114,51 @@ function getAppDescription(app) {
   let markedOptions = { baseUrl : appPath };
   return marked(app.description, markedOptions);
 }
+
+/** Setup IFRAME callbacks for handleCustomApp and handleInterface */
+function iframeSetup(iframe, messageHandler) {
+  // when iframe is loaded, call 'onInit' with info about the device
+  iframe.addEventListener("load", function() {
+    console.log("IFRAME loaded");
+    /* if we get a message from the iframe (eg asking to send data to Puck), handle it
+    otherwise pass to messageHandler because handleCustomApp may want to handle it */
+    iframe.contentWindow.addEventListener("message",function(event) {
+      let msg = event.data;
+      if (msg.type=="eval") {
+        Puck.eval(msg.data, function(result) {
+          iframe.contentWindow.postMessage({
+            type : "evalrsp",
+            data : result,
+            id : msg.id
+          });
+        });
+      } else if (msg.type=="write") {
+        Puck.write(msg.data, function(result) {
+          iframe.contentWindow.postMessage({
+            type : "writersp",
+            data : result,
+            id : msg.id
+          });
+        });
+      } else if (msg.type=="readstoragefile") {
+        Comms.readStorageFile(msg.data/*filename*/).then(function(result) {
+          iframe.contentWindow.postMessage({
+            type : "readstoragefilersp",
+            data : result,
+            id : msg.id
+          });
+        });
+      } else if (messageHandler) messageHandler(event);
+    }, false);
+    // send the 'init' message
+    iframe.contentWindow.postMessage({
+      type: "init",
+      data: device
+    },"*");
+  }, false);  
+}
+
+/** Create window for app customiser */
 function handleCustomApp(appTemplate) {
   // Pops up an IFRAME that allows an app to be customised
   if (!appTemplate.custom) throw new Error("App doesn't have custom HTML");
@@ -146,16 +191,7 @@ function handleCustomApp(appTemplate) {
     });
 
     let iframe = modal.getElementsByTagName("iframe")[0];
-    // when iframe is loaded, call 'onInit' with info about the device
-    iframe.contentWindow.addEventListener("load", function() {
-      console.log("Custom App IFRAME loaded");
-      iframe.contentWindow.postMessage({
-        type: "init",
-        data: device
-      },"*");
-    }, false);
-    // if we get an 'app' message, handle it and upload
-    iframe.contentWindow.addEventListener("message", function(event) {
+    iframeSetup(iframe, function(event) {
       let msg = event.data;
       if (msg.type=="app") {
         let appFiles = msg.data;
@@ -184,6 +220,7 @@ function handleCustomApp(appTemplate) {
   });
 }
 
+/* Create window for app interface page */
 function handleAppInterface(app) {
   // IFRAME interface window that can be used to get data from the app
   if (!app.interface) throw new Error("App doesn't have interface HTML");
@@ -211,38 +248,9 @@ function handleAppInterface(app) {
       });
     });
     let iframe = modal.getElementsByTagName("iframe")[0];
-    iframe.onload = function() {
-      let iwin = iframe.contentWindow;
-      iwin.addEventListener("message", function(event) {
-        let msg = event.data;
-        if (msg.type=="eval") {
-          Puck.eval(msg.data, function(result) {
-            iwin.postMessage({
-              type : "evalrsp",
-              data : result,
-              id : msg.id
-            });
-          });
-        } else if (msg.type=="write") {
-          Puck.write(msg.data, function(result) {
-            iwin.postMessage({
-              type : "writersp",
-              data : result,
-              id : msg.id
-            });
-          });
-        } else if (msg.type=="readstoragefile") {
-          Comms.readStorageFile(msg.data/*filename*/).then(function(result) {
-            iwin.postMessage({
-              type : "readstoragefilersp",
-              data : result,
-              id : msg.id
-            });
-          });
-        }
-      }, false);
-      iwin.postMessage({type:"init"});
-    };
+    iframeSetup(iframe, function(event) {
+      // nothing custom needed in here
+    });
     iframe.src = `apps/${app.id}/${app.interface}`;
   });
 }
