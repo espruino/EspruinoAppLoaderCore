@@ -698,6 +698,15 @@ function getInstalledApps(refresh) {
         console.log("SETTINGS.settime=true and >2 seconds out - updating time");
         return Comms.setTime();
       }
+      // Show device info in more page:
+      const deviceInfoElem = document.getElementById("more-deviceinfo");
+      if (deviceInfoElem) {
+        deviceInfoElem.style.display = "inherit";
+        const e = '<p><b>Type</b>: ' + device.id + '</p>'
+                +'<p><b>Version</b>: ' + device.version + '</p>';
+        const deviceInfoContentElem = document.getElementById("more-deviceinfo-content");
+        deviceInfoContentElem.innerHTML = e;
+      }
     })
     .then(() => handleConnectionChange(true))
     .then(() => device.appsInstalled);
@@ -786,6 +795,8 @@ htmlToArray(document.querySelectorAll(".btn.updateapps")).map(button => button.a
 connectMyDeviceBtn.addEventListener("click", () => {
   if (connectMyDeviceBtn.classList.contains('is-connected')) {
     Comms.disconnectDevice();
+    const deviceInfoElem = document.getElementById("more-deviceinfo");
+    if (deviceInfoElem) deviceInfoElem.style.display = "none";
   } else {
     getInstalledApps(true).catch(err => {
       showToast("Device connection failed, "+err,"error");
