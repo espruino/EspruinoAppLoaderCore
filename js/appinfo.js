@@ -47,7 +47,7 @@ function translateJS(options, app, code) {
       previousString=previousString.replace("/*LANG*/","");
       let language = options.language;
       // strip out formatting at beginning/end
-      let match = tok.value.match(/^([.<>\- ]*)([^<>!?]*?)([.<>!?\- ]*)$/);
+      let match = tok.value.match(/^([.<>\- /\n/]*)([^<>!?]*?)([.<>!?\- /\n/]*)$/);
       let textToTranslate = match[2];
       // now translate
       if (language[app.id] && language[app.id][textToTranslate]) {
