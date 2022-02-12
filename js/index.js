@@ -845,10 +845,10 @@ let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
 filtersContainer.addEventListener('click', ({ target }) => {
   if (target.classList.contains('active')) return;
 
-  activeFilter = target.getAttribute('filterid') || ''; // TODO
+  hashValue = target.getAttribute('filterid') || '';
   refreshFilter();
   refreshLibrary();
-  window.location.hash = activeFilter;
+  window.location.hash = hashValue;
 });
 
 let librarySearchInput = document.querySelector("#searchform input");
