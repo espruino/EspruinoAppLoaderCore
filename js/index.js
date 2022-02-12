@@ -330,18 +330,45 @@ function getAppHTML(app, appInstalled, forInterface) {
 
 // Can't use chip.attributes.filterid.value here because Safari/Apple's WebView doesn't handle it
 let chips = Array.from(document.querySelectorAll('.filter-nav .chip')).map(chip => chip.getAttribute("filterid"));
-let hash = "";
-if (window.location.hash)
-  hash = decodeURIComponent(window.location.hash.slice(1)).toLowerCase();
 
-let activeFilter = (chips.indexOf(hash)>=0) ? hash : '';
+/*
+ Filter types:
+ .../BangleApps/#blue shows apps having "blue" in app.id or app.tag --> searchType:hash
+ .../BangleApps/#bluetooth shows apps having "bluetooth" in app.id or app.tag (also selects bluetooth chip) --> searchType:chip
+ .../BangleApps/id=antonclk shows app having app.id = antonclk --> searchType:id
+  .../BangleApps/q=clock shows apps having "clock" in app.id or app.description --> searchType:full
+*/
+
+let searchType = ""; // possible values: hash, chip, full, id
+let searchValue = "";
+let hashValue = "";
+if (window.location.hash) {
+  hashValue = decodeURIComponent(window.location.hash.slice(1)).toLowerCase();
+  searchType = "hash";
+}
+if (window.location.search) {
+  var searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.has("id")) {
+    searchValue = searchParams.get("id").toLowerCase();
+    searchType = "id";
+  }
+  if (searchParams.has("q")) {
+    searchValue = searchParams.get("q").toLowerCase();
+    searchType = "full";
+  }
+}
+if (searchType === "hash" && chips.indexOf(hashValue)>=0) {
+  searchType = "chip";
+}
+
 let activeSort = '';
-let currentSearch = activeFilter ? '' : hash;
 
 function refreshFilter(){
   let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
   filtersContainer.querySelector('.active').classList.remove('active');
-  if(activeFilter) filtersContainer.querySelector('.chip[filterid="'+activeFilter+'"]').classList.add('active');
+  if((searchType === "tag" || searchType === "hash+tag") && hashValue) {
+    filtersContainer.querySelector('.chip[filterid="'+hashValue+'"]').classList.add('active');
+  }
   else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
 }
 function refreshSort(){
@@ -354,16 +381,23 @@ function refreshLibrary() {
   let panelbody = document.querySelector("#librarycontainer .panel-body");
   let visibleApps = appJSON.slice(); // clone so we don't mess with the original
 
-  if (activeFilter) {
-    if ( activeFilter == "favourites" ) {
+  if ((searchType === "tag" || searchType === "hash+tag") && hashValue) {
+    if ( hashValue == "favourites" ) {
       visibleApps = visibleApps.filter(app => app.id && (SETTINGS.favourites.filter( e => e == app.id).length));
     } else {
-      visibleApps = visibleApps.filter(app => app.tags && app.tags.split(',').includes(activeFilter));
+      visibleApps = visibleApps.filter(app => app.tags && app.tags.split(',').includes(hashValue));
     }
   }
 
-  if (currentSearch) {
-    visibleApps = visibleApps.filter(app => app.name.toLowerCase().includes(currentSearch) || (app.tags && app.tags.includes(currentSearch)) || app.id.toLowerCase().includes(currentSearch));
+  if ((searchType === "hash" || searchType === "hash+tag") && hashValue) {
+    visibleApps = visibleApps.filter(app => app.name.toLowerCase().includes(hashValue) || (app.tags && app.tags.includes(hashValue)) || app.id.toLowerCase().includes(hashValue));
+  }
+
+  if (searchType === "id" && searchValue) {
+    visibleApps = visibleApps.filter(app => app.id.toLowerCase() == searchValue);
+  }
+  if (searchType === "full" && searchValue) {
+    visibleApps = visibleApps.filter(app => app.name.toLowerCase().includes(searchValue) || app.description.toLowerCase().includes(searchValue));
   }
 
   visibleApps.sort(appSorter);
@@ -811,18 +845,19 @@ let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
 filtersContainer.addEventListener('click', ({ target }) => {
   if (target.classList.contains('active')) return;
 
-  activeFilter = target.getAttribute('filterid') || '';
+  activeFilter = target.getAttribute('filterid') || ''; // TODO
   refreshFilter();
   refreshLibrary();
   window.location.hash = activeFilter;
 });
 
 let librarySearchInput = document.querySelector("#searchform input");
-librarySearchInput.value = currentSearch;
+if (searchType === "hash") librarySearchInput.value = hashValue;
 const searchInputChangedDebounced = debounce(refreshLibrary, 300);
 librarySearchInput.addEventListener('input', evt => {
-  currentSearch = evt.target.value.toLowerCase();
-  window.location.hash = "#"+encodeURIComponent(currentSearch);
+  hashValue = evt.target.value.toLowerCase();
+  searchType = "hash";
+  window.location.hash = "#"+encodeURIComponent(hashValue);
   searchInputChangedDebounced();
 });
 
@@ -833,7 +868,8 @@ sortContainer.addEventListener('click', ({ target }) => {
   activeSort = target.getAttribute('sortid') || '';
   refreshSort();
   refreshLibrary();
-  window.location.hash = activeFilter;
+  if (searchType === "hash")
+    window.location.hash = hashValue;
 });
 
 // =========================================== About
