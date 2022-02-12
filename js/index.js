@@ -366,7 +366,7 @@ let activeSort = '';
 function refreshFilter(){
   let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
   filtersContainer.querySelector('.active').classList.remove('active');
-  if((searchType === "tag" || searchType === "hash+tag") && hashValue) {
+  if((searchType === "tag" || searchType === "chip") && hashValue) {
     filtersContainer.querySelector('.chip[filterid="'+hashValue+'"]').classList.add('active');
   }
   else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
@@ -381,7 +381,7 @@ function refreshLibrary() {
   let panelbody = document.querySelector("#librarycontainer .panel-body");
   let visibleApps = appJSON.slice(); // clone so we don't mess with the original
 
-  if ((searchType === "tag" || searchType === "hash+tag") && hashValue) {
+  if ((searchType === "tag" || searchType === "chip") && hashValue) {
     if ( hashValue == "favourites" ) {
       visibleApps = visibleApps.filter(app => app.id && (SETTINGS.favourites.filter( e => e == app.id).length));
     } else {
@@ -389,7 +389,7 @@ function refreshLibrary() {
     }
   }
 
-  if ((searchType === "hash" || searchType === "hash+tag") && hashValue) {
+  if ((searchType === "hash" || searchType === "chip") && hashValue) {
     visibleApps = visibleApps.filter(app => app.name.toLowerCase().includes(hashValue) || (app.tags && app.tags.includes(hashValue)) || app.id.toLowerCase().includes(hashValue));
   }
 
