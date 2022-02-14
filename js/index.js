@@ -627,16 +627,19 @@ function getAppsToUpdate(options) {
   device.appsInstalled.forEach(appInstalled => {
     let app = appNameToApp(appInstalled.id);
     if (app.version &&
-        app.version != appInstalled.version &&
-        (!options.excludeCustomApps || app.custom===undefined))
+      app.version != appInstalled.version &&
+      (!options.excludeCustomApps || app.custom===undefined)) {
       appsToUpdate.push(app);
+      appInstalled.canUpdate = true;
+    }
   });
   return appsToUpdate;
 }
 
 function refreshMyApps() {
   let panelbody = document.querySelector("#myappscontainer .panel-body");
-  panelbody.innerHTML = device.appsInstalled.map(appInstalled => {
+  getAppsToUpdate(); // this writes canUpdate attributes to apps in device.appsInstalled
+  panelbody.innerHTML = device.appsInstalled.sort(appSorterUpdatesFirst).map(appInstalled => {
     let app = appNameToApp(appInstalled.id);
     return getAppHTML(app, appInstalled, "myapps");
   }).join("");
