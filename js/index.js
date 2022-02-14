@@ -337,6 +337,8 @@ let chips = Array.from(document.querySelectorAll('.filter-nav .chip')).map(chip 
  .../BangleApps/#bluetooth shows apps having "bluetooth" in app.id or app.tag (also selects bluetooth chip) --> searchType:chip
  .../BangleApps/id=antonclk shows app having app.id = antonclk --> searchType:id
   .../BangleApps/q=clock shows apps having "clock" in app.id or app.description --> searchType:full
+
+  the input field does full search as well
 */
 
 let searchType = ""; // possible values: hash, chip, full, id
@@ -852,12 +854,11 @@ filtersContainer.addEventListener('click', ({ target }) => {
 });
 
 let librarySearchInput = document.querySelector("#searchform input");
-if (searchType === "hash") librarySearchInput.value = hashValue;
+if (searchType === "full") librarySearchInput.value = searchValue;
 const searchInputChangedDebounced = debounce(refreshLibrary, 300);
 librarySearchInput.addEventListener('input', evt => {
-  hashValue = evt.target.value.toLowerCase();
-  searchType = "hash";
-  window.location.hash = "#"+encodeURIComponent(hashValue);
+  searchValue = evt.target.value.toLowerCase();
+  searchType = "full";
   searchInputChangedDebounced();
 });
 
