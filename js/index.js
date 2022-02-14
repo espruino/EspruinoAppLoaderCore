@@ -348,8 +348,8 @@ if (window.location.hash) {
   hashValue = decodeURIComponent(window.location.hash.slice(1)).toLowerCase();
   searchType = "hash";
 }
+let searchParams = new URLSearchParams(window.location.search);
 if (window.location.search) {
-  var searchParams = new URLSearchParams(window.location.search);
   if (searchParams.has("id")) {
     searchValue = searchParams.get("id").toLowerCase();
     searchType = "id";
@@ -859,6 +859,11 @@ const searchInputChangedDebounced = debounce(refreshLibrary, 300);
 librarySearchInput.addEventListener('input', evt => {
   searchValue = evt.target.value.toLowerCase();
   searchType = "full";
+  if (searchParams) {
+    searchParams.set("q", searchValue);
+    // Update window URL
+    window.history.replaceState(null, null, "?q=" + searchValue);
+  }
   searchInputChangedDebounced();
 });
 
