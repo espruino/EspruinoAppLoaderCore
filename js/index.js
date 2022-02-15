@@ -307,6 +307,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   if (forInterface=="library") html += `
     <button class="btn btn-link btn-action btn-lg ${!app.custom?"":"d-hide"} btn-favourite" appid="${app.id}" title="Favorite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
+    <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Copy link to app"><i class="icon icon-copy"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
     <button class="btn btn-link btn-action btn-lg ${version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(!appInstalled && !app.custom)?"":"d-hide"}" appid="${app.id}" title="Upload App"><i class="icon icon-upload"></i></button>
@@ -465,6 +466,13 @@ function refreshLibrary() {
         changeAppFavourite(!favourite, app);
       } else if ( button.classList.contains("tile-screenshot")) {
         console.log("Boo")
+      } else if ( icon.classList.contains("icon-copy")) {
+        const url = window.location.origin + window.location.pathname + "?id=" + appid;
+        navigator.clipboard.writeText(url).then(function() {
+          showToast("Link to app " + app.name + " copied to clipboard.","success");
+        }, function(err) {
+          console.error('Could not copy link to clipboard.', err);
+        });
       }
     });
   });
