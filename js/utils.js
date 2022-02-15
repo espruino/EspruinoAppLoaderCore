@@ -143,6 +143,20 @@ function appSorter(a,b) {
   return (a.name==b.name) ? 0 : ((a.name<b.name) ? -1 : 1);
 }
 
+// callback for sorting apps (apps which can be updated on top)
+function appSorterUpdatesFirst(a,b) {
+  if (a.canUpdate || b.canUpdate) {
+    return a.canUpdate ? -1 : 1;
+  }
+  if (a.unknown || b.unknown)
+    return (a.unknown)? 1 : -1;
+  let sa = 0|a.sortorder;
+  let sb = 0|b.sortorder;
+  if (sa<sb) return -1;
+  if (sa>sb) return 1;
+  return (a.name==b.name) ? 0 : ((a.name<b.name) ? -1 : 1);
+}
+
 /* Given 2 JSON structures (1st from apps.json, 2nd from an installed app)
 work out what to display re: versions and if we can update */
 function getVersionInfo(appListing, appInstalled) {
