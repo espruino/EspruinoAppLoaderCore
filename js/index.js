@@ -293,6 +293,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   let githubLink = Const.APP_SOURCECODE_URL ?
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
   let appurl = window.location.origin + window.location.pathname + "#" + encodeURIComponent(app.id);
+  let appCopyIcon = `<button class="link-copy-url btn btn-link btn-action btn-lg" appid="${app.id}" style="position:absolute;top: 56px;left: -36px;" title="Copy link to app"><img src="core/img/copy-icon.png" alt="Copy link to app"/></button>`;
 
   let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile">
   <div class="tile-icon">
@@ -302,6 +303,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     <p class="tile-title text-bold"><a name="${appurl}"></a>${escapeHtml(app.name)} ${versionInfo}</p>
     <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`<br/>${readme}`:""}</p>
     ${githubLink}
+    ${appCopyIcon}
   </div>
   <div class="tile-action">`;
   if (forInterface=="library") html += `
@@ -465,6 +467,13 @@ function refreshLibrary() {
         changeAppFavourite(!favourite, app);
       } else if ( button.classList.contains("tile-screenshot")) {
         console.log("Boo")
+      } else if ( button.classList.contains("link-copy-url")) {
+        const url = window.location.origin + window.location.pathname + "?id=" + appid;
+        navigator.clipboard.writeText(url).then(function() {
+          showToast("Link to app " + app.name + " copied to clipboard.","success");
+        }, function(err) {
+          console.error('Could not copy link to clipboard.', err);
+        });
       }
     });
   });
