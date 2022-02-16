@@ -293,6 +293,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   let githubLink = Const.APP_SOURCECODE_URL ?
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
   let appurl = window.location.origin + window.location.pathname + "#" + encodeURIComponent(app.id);
+  let appCopyIcon = `<button class="link-copy-url btn btn-link btn-action btn-lg" appid="${app.id}" style="position:absolute;top: 56px;left: -36px;" title="Copy link to app"><img src="core/img/copy-icon.png" alt="Copy link to app"/></button>`;
 
   let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile">
   <div class="tile-icon">
@@ -302,12 +303,12 @@ function getAppHTML(app, appInstalled, forInterface) {
     <p class="tile-title text-bold"><a name="${appurl}"></a>${escapeHtml(app.name)} ${versionInfo}</p>
     <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`<br/>${readme}`:""}</p>
     ${githubLink}
+    ${appCopyIcon}
   </div>
   <div class="tile-action">`;
   if (forInterface=="library") html += `
     <button class="btn btn-link btn-action btn-lg ${!app.custom?"":"d-hide"} btn-favourite" appid="${app.id}" title="Favorite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
-    <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Copy link to app"><i class="icon icon-copy"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
     <button class="btn btn-link btn-action btn-lg ${version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(!appInstalled && !app.custom)?"":"d-hide"}" appid="${app.id}" title="Upload App"><i class="icon icon-upload"></i></button>
@@ -466,7 +467,7 @@ function refreshLibrary() {
         changeAppFavourite(!favourite, app);
       } else if ( button.classList.contains("tile-screenshot")) {
         console.log("Boo")
-      } else if ( icon.classList.contains("icon-copy")) {
+      } else if ( button.classList.contains("link-copy-url")) {
         const url = window.location.origin + window.location.pathname + "?id=" + appid;
         navigator.clipboard.writeText(url).then(function() {
           showToast("Link to app " + app.name + " copied to clipboard.","success");
