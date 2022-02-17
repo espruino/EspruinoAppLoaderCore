@@ -50,6 +50,10 @@ function appJSONLoadedHandler() {
 }
 
 httpGet(Const.APPS_JSON_FILE).then(apps=>{
+  if (apps.startsWith("---")) {
+    showToast(Const.APPS_JSON_FILE+" still contains Jekyll markup","warning");
+    throw new Error("Not JSON");
+  }
   try {
     appJSON = JSON.parse(apps);
   } catch(e) {
@@ -65,7 +69,7 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
   console.log("Attempting search - SLOW");
   let appsURL = window.location.origin+window.location.pathname+"apps";
   httpGet(appsURL).then(htmlText=>{
-    showToast(Const.APPS_JSON_FILE+" doesn't exist, scanning 'apps' folder for apps","warning");
+    showToast(Const.APPS_JSON_FILE+" can't be read, scanning 'apps' folder for apps","warning");
     var parser = new DOMParser();
     var xmlDoc = parser.parseFromString(htmlText,"text/html");
     appJSON = [];
