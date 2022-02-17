@@ -56,7 +56,6 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
   // finally update what we're showing
   promise.then(function() {
     refreshLibrary();
-    refreshFilter();
   });
 });
 
@@ -337,70 +336,84 @@ let chips = Array.from(document.querySelectorAll('.filter-nav .chip')).map(chip 
  .../BangleApps/#blue shows apps having "blue" in app.id or app.tag --> searchType:hash
  .../BangleApps/#bluetooth shows apps having "bluetooth" in app.id or app.tag (also selects bluetooth chip) --> searchType:chip
  .../BangleApps/id=antonclk shows app having app.id = antonclk --> searchType:id
-  .../BangleApps/q=clock shows apps having "clock" in app.id or app.description --> searchType:full
+ .../BangleApps/q=clock shows apps having "clock" in app.id or app.description --> searchType:full
+ .../BangleApps/c=tool shows anything with keyword 'tool' (like cliking the 'Tools' chip) --> searchType:chip
 
   the input field does full search as well
 */
 
-let searchType = ""; // possible values: hash, chip, full, id
-let searchValue = "";
-let hashValue = "";
-if (window.location.hash) {
-  hashValue = decodeURIComponent(window.location.hash.slice(1)).toLowerCase();
-  searchType = "hash";
-}
-let searchParams = new URLSearchParams(window.location.search);
-if (window.location.search) {
-  if (searchParams.has("id")) {
-    searchValue = searchParams.get("id").toLowerCase();
-    searchType = "id";
-  }
-  if (searchParams.has("q")) {
-    searchValue = searchParams.get("q").toLowerCase();
-    searchType = "full";
-  }
-}
-if (searchType === "hash" && chips.indexOf(hashValue)>=0) {
-  searchType = "chip";
-}
 
 let activeSort = '';
 
-function refreshFilter(){
-  let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
-  filtersContainer.querySelector('.active').classList.remove('active');
-  if(hashValue) {
-    filtersContainer.querySelector('.chip[filterid="'+hashValue+'"]').classList.add('active');
-  }
-  else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
-}
+// Update the sort state to match the current sort value
 function refreshSort(){
   let sortContainer = document.querySelector("#librarycontainer .sort-nav");
   sortContainer.querySelector('.active').classList.remove('active');
   if(activeSort) sortContainer.querySelector('.chip[sortid="'+activeSort+'"]').classList.add('active');
   else sortContainer.querySelector('.chip[sortid]').classList.add('active');
 }
+// Refill the library with apps
 function refreshLibrary() {
   let panelbody = document.querySelector("#librarycontainer .panel-body");
-  let visibleApps = appJSON.slice(); // clone so we don't mess with the original
+  // Work out what we should be filtering, based on the URL
+  let searchType = ""; // possible values: hash, chip, full, id
+  let searchValue = ""; // the actual value to search for
 
-  if ((searchType === "tag" || searchType === "chip") && hashValue) {
-    if ( hashValue == "favourites" ) {
-      visibleApps = visibleApps.filter(app => app.id && (SETTINGS.favourites.filter( e => e == app.id).length));
-    } else {
-      visibleApps = visibleApps.filter(app => app.tags && app.tags.split(',').includes(hashValue));
+  if (window.location.hash) {
+    searchValue = decodeURIComponent(window.location.hash.slice(1)).toLowerCase();
+    searchType = "hash";
+  }
+  let searchParams = new URLSearchParams(window.location.search);
+  if (window.location.search) {
+    if (searchParams.has("id")) {
+      searchValue = searchParams.get("id").toLowerCase();
+      searchType = "id";
+    }
+    if (searchParams.has("q")) {
+      searchValue = searchParams.get("q").toLowerCase();
+      searchType = "full";
+    }
+    if (searchParams.has("c")) {
+      searchValue = searchParams.get("c").toLowerCase();
+      searchType = "chip";
     }
   }
-
-  if ((searchType === "hash" || searchType === "chip") && hashValue) {
-    visibleApps = visibleApps.filter(app => app.name.toLowerCase().includes(hashValue) || (app.tags && app.tags.includes(hashValue)) || app.id.toLowerCase().includes(hashValue));
-  }
-
-  if (searchType === "id" && searchValue) {
-    visibleApps = visibleApps.filter(app => app.id.toLowerCase() == searchValue);
-  }
-  if (searchType === "full" && searchValue) {
-    visibleApps = visibleApps.filter(app => app.name.toLowerCase().includes(searchValue) || app.description.toLowerCase().includes(searchValue));
+  if (searchType === "hash" && chips.indexOf(searchValue)>=0)
+    searchType = "chip";
+  // Update the 'chips' to match the current window location
+  let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
+  filtersContainer.querySelector('.active').classList.remove('active');
+  if(searchType == "chip") {
+    var hashFilter = filtersContainer.querySelector('.chip[filterid="'+searchValue+'"]');
+    if (hashFilter) hashFilter.classList.add('active');
+  } else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
+  // update the search box value
+  if (searchType === "full")
+    librarySearchInput.value = searchValue;
+  else
+    librarySearchInput.value = "";
+  // Now filter according to what was set
+  let visibleApps = appJSON.slice(); // clone so we don't mess with the original
+  if (searchValue) {
+    if (searchType === "chip") {
+      if ( searchValue == "favourites" ) {
+        visibleApps = visibleApps.filter(app => app.id && (SETTINGS.favourites.filter( e => e == app.id).length));
+      } else {
+        visibleApps = visibleApps.filter(app => app.tags && app.tags.split(',').includes(searchValue));
+      }
+    } else if (searchType === "hash") {
+      visibleApps = visibleApps.filter(app =>
+        app.name.toLowerCase().includes(searchValue) ||
+        (app.tags && app.tags.includes(searchValue)) ||
+        app.id.toLowerCase().includes(searchValue));
+    } else if (searchType === "id") {
+      visibleApps = visibleApps.filter(app => app.id.toLowerCase() == searchValue);
+    } else if (searchType === "full" && searchValue) {
+      visibleApps = visibleApps.filter(app =>
+        app.name.toLowerCase().includes(searchValue) ||
+        app.description.toLowerCase().includes(searchValue) ||
+        (app.tags && app.tags.includes(searchValue)));
+    }
   }
 
   visibleApps.sort(appSorter);
@@ -464,15 +477,6 @@ function refreshLibrary() {
       } else if ( button.classList.contains("btn-favourite")) {
         let favourite = SETTINGS.favourites.find(e => e == app.id);
         changeAppFavourite(!favourite, app);
-      } else if ( button.classList.contains("tile-screenshot")) {
-        console.log("Boo")
-      } else if ( button.classList.contains("link-copy-url")) {
-        const url = window.location.origin + window.location.pathname + "?id=" + appid;
-        navigator.clipboard.writeText(url).then(function() {
-          showToast("Link to app " + app.name + " copied to clipboard.","success");
-        }, function(err) {
-          console.error('Could not copy link to clipboard.', err);
-        });
       }
     });
   });
@@ -481,6 +485,21 @@ function refreshLibrary() {
       let icon = event.currentTarget;
       let appid = icon.getAttribute("appid");
       showScreenshots(appid);
+    });
+  });
+  htmlToArray(panelbody.getElementsByClassName("link-copy-url")).forEach(link => {
+    link.addEventListener("click",event => {
+      event.preventDefault();
+      let link = event.currentTarget;
+      let appid = link.getAttribute("appid");
+      let app = appNameToApp(appid);
+      if (!app) throw new Error("App "+appid+" not found");
+      const url = window.location.origin + window.location.pathname + "?id=" + appid;
+      navigator.clipboard.writeText(url).then(function() {
+        showToast("Link to app " + app.name + " copied to clipboard.","success");
+      }, function(err) {
+        console.error('Could not copy link to clipboard.', err);
+      });
     });
   });
 }
@@ -501,8 +520,6 @@ function showScreenshots(appId) {
   </div>`,{ok:true},false);
 }
 
-refreshFilter();
-refreshLibrary();
 // =========================================== My Apps
 
 function uploadApp(app) {
@@ -855,27 +872,23 @@ connectMyDeviceBtn.addEventListener("click", () => {
 });
 Comms.watchConnectionChange(handleConnectionChange);
 
+// Handle the 'chips'
 let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
 filtersContainer.addEventListener('click', ({ target }) => {
   if (target.classList.contains('active')) return;
 
-  hashValue = target.getAttribute('filterid') || '';
-  refreshFilter();
+  var filterName = target.getAttribute('filterid') || '';
+  // Update window URL
+  window.history.replaceState(null, null, "?c=" + filterName);
   refreshLibrary();
-  window.location.hash = hashValue;
 });
 
 let librarySearchInput = document.querySelector("#searchform input");
-if (searchType === "full") librarySearchInput.value = searchValue;
 const searchInputChangedDebounced = debounce(refreshLibrary, 300);
 librarySearchInput.addEventListener('input', evt => {
-  searchValue = evt.target.value.toLowerCase();
-  searchType = "full";
-  if (searchParams) {
-    searchParams.set("q", searchValue);
-    // Update window URL
-    window.history.replaceState(null, null, "?q=" + searchValue);
-  }
+  var searchValue = evt.target.value.toLowerCase();
+  // Update window URL
+  window.history.replaceState(null, null, "?q=" + searchValue);
   searchInputChangedDebounced();
 });
 
@@ -886,7 +899,6 @@ sortContainer.addEventListener('click', ({ target }) => {
   activeSort = target.getAttribute('sortid') || '';
   refreshSort();
   refreshLibrary();
-  window.location.hash = hashValue;
 });
 
 // =========================================== About
