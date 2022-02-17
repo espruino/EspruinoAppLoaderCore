@@ -155,7 +155,7 @@ function iframeSetup(iframe, messageHandler) {
       type: "init",
       data: device
     },"*");
-  }, false);  
+  }, false);
 }
 
 /** Create window for app customiser */
@@ -292,8 +292,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   let favourite = SETTINGS.favourites.find(e => e == app.id);
   let githubLink = Const.APP_SOURCECODE_URL ?
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
-  let appurl = window.location.origin + window.location.pathname + "#" + encodeURIComponent(app.id);
-  let appCopyIcon = `<button class="link-copy-url btn btn-link btn-action btn-lg" appid="${app.id}" style="position:absolute;top: 56px;left: -36px;" title="Copy link to app"><img src="core/img/copy-icon.png" alt="Copy link to app"/></button>`;
+  let appurl = window.location.origin + window.location.pathname + "?id=" + encodeURIComponent(app.id);
 
   let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile">
   <div class="tile-icon">
@@ -303,7 +302,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     <p class="tile-title text-bold"><a name="${appurl}"></a>${escapeHtml(app.name)} ${versionInfo}</p>
     <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`<br/>${readme}`:""}</p>
     ${githubLink}
-    ${appCopyIcon}
+    <a href="${appurl}" class="link-copy-url" appid="${app.id}" title="Copy link to app" style="position:absolute;top: 56px;left: -24px;"><img src="core/img/copy-icon.png" alt="Copy link to app"/></a>
   </div>
   <div class="tile-action">`;
   if (forInterface=="library") html += `
