@@ -33,17 +33,7 @@ let device = {
 };*/
 var LANGUAGE = undefined;
 
-
-httpGet(Const.APPS_JSON_FILE).then(apps=>{
-  try {
-    appJSON = JSON.parse(apps);
-  } catch(e) {
-    console.log(e);
-    showToast("App List Corrupted","error");
-  }
-  // fix up the JSON
-  if (appJSON.length && appJSON[appJSON.length-1]===null)
-    appJSON.pop(); // remove trailing null added to make auto-generation of apps.json easier
+function appJSONLoadedHandler() {
   appJSON.forEach(app => {
     if (app.screenshots)
       app.screenshots.forEach(s => {
@@ -56,6 +46,49 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
   // finally update what we're showing
   promise.then(function() {
     refreshLibrary();
+  });
+}
+
+httpGet(Const.APPS_JSON_FILE).then(apps=>{
+  try {
+    appJSON = JSON.parse(apps);
+  } catch(e) {
+    console.log(e);
+    showToast("App List Corrupted","error");
+  }
+  // fix up the JSON
+  if (appJSON.length && appJSON[appJSON.length-1]===null)
+    appJSON.pop(); // remove trailing null added to make auto-generation of apps.json easier
+  appJSONLoadedHandler();
+}).catch(error=>{
+  console.warn("APPS FILE NOT FOUND "+Const.APPS_JSON_FILE);
+  console.log("Attempting search - SLOW");
+  let appsURL = window.location.origin+window.location.pathname+"apps";
+  httpGet(appsURL).then(htmlText=>{
+    showToast(Const.APPS_JSON_FILE+" doesn't exist, scanning 'apps' folder for apps","warning");
+    var parser = new DOMParser();
+    var xmlDoc = parser.parseFromString(htmlText,"text/html");
+    appJSON = [];
+    var promises = [];
+    htmlToArray(xmlDoc.querySelectorAll("a")).forEach(a=>{
+      var href = a.getAttribute("href");
+      if (!href || href.startsWith("/") || href.startsWith("_") || !href.endsWith("/")) return;
+      var metadataURL = appsURL+"/"+href+"metadata.json";
+      console.log(" - Loading "+metadataURL);
+      promises.push(httpGet(metadataURL).then(metadataText=>{
+        try {
+          appJSON.push(JSON.parse(metadataText));
+        } catch(e) {
+          console.log(e);
+          showToast("App "+href+" metadata.json Corrupted","error");
+        }
+      }).catch(err=>{
+        console.warn("App folder "+href+" has no metadata");
+      }));
+    });
+    Promise.all(promises).then(appJSONLoadedHandler);
+  }).catch(err=>{
+    showToast(Const.APPS_JSON_FILE+" doesn't exist and cannot do directory listing on this server","error");
   });
 });
 
