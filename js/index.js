@@ -749,12 +749,13 @@ function getInstalledApps(refresh) {
       const deviceInfoElem = document.getElementById("more-deviceinfo");
       if (deviceInfoElem) {
         deviceInfoElem.style.display = "inherit";
-        const e = `<table class="table"><tbody>
+        const deviceInfoContentElem = document.getElementById("more-deviceinfo-content");
+        deviceInfoContentElem.innerHTML = `
+<table class="table"><tbody>
   <tr><td><b>Device Type</b></td><td>${device.id}</td></tr>
   <tr><td><b>Firmware Version</b></td><td>${device.version}</td></tr>
+  <tr><td><b>Apps Installed</b></td><td>${(device.appsInstalled||[]).map(a=>a.id).join(", ")}</td></tr>
 </tbody></table>`;
-        const deviceInfoContentElem = document.getElementById("more-deviceinfo-content");
-        deviceInfoContentElem.innerHTML = e;
       }
     })
     .then(() => handleConnectionChange(true))
