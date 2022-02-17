@@ -370,7 +370,7 @@ let activeSort = '';
 function refreshFilter(){
   let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
   filtersContainer.querySelector('.active').classList.remove('active');
-  if((searchType === "tag" || searchType === "chip") && hashValue) {
+  if(hashValue) {
     filtersContainer.querySelector('.chip[filterid="'+hashValue+'"]').classList.add('active');
   }
   else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
@@ -886,8 +886,7 @@ sortContainer.addEventListener('click', ({ target }) => {
   activeSort = target.getAttribute('sortid') || '';
   refreshSort();
   refreshLibrary();
-  if (searchType === "hash")
-    window.location.hash = hashValue;
+  window.location.hash = hashValue;
 });
 
 // =========================================== About
