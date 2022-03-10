@@ -242,7 +242,9 @@ function handleCustomApp(appTemplate) {
         });
         console.log("Received custom app", app);
         modal.remove();
-        checkDependencies(app)
+
+        getInstalledApps()
+          .then(()=>checkDependencies(app))
           .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
           .then((appInfo)=>{
             Progress.hide({sticky:true});
