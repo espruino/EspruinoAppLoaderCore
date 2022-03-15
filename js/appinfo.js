@@ -101,6 +101,26 @@ function parseJS(storageFile, options, app) {
 }
 
 var AppInfo = {
+  /* Get a list of commands needed to upload the file */
+  getFileUploadCommands : (filename, data) => {
+    var cmd = "";
+    // write code in chunks, in case it is too big to fit in RAM (fix #157)
+    let CHUNKSIZE = 2048;
+    var cmd = `\x10require('Storage').write(${JSON.stringify(filename)},${toJS(data.substr(0,CHUNKSIZE))},0,${data.length});`;
+    for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
+      cmd += `\n\x10require('Storage').write(${JSON.stringify(filename)},${toJS(data.substr(i,CHUNKSIZE))},${i});`;
+    return cmd;
+  },
+  /* Get a list of commands needed to upload a storage file */
+  getStorageFileUploadCommands : (filename, data) => {
+    var cmd = "";
+    // write code in chunks, in case it is too big to fit in RAM (fix #157)
+    let CHUNKSIZE = 2048;
+    var cmd = `\x10f=require('Storage').open(${JSON.stringify(filename)},'w');f.write(${toJS(data.substr(0,CHUNKSIZE))},0,${data.length});`;
+    for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
+      cmd += `\n\x10f.write(${toJS(data.substr(i,CHUNKSIZE))},${i});`;
+    return cmd;
+  },
   /* Get files needed for app.
      options = {
         fileGetter : callback for getting URL,
@@ -160,12 +180,7 @@ var AppInfo = {
               js = js.slice(0,-1);
             storageFile.cmd = `\x10require('Storage').write(${JSON.stringify(storageFile.name)},${js});`;
           } else {
-            let code = storageFile.content;
-            // write code in chunks, in case it is too big to fit in RAM (fix #157)
-            let CHUNKSIZE = 2048;
-            storageFile.cmd = `\x10require('Storage').write(${JSON.stringify(storageFile.name)},${toJS(code.substr(0,CHUNKSIZE))},0,${code.length});`;
-            for (let i=CHUNKSIZE;i<code.length;i+=CHUNKSIZE)
-              storageFile.cmd += `\n\x10require('Storage').write(${JSON.stringify(storageFile.name)},${toJS(code.substr(i,CHUNKSIZE))},${i});`;
+            storageFile.cmd = AppInfo.getFileUploadCommands(storageFile.name, storageFile.content);
           }
           // if we're not supposed to overwrite this file... this gets set
           // automatically for data files that are loaded
