@@ -62,10 +62,10 @@ const Comms = {
     In the absence of bracket counting/etc we'll just use the \x10
     char we use to signify echo(0) for a line */
     cmds = cmds.split("\x10").filter(l=>l!="").map(l=>"\x10"+l.trim());
-    
+
     return new Promise( (resolve, reject) => {
       // Function to upload a single line and wait for an 'OK' response
-      function uploadCmd(resolve, reject) {
+      function uploadCmd() {
         if (!cmds.length) return resolve();
         let cmd = cmds.shift();
         Progress.show({
@@ -108,7 +108,7 @@ const Comms = {
         // to deal with the response. If OK we call uploadCmd to upload the next block
         Puck.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}Bluetooth.println("OK")\n`,responseHandler, true /* wait for a newline*/);
       }
-    
+
       uploadCmd()
     });
   },
