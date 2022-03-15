@@ -62,52 +62,55 @@ const Comms = {
     In the absence of bracket counting/etc we'll just use the \x10
     char we use to signify echo(0) for a line */
     cmds = cmds.split("\x10").filter(l=>l!="").map(l=>"\x10"+l.trim());
+    
+    return new Promise( (resolve, reject) => {
+      // Function to upload a single line and wait for an 'OK' response
+      function uploadCmd(resolve, reject) {
+        if (!cmds.length) return resolve();
+        let cmd = cmds.shift();
+        Progress.show({
+          min:currentBytes / maxBytes,
+          max:(currentBytes+cmd.length) / maxBytes});
+        currentBytes += cmd.length;
+        function responseHandler(result) {
+          console.log("<COMMS> Response: ",JSON.stringify(result));
+          if (result) {
+            result=result.trim();
+            if (result=="OK") {
+              uploadCmd(); // all as expected - send next
+              return;
+            }
+            if (result.startsWith("{") && result.endsWith("}")) {
+              console.log("<COMMS> JSON response received (Gadgetbridge?) - ignoring...");
+              /* Here we have to poke around inside the Puck.js library internals. Basically
+              it just gave us the first line in the input buffer, but there may have been more.
+              We take the next line (or undefined) and call ourselves again to handle that.
 
-    // Function to upload a single line and wait for an 'OK' response
-    function uploadCmd(finishedCallback) {
-      if (!cmds.length) return finishedCallback();
-      let cmd = cmds.shift();
-      Progress.show({
-        min:currentBytes / maxBytes,
-        max:(currentBytes+cmd.length) / maxBytes});
-      currentBytes += cmd.length;
-      function responseHandler(result) {
-        console.log("<COMMS> Response: ",JSON.stringify(result));
-        if (result) {
-          result=result.trim();
-          if (result=="OK") {
-            uploadCmd(finishedCallback); // all as expected - send next
-            return;
+              Just in case, delay a little to give our previous command time to finish.*/
+              setTimeout(function() {
+                let connection = Puck.getConnection();
+                let newLineIdx = connection.received.indexOf("\n");
+                let l = undefined;
+                if (newLineIdx>=0) {
+                  l = connection.received.substr(0,newLineIdx);
+                  connection.received = connection.received.substr(newLineIdx+1);
+                }
+                responseHandler(l);
+              }, 500);
+              return;
+            }
           }
-          if (result.startsWith("{") && result.endsWith("}")) {
-            console.log("<COMMS> JSON response received (Gadgetbridge?) - ignoring...");
-            /* Here we have to poke around inside the Puck.js library internals. Basically
-            it just gave us the first line in the input buffer, but there may have been more.
-            We take the next line (or undefined) and call ourselves again to handle that.
-
-            Just in case, delay a little to give our previous command time to finish.*/
-            setTimeout(function() {
-              var connection = Puck.getConnection();
-              var newLineIdx = connection.received.indexOf("\n");
-              var l = undefined;
-              if (newLineIdx>=0) {
-                l = connection.received.substr(0,newLineIdx);
-                connection.received = connection.received.substr(newLineIdx+1);
-              }
-               responseHandler(l);
-            }, 500);
-            return;
-          }
+          // Not an response we expected!
+          Progress.hide({sticky:true});
+          return reject("Unexpected response "+(result?JSON.stringify(result):"<empty>"));
         }
-        // Not an response we expected!
-        Progress.hide({sticky:true});
-        return reject("Unexpected response "+(result?JSON.stringify(result):"<empty>"));
+        // Actually write the command with a 'print OK' at the end, and use responseHandler
+        // to deal with the response. If OK we call uploadCmd to upload the next block
+        Puck.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}Bluetooth.println("OK")\n`,responseHandler, true /* wait for a newline*/);
       }
-      // Actually write the command with a 'print OK' at the end, and use responseHandler
-      // to deal with the response. If OK we call uploadCmd to upload the next block
-      Puck.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}Bluetooth.println("OK")\n`,responseHandler, true /* wait for a newline*/);
-    }
-    return new Promise( resolve => uploadCmd(resolve) );
+    
+      uploadCmd()
+    });
   },
   // Upload an app
   uploadApp : (app,options) => {
@@ -233,7 +236,7 @@ const Comms = {
   getAppInfo : app => {
     return Comms.write(`\x10Bluetooth.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`).
       then(appJSON=>{
-      var app;
+        let app;
         try {
           app = JSON.parse(appJSON);
         } catch (e) {
@@ -367,7 +370,7 @@ const Comms = {
     return new Promise((resolve,reject) => {
       Puck.write("\x03",(result) => {
         if (result===null) return reject("");
-        var args = "";
+        let args = "";
         if (options && options.sf!==undefined) args=`undefined,{sf:${options.sf}}`;
         //use encodeURIComponent to serialize octal sequence of append files
         Puck.eval(`require("Storage").list(${args}).map(encodeURIComponent)`, (files,err) => {
@@ -390,23 +393,6 @@ const Comms = {
         //we should loop and read chunks one by one.
         //Use btoa for binary content
         Puck.eval(`btoa(require("Storage").read(decodeURIComponent("${name}"))))`, (content,err) => {
-          if (content===null) return reject(err || "");
-          resolve(atob(content));
-        });
-      });
-    });
-  },
-  // Write a non-storagefile file
-  readFile : (file) => {
-    return new Promise((resolve,reject) => {
-    //encode name to avoid serialization issue due to octal sequence
-      const name = encodeURIComponent(file);
-      Puck.write("\x03",(result) => {
-        if (result===null) return reject("");
-        //TODO: big files will not fit in RAM.
-        //we should loop and read chunks one by one.
-        //Use btoa for binary content
-        Puck.eval(`btoa(require("Storage").write(decodeURIComponent("${name}"))))`, (content,err) => {
           if (content===null) return reject(err || "");
           resolve(atob(content));
         });
