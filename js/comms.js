@@ -382,27 +382,10 @@ const Comms = {
       });
     });
   },
-  // Read a non-storagefile file
-  readFile : (file) => {
+  // Execute some code, and read back the block of text it outputs (first line is the size in bytes for progress)
+  readTextBlock : (code) => {
     return new Promise((resolve,reject) => {
-    //encode name to avoid serialization issue due to octal sequence
-      const name = encodeURIComponent(file);
-      Puck.write("\x03",(result) => {
-        if (result===null) return reject("");
-        //TODO: big files will not fit in RAM.
-        //we should loop and read chunks one by one.
-        //Use btoa for binary content
-        Puck.eval(`btoa(require("Storage").read(decodeURIComponent("${name}"))))`, (content,err) => {
-          if (content===null) return reject(err || "");
-          resolve(atob(content));
-        });
-      });
-    });
-  },
-  // Read a storagefile
-  readStorageFile : (filename) => { // StorageFiles are different to normal storage entries
-    return new Promise((resolve,reject) => {
-    // Use "\xFF" to signal end of file (can't occur in files anyway)
+      // Use "\xFF" to signal end of file (can't occur in StorageFiles anyway)
       let fileContent = "";
       let fileSize = undefined;
       let connection = Puck.getConnection();
@@ -419,7 +402,7 @@ const Comms = {
           let newLineIdx = fileContent.indexOf("\n");
           if (newLineIdx>=0) {
             fileSize = parseInt(fileContent.substr(0,newLineIdx));
-            console.log("<COMMS> readStorageFile size is "+fileSize);
+            console.log("<COMMS> size is "+fileSize);
             fileContent = fileContent.substr(newLineIdx+1);
           }
         } else {
@@ -432,17 +415,35 @@ const Comms = {
           resolve(fileContent);
         }
       };
-      console.log(`<COMMS> readStorageFile ${JSON.stringify(filename)}`);
-      connection.write(`\x03\x10(function() {
+      connection.write(code,() => {
+        console.log(`<COMMS> readTextBlock read started...`);
+      });
+    });
+  },
+  // Read a non-storagefile file
+  readFile : (filename) => {
+    Progress.show({title:`Reading ${JSON.stringify(filename)}`,percent:0});
+    console.log(`<COMMS> readFile ${JSON.stringify(filename)}`);
+    const CHUNKSIZE = 384;
+    return Comms.readTextBlock(`\x03\x10(function() {
+var s = require("Storage").read(${JSON.stringify(filename)});
+Bluetooth.println(((s.length+2)/3)<<2); // estimate file size
+for (var i=0;i<s.length;i+=${CHUNKSIZE}) Bluetooth.print(btoa(s.substr(i,${CHUNKSIZE})));
+Bluetooth.print("\xFF");
+})()\n`).then(text => {
+      return atob(text);
+    });
+  },
+  // Read a storagefile
+  readStorageFile : (filename) => { // StorageFiles are different to normal storage entries
+    Progress.show({title:`Reading ${JSON.stringify(filename)}`,percent:0});
+    console.log(`<COMMS> readStorageFile ${JSON.stringify(filename)}`);
+    return Comms.readTextBlock(`\x03\x10(function() {
       var f = require("Storage").open(${JSON.stringify(filename)},"r");
       Bluetooth.println(f.getLength());
       var l = f.readLine();
       while (l!==undefined) { Bluetooth.print(l); l = f.readLine(); }
       Bluetooth.print("\xFF");
-    })()\n`,() => {
-        Progress.show({title:`Reading ${JSON.stringify(filename)}`,percent:0});
-        console.log(`<COMMS> StorageFile read started...`);
-      });
-    });
+    })()\n`);
   }
 };
