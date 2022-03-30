@@ -100,7 +100,7 @@ const Comms = {
               return;
             }
           }
-          // Not an response we expected!
+          // Not a response we expected!
           Progress.hide({sticky:true});
           return reject("Unexpected response "+(result?JSON.stringify(result):"<empty>"));
         }
@@ -155,6 +155,7 @@ const Comms = {
           let f = fileContents.shift();
           console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content)}`);
           Comms.uploadCommandList(f.cmd, currentBytes, maxBytes).then(() => doUploadFiles());
+          currentBytes += f.cmd.length;
         }
         // Start the upload
         function doUpload() {
