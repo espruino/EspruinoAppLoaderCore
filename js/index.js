@@ -726,6 +726,7 @@ function getAppsToUpdate(options) {
   let appsToUpdate = [];
   device.appsInstalled.forEach(appInstalled => {
     let app = appNameToApp(appInstalled.id);
+    appInstalled.canUpdate = false;
     if (app.version &&
       app.version != appInstalled.version &&
       (!options.excludeCustomApps || app.custom===undefined)) {
@@ -738,7 +739,7 @@ function getAppsToUpdate(options) {
 
 function refreshMyApps() {
   let panelbody = document.querySelector("#myappscontainer .panel-body");
-  getAppsToUpdate(); // this writes canUpdate attributes to apps in device.appsInstalled
+  let appsToUpdate = getAppsToUpdate(); // this writes canUpdate attributes to apps in device.appsInstalled
   panelbody.innerHTML = device.appsInstalled.sort(appSorterUpdatesFirst).map(appInstalled => {
     let app = appNameToApp(appInstalled.id);
     return getAppHTML(app, appInstalled, "myapps");
@@ -760,15 +761,21 @@ function refreshMyApps() {
       }
     });
   });
-  let appsToUpdate = getAppsToUpdate();
+  let nonCustomAppsToUpdate = getAppsToUpdate({excludeCustomApps:true});
   let tab = document.querySelector("#tab-myappscontainer a");
   let updateApps = document.querySelector("#myappscontainer .updateapps");
-  if (appsToUpdate.length) {
-    updateApps.innerHTML = `Update ${appsToUpdate.length} apps`;
+  if (nonCustomAppsToUpdate.length) {
+    updateApps.innerHTML = `Update ${nonCustomAppsToUpdate.length} apps`;
     updateApps.classList.remove("hidden");
-    tab.setAttribute("data-badge", `${device.appsInstalled.length} ⬆${appsToUpdate.length}`);
+    updateApps.classList.remove("disabled");
+    tab.setAttribute("data-badge", `${device.appsInstalled.length} ⬆${nonCustomAppsToUpdate.length}`);
+  } else if (appsToUpdate.length) {
+    updateApps.classList.add("disabled");
+    updateApps.classList.remove("hidden");
+    updateApps.innerHTML = `${appsToUpdate.length} custom app needs manual update`;
   } else {
     updateApps.classList.add("hidden");
+    updateApps.classList.remove("disabled");
     tab.setAttribute("data-badge", device.appsInstalled.length);
   }
 }
