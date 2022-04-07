@@ -121,16 +121,16 @@ const CODEPAGE_CONVERSIONS = {
 /// Convert any character that cannot be displayed by Espruino's built in fonts
 /// originally https://github.com/espruino/EspruinoAppLoaderCore/pull/11/files
 function convertStringToISOLatin(originalStr) {
- 	var chars = originalStr.split('');
- 	for (var i = 0; i < chars.length; i++) {
- 		var ch = chars[i];
- 		if (CODEPAGE_CONVERSIONS[ch])
- 			chars[i] = CODEPAGE_CONVERSIONS[ch];
- 	}
+  var chars = originalStr.split('');
+  for (var i = 0; i < chars.length; i++) {
+    var ch = chars[i];
+    if (CODEPAGE_CONVERSIONS[ch])
+      chars[i] = CODEPAGE_CONVERSIONS[ch];
+  }
   var translatedStr = chars.join('');
   if (translatedStr != originalStr)
     console.log("Remapped text: "+originalStr+" -> "+translatedStr);
- 	return translatedStr;
+  return translatedStr;
 }
 
 function escapeHtml(text) {
