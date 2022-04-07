@@ -74,35 +74,46 @@ const Comms = {
         currentBytes += cmd.length;
         function responseHandler(result) {
           console.log("<COMMS> Response: ",JSON.stringify(result));
-          if (result) {
+          var ignore = false;
+          if (result!==undefined) {
             result=result.trim();
             if (result=="OK") {
               uploadCmd(); // all as expected - send next
               return;
             }
+            
             if (result.startsWith("{") && result.endsWith("}")) {
               console.log("<COMMS> JSON response received (Gadgetbridge?) - ignoring...");
-              /* Here we have to poke around inside the Puck.js library internals. Basically
-              it just gave us the first line in the input buffer, but there may have been more.
-              We take the next line (or undefined) and call ourselves again to handle that.
-
-              Just in case, delay a little to give our previous command time to finish.*/
-              setTimeout(function() {
-                let connection = Puck.getConnection();
-                let newLineIdx = connection.received.indexOf("\n");
-                let l = undefined;
-                if (newLineIdx>=0) {
-                  l = connection.received.substr(0,newLineIdx);
-                  connection.received = connection.received.substr(newLineIdx+1);
-                }
-                responseHandler(l);
-              }, 500);
-              return;
+              ignore = true;
+            } else if (result=="") {
+              console.log("<COMMS> Blank line received - ignoring...");
+              ignore = true;
             }
+          } else { // result===undefined
+            console.log("<COMMS> No response received - ignoring...");
+            ignore = true;
           }
-          // Not a response we expected!
-          Progress.hide({sticky:true});
-          return reject("Unexpected response "+(result?JSON.stringify(result):"<empty>"));
+          if (ignore) {
+            /* Here we have to poke around inside the Puck.js library internals. Basically
+            it just gave us the first line in the input buffer, but there may have been more.
+            We take the next line (or undefined) and call ourselves again to handle that.            
+            Just in case, delay a little to give our previous command time to finish.*/
+          
+            setTimeout(function() {
+              let connection = Puck.getConnection();
+              let newLineIdx = connection.received.indexOf("\n");
+              let l = undefined;
+              if (newLineIdx>=0) {
+                l = connection.received.substr(0,newLineIdx);
+                connection.received = connection.received.substr(newLineIdx+1);
+              }
+              responseHandler(l);
+            }, 500);
+          } else {
+            // Not a response we expected and we're not ignoring!
+            Progress.hide({sticky:true});
+            return reject("Unexpected response "+(result?JSON.stringify(result):"<empty>"));
+          }
         }
         // Actually write the command with a 'print OK' at the end, and use responseHandler
         // to deal with the response. If OK we call uploadCmd to upload the next block

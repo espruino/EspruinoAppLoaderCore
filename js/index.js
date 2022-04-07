@@ -246,12 +246,12 @@ function handleCustomApp(appTemplate) {
         getInstalledApps()
           .then(()=>checkDependencies(app))
           .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
-          .then((appInfo)=>{
+          .then(()=>{
             Progress.hide({sticky:true});
-            resolve(appInfo);
-          }).catch(e => {
+            showToast(app.name + ' Uploaded!', 'success');
+          }).catch(err => {
             Progress.hide({sticky:true});
-            reject(e);
+            showToast('Upload failed, ' + err, 'error');
           });
       }
     }, false);
