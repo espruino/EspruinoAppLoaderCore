@@ -64,6 +64,75 @@ let DEVICEINFO = [
   }*/
 ];
 
+/* When a char is not in Espruino's codepage, try and use
+these conversions */
+const CODEPAGE_CONVERSIONS = {
+  "æ":"e",
+  "å":"a",
+  "ą":"a",
+  "ā":"a",
+  "č":"c",
+  "ć":"c",
+  "ě":"e",
+  "ę":"e",
+  "ē":"e",
+  "ģ":"g",
+  "í":"i",
+  "ī":"i",
+  "ķ":"k",
+  "ļ":"l",
+  "ł":"l",
+  "ń":"n",
+  "ņ":"n",
+  "ő":"o",
+  "ó":"o",
+  "ø":"o",
+  "ř":"r",
+  "ś":"s",
+  "š":"s",
+  "ū":"u",
+  "ż":"z",
+  "ź":"z",
+  "ž":"z",
+  "Ą":"A",
+  "Ā":"A",
+  "Č":"C",
+  "Ć":"C",
+  "Ě":"E",
+  "Ę":"E",
+  "Ē":"E",
+  "Ģ":"G",
+  "Ķ":"K",
+  "Ļ":"L",
+  "Ł":"L",
+  "Ń":"N",
+  "Ņ":"N",
+  "Ő":"O",
+  "Ó":"O",
+  "Ř":"R",
+  "Ś":"S",
+  "Š":"S",
+  "Ū":"U",
+  "Ż":"Z",
+  "Ź":"Z",
+  "Ž":"Z",
+ };
+
+/// Convert any character that cannot be displayed by Espruino's built in fonts
+/// originally https://github.com/espruino/EspruinoAppLoaderCore/pull/11/files
+function convertStringToISOLatin(originalStr) {
+ 	var chars = originalStr.split('');
+ 	for (var i = 0; i < chars.length; i++) {
+ 		var ch = chars[i];
+ 		if (CODEPAGE_CONVERSIONS[ch])
+ 			chars[i] = CODEPAGE_CONVERSIONS[ch];
+ 	}
+  var translatedStr = chars.join('');
+  if (translatedStr != originalStr)
+    console.log("Remapped text: "+originalStr+" -> "+translatedStr);
+ 	return translatedStr;
+}
+
 function escapeHtml(text) {
   let map = {
     '&': '&amp;',

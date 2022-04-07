@@ -58,6 +58,9 @@ function translateJS(options, app, code) {
         // Unhandled translation...
         //console.log("Untranslated ",tokenString);
       }
+      // remap any chars that we don't think we can display in Espruino's
+      // built in fonts.
+      tokenString = convertStringToISOLatin(tokenString);
     }
     outjs += previousString+tokenString;
     lastIdx = tok.endIdx;
