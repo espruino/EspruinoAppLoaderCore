@@ -4,6 +4,9 @@ if ("undefined"!=typeof module) {
   heatshrink = require("../lib/heatshrink.js");
 }
 
+// How many bytes of code to we attempt to upload in one go?
+const CHUNKSIZE = 1024;
+
 // Converts a string into most efficient way to send to Espruino (either json, base64, or compressed base64)
 function toJS(txt) {
   let isBinary = false;
@@ -108,7 +111,6 @@ var AppInfo = {
   getFileUploadCommands : (filename, data) => {
     var cmd = "";
     // write code in chunks, in case it is too big to fit in RAM (fix #157)
-    let CHUNKSIZE = 2048;
     var cmd = `\x10require('Storage').write(${JSON.stringify(filename)},${toJS(data.substr(0,CHUNKSIZE))},0,${data.length});`;
     for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
       cmd += `\n\x10require('Storage').write(${JSON.stringify(filename)},${toJS(data.substr(i,CHUNKSIZE))},${i});`;
@@ -118,7 +120,6 @@ var AppInfo = {
   getStorageFileUploadCommands : (filename, data) => {
     var cmd = "";
     // write code in chunks, in case it is too big to fit in RAM (fix #157)
-    let CHUNKSIZE = 2048;
     var cmd = `\x10f=require('Storage').open(${JSON.stringify(filename)},'w');f.write(${toJS(data.substr(0,CHUNKSIZE))},0,${data.length});`;
     for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
       cmd += `\n\x10f.write(${toJS(data.substr(i,CHUNKSIZE))},${i});`;
