@@ -248,10 +248,10 @@ function handleCustomApp(appTemplate) {
           .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
           .then(()=>{
             Progress.hide({sticky:true});
-            showToast(app.name + ' Uploaded!', 'success');
+            resolve();
           }).catch(err => {
             Progress.hide({sticky:true});
-            showToast('Upload failed, ' + err, 'error');
+            reject('Upload failed, ' + err, 'error');
           });
       }
     }, false);
