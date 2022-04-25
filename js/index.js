@@ -435,10 +435,23 @@ function refreshLibrary() {
   let visibleApps = appJSON.slice(); // clone so we don't mess with the original
   if (searchValue) {
     if (searchType === "chip") {
-      if ( searchValue == "favourites" ) {
-        visibleApps = visibleApps.filter(app => app.id && (SETTINGS.favourites.filter( e => e == app.id).length));
+      if (searchValue == "favourites") {
+        visibleApps = visibleApps.filter(app => app.id && (SETTINGS.favourites.filter(e => e == app.id).length));
       } else {
-        visibleApps = visibleApps.filter(app => app.tags && app.tags.split(',').includes(searchValue));
+        // Some chips represent a metadata "type" element:
+        // - the "Clocks" chip must show only apps with "type": "clock"
+        // - the "Widgets" chip must show only apps with "type": "widget"
+        // and so on.
+        // If the type is NOT in the array below then the search will be tag-based instead
+        // of type-based.
+        const supportedMetadataTypes = ["clock", "widget", "launch", "textinput", "ram"];
+        visibleApps = visibleApps.filter(app => {
+          if (app.type && supportedMetadataTypes.includes(app.type.toLowerCase())) {
+            return app.type.toLowerCase() == searchValue.toLowerCase();
+          } else {
+            return app.tags && app.tags.split(',').includes(searchValue);
+          }
+        });
       }
     } else if (searchType === "hash") {
       visibleApps = visibleApps.filter(app =>
