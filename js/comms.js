@@ -46,8 +46,12 @@ const Comms = {
         console.log(`<COMMS> reset: no response. waiting ${tries}...`);
         Puck.write("\x03",rstHandler);
       } else {
-        console.log(`<COMMS> reset: complete.`);
-        setTimeout(resolve,250);
+        console.log(`<COMMS> reset: rebooted - sending commands to clear out any boot code`);
+        // see https://github.com/espruino/BangleApps/issues/1759
+        Puck.write("\x10clearInterval();clearWatch();global.Bangle&&Bangle.removeAllListeners();E.removeAllListeners();NRF.removeAllListeners();\n",function() {
+          console.log(`<COMMS> reset: complete.`);
+          setTimeout(resolve,250);
+        });
       }
     });
   }),
