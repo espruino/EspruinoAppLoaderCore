@@ -98,11 +98,19 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
 
 httpGet("appdates.csv").then(csv=>{
   document.querySelector(".sort-nav").classList.remove("hidden");
+  // Firefox Date.parse doesn't understand our appdates.csv format
+  function parseDate(datestamp) {
+    // example: "2022-01-13 09:21:33 +0000"
+    const [date, time, tz] = datestamp.split(" "),
+      [year, month, day] = date.split("-"),
+      [hours, minutes, seconds] = time.split(":");
+    return new Date(year, month-1, day, hours, minutes, seconds);
+  }
   csv.split("\n").forEach(line=>{
     let l = line.split(",");
     appSortInfo[l[0]] = {
-      created : Date.parse(l[1]),
-      modified : Date.parse(l[2])
+      created : parseDate(l[1]),
+      modified : parseDate(l[2]),
     };
   });
 }).catch(err=>{
@@ -325,7 +333,11 @@ function showTab(tabname) {
 function getAppHTML(app, appInstalled, forInterface) {
   let version = getVersionInfo(app, appInstalled);
   let versionInfo = version.text;
-  if (versionInfo) versionInfo = " <small>("+versionInfo+")</small>";
+  let versionTitle = '';
+  if (app.id in appSortInfo && "object"==typeof appSortInfo[app.id].modified) {
+    versionTitle = `title="Last update: ${(appSortInfo[app.id].modified.toLocaleDateString())}"`;
+  }
+  if (versionInfo) versionInfo = ` <small ${versionTitle}>(${versionInfo})</small>`;
   let readme = `<a class="c-hand" onclick="showReadme('${app.id}')">Read more...</a>`;
   let favourite = SETTINGS.favourites.find(e => e == app.id);
   let githubLink = Const.APP_SOURCECODE_URL ?
