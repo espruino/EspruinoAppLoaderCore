@@ -451,7 +451,7 @@ Bluetooth.println(((s.length+2)/3)<<2); // estimate file size
 for (var i=0;i<s.length;i+=${CHUNKSIZE}) Bluetooth.print(btoa(s.substr(i,${CHUNKSIZE})));
 Bluetooth.print("\xFF");
 })()\n`).then(text => {
-      return atob(text);
+      return atobSafe(text);
     });
   },
   // Read a storagefile
