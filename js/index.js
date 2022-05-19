@@ -747,16 +747,13 @@ function showLoadingIndicator(id) {
 }
 
 function getAppsToUpdate(options) {
-  options = options||{};  // excludeCustomApps
+  options = options || {}; // excludeCustomApps
   let appsToUpdate = [];
   device.appsInstalled.forEach(appInstalled => {
     let app = appNameToApp(appInstalled.id);
-    appInstalled.canUpdate = false;
-    if (app.version &&
-      app.version != appInstalled.version &&
-      (!options.excludeCustomApps || app.custom===undefined)) {
+    appInstalled.canUpdate = isAppUpdateable(appInstalled, app) && (!options.excludeCustomApps || app.custom === undefined);
+    if (appInstalled.canUpdate) {
       appsToUpdate.push(app);
-      appInstalled.canUpdate = true;
     }
   });
   return appsToUpdate;
