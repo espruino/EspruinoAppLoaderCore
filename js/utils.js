@@ -242,7 +242,7 @@ function getVersionInfo(appListing, appInstalled) {
       versionText = clicky("v"+appListing.version);
   } else {
     versionText = (appInstalled.version ? (clicky("v"+appInstalled.version)) : "Unknown version");
-    if (appListing.version != appInstalled.version) {
+    if (isAppUpdateable(appInstalled, appListing)) {
       if (appListing.version) {
         versionText += ", latest "+clicky("v"+appListing.version);
         canUpdate = true;
@@ -253,6 +253,10 @@ function getVersionInfo(appListing, appInstalled) {
     text : versionText,
     canUpdate : canUpdate
   }
+}
+
+function isAppUpdateable(appInstalled, appListing) {
+  return appInstalled.version && appListing.version && versionLess(appInstalled.version, appListing.version);
 }
 
 function versionLess(a,b) {
