@@ -404,7 +404,8 @@ function refreshSort(){
   else sortContainer.querySelector('.chip[sortid]').classList.add('active');
 }
 // Refill the library with apps
-function refreshLibrary() {
+function refreshLibrary(options) {
+  options = options||{};
   let panelbody = document.querySelector("#librarycontainer .panel-body");
   // Work out what we should be filtering, based on the URL
   let searchType = ""; // possible values: hash, chip, full, id
@@ -439,10 +440,12 @@ function refreshLibrary() {
     if (hashFilter) hashFilter.classList.add('active');
   } else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
   // update the search box value
-  if (searchType === "full")
-    librarySearchInput.value = searchValue;
-  else
-    librarySearchInput.value = "";
+  if (!options.dontChangeSearchBox) {
+    if (searchType === "full") 
+      librarySearchInput.value = searchValue;
+    else
+      librarySearchInput.value = "";
+  }
   // Now filter according to what was set
   let visibleApps = appJSON.slice(); // clone so we don't mess with the original
   if (searchValue) {
@@ -952,7 +955,9 @@ filtersContainer.addEventListener('click', ({ target }) => {
 });
 
 let librarySearchInput = document.querySelector("#searchform input");
-const searchInputChangedDebounced = debounce(refreshLibrary, 300);
+const searchInputChangedDebounced = debounce(function() {
+  refreshLibrary({dontChangeSearchBox:true});
+}, 300);
 librarySearchInput.addEventListener('input', evt => {
   var searchValue = evt.target.value.toLowerCase();
   // Update window URL
