@@ -160,7 +160,7 @@ function getAppDescription(app) {
 }
 
 /** Setup IFRAME callbacks for handleCustomApp and handleInterface */
-function iframeSetup(iframe, messageHandler) {
+function iframeSetup(iframe, interfaceType, messageHandler) {
   // when iframe is loaded, call 'onInit' with info about the device
   iframe.addEventListener("load", function() {
     console.log("IFRAME loaded");
@@ -197,6 +197,7 @@ function iframeSetup(iframe, messageHandler) {
     // send the 'init' message
     iframe.contentWindow.postMessage({
       type: "init",
+      expectedInterface: interfaceType,
       data: device
     },"*");
   }, false);
@@ -235,7 +236,7 @@ function handleCustomApp(appTemplate) {
     });
 
     let iframe = modal.getElementsByTagName("iframe")[0];
-    iframeSetup(iframe, function(event) {
+    iframeSetup(iframe, "customize.js", function(event) {
       let msg = event.data;
       if (msg.type=="app") {
         let appFiles = msg.data;
@@ -294,7 +295,7 @@ function handleAppInterface(app) {
       });
     });
     let iframe = modal.getElementsByTagName("iframe")[0];
-    iframeSetup(iframe, function(event) {
+    iframeSetup(iframe, "interface.js", function(event) {
       // nothing custom needed in here
     });
     iframe.src = `apps/${app.id}/${app.interface}`;
@@ -441,7 +442,7 @@ function refreshLibrary(options) {
   } else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
   // update the search box value
   if (!options.dontChangeSearchBox) {
-    if (searchType === "full") 
+    if (searchType === "full")
       librarySearchInput.value = searchValue;
     else
       librarySearchInput.value = "";
