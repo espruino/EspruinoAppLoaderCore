@@ -1,6 +1,8 @@
 EspruinoAppLoaderCore
 =====================
 
+[![Build Status](https://github.com/espruino/EspruinoAppLoaderCore/actions/workflows/nodejs.yml/badge.svg)](https://github.com/espruino/EspruinoAppLoaderCore/actions/workflows/nodejs.yml)
+
 This is the code use for both:
 
 * [Bangle.js](https://banglejs.com/) App Loader : https://github.com/espruino/BangleApps
