@@ -92,6 +92,9 @@ function parseJS(storageFile, options, app) {
     let builtinModules = ["Flash","Storage","heatshrink","tensorflow","locale","notify"];
     if (options && options.device && options.device.id=="BANGLEJS2")
       builtinModules.push("crypto");
+    // add any modules that were defined for this app (no need to search for them!)
+    builtinModules = builtinModules.concat(app.storage.map(f=>f.name).filter(name => name && !name.includes(".")));
+    // TODO: we could look at installed app files and add any modules defined in those?
     return Espruino.transform(js, {
       SET_TIME_ON_WRITE : false,
       PRETOKENISE : options.settings.pretokenise,
