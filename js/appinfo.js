@@ -51,7 +51,7 @@ function translateJS(options, app, code) {
       let language = options.language;
       // strip out formatting at beginning/end
       let match = tok.value.match(/^([.<>\- /\n/]*)([^<>!?]*?)([.<>!?\- /\n/]*)$/);
-      let textToTranslate = match[2];
+      let textToTranslate = match ? match[2] : tok.value;
       // now translate
       if (language[app.id] && language[app.id][textToTranslate]) {
         tokenString = JSON.stringify(match[1]+language[app.id][textToTranslate]+match[3]);
