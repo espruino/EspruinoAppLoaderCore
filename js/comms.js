@@ -220,13 +220,18 @@ const Comms = {
           cmd = `\x10Bluetooth.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};Bluetooth.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data})+",")});Bluetooth.println(${finalJS})\n`;
         Puck.write(cmd, (appListStr,err) => {
           Progress.hide({sticky:true});
-          if (appListStr=="") {
+          // we may have received more than one line - we're looking for an array (starting with '[')
+          var lines = appListStr ? appListStr.split("\n").map(l=>l.trim()) : [];
+          var appListJSON = lines.find(l => l[0]=="[");
+          // check to see if we got our data
+          if (!appListJSON) {
             return reject("No response from device. Is 'Programmable' set to 'Off'?");
           }
+          // now try and parse
           let info = {};
           let appList;
           try {
-            appList = JSON.parse(appListStr);
+            appList = JSON.parse(appListJSON);
             // unpack the last 3 elements which are board info (See finalJS above)
             info.currentTime = appList.pop()*1000; // time in ms
             info.version = appList.pop();
