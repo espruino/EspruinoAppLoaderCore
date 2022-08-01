@@ -123,9 +123,17 @@ var AppInfo = {
   getStorageFileUploadCommands : (filename, data) => {
     var cmd = "";
     // write code in chunks, in case it is too big to fit in RAM (fix #157)
-    var cmd = `\x10f=require('Storage').open(${JSON.stringify(filename)},'w');f.write(${toJS(data.substr(0,CHUNKSIZE))},0,${data.length});`;
+    function getWriteData(offset) {
+      var js = toJS(data.substr(offset,CHUNKSIZE));
+      // fix https://github.com/espruino/BangleApps/issues/2068
+      // If we give f.write `[65,66,67]` it writes it as `65,66,67` rather than `"ABC"`
+      // so we must ensure we force it to a string first...
+      if (js[0]!='"') js = "E.toString("+js+")";
+      return js;
+    }
+    var cmd = `\x10f=require('Storage').open(${JSON.stringify(filename)},'w');f.write(${getWriteData(0)},0,${data.length});`;
     for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
-      cmd += `\n\x10f.write(${toJS(data.substr(i,CHUNKSIZE))},${i});`;
+      cmd += `\n\x10f.write(${getWriteData(i)},${i});`;
     return cmd;
   },
   /* Get files needed for app.
