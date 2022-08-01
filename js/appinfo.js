@@ -131,9 +131,9 @@ var AppInfo = {
       if (js[0]!='"') js = "E.toString("+js+")";
       return js;
     }
-    var cmd = `\x10f=require('Storage').open(${JSON.stringify(filename)},'w');f.write(${getWriteData(0)},0,${data.length});`;
+    var cmd = `\x10f=require('Storage').open(${JSON.stringify(filename)},'w');f.write(${getWriteData(0)});`;
     for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
-      cmd += `\n\x10f.write(${getWriteData(i)},${i});`;
+      cmd += `\n\x10f.write(${getWriteData(i)});`;
     return cmd;
   },
   /* Get files needed for app.
