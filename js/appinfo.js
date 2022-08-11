@@ -8,7 +8,11 @@ if ("undefined"!=typeof module) {
 const CHUNKSIZE = 1024;
 
 // Converts a string into most efficient way to send to Espruino (either json, base64, or compressed base64)
-function toJS(txt) {
+function toJS(txt, options) {
+  /* options = {
+    noHeatshrink : bool // don't allow heatshrink - this ensures the result will always be a String (Heatshrink makes an ArrayBuffer)
+  }*/
+  options = options||{};
   let isBinary = false;
   for (let i=0;i<txt.length;i++) {
     let ch = txt.charCodeAt(i);
@@ -17,7 +21,7 @@ function toJS(txt) {
   let json = JSON.stringify(txt);
   let b64 = "atob("+JSON.stringify(Espruino.Core.Utils.btoa(txt))+")";
   let js = (isBinary || (b64.length < json.length)) ? b64 : json;
-  if (txt.length>64 && typeof heatshrink !== "undefined") {
+  if (txt.length>64 && typeof heatshrink !== "undefined" && !options.noHeatshrink) {
     let ua = new Uint8Array(txt.length);
     for (let i=0;i<txt.length;i++)  ua[i] = txt.charCodeAt(i);
     let c = heatshrink.compress(ua);
@@ -124,12 +128,11 @@ var AppInfo = {
     var cmd = "";
     // write code in chunks, in case it is too big to fit in RAM (fix #157)
     function getWriteData(offset) {
-      var js = toJS(data.substr(offset,CHUNKSIZE));
-      // fix https://github.com/espruino/BangleApps/issues/2068
+      return toJS(data.substr(offset,CHUNKSIZE), {noHeatshrink:true});
+      // noHeatshrink:true fixes https://github.com/espruino/BangleApps/issues/2068
       // If we give f.write `[65,66,67]` it writes it as `65,66,67` rather than `"ABC"`
-      // so we must ensure we force it to a string first...
-      if (js[0]!='"') js = "E.toString("+js+")";
-      return js;
+      // so we must ensure we always return a String
+      // We could use E.toString but https://github.com/espruino/BangleApps/issues/2068#issuecomment-1211717749
     }
     var cmd = `\x10f=require('Storage').open(${JSON.stringify(filename)},'w');f.write(${getWriteData(0)});`;
     for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
