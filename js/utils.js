@@ -116,7 +116,7 @@ const CODEPAGE_CONVERSIONS = {
   "Ż":"Z",
   "Ź":"Z",
   "Ž":"Z",
- };
+};
 
 /// Convert any character that cannot be displayed by Espruino's built in fonts
 /// originally https://github.com/espruino/EspruinoAppLoaderCore/pull/11/files
@@ -226,6 +226,41 @@ function appSorterUpdatesFirst(a,b) {
   return (a.name==b.name) ? 0 : ((a.name<b.name) ? -1 : 1);
 }
 
+/* This gives us a numeric relevance value based on how well the search string matches,
+based on some relatively unscientific heuristics.
+
+searchRelevance("my clock", "lock") == 15
+searchRelevance("a lock widget", "lock") == 21
+
+ */
+function searchRelevance(value, searchString) {
+  value = value.toLowerCase().trim();
+  // compare the full string
+  let relevance = 0;
+  if (value==searchString) // if a complete match, +20
+    relevance += 20;
+  else {
+    if (value.includes(searchString)) // the less of the string matched, lower relevance
+      relevance += Math.max(0, 10 - (value.length - searchString.length));
+    if (value.startsWith(searchString))  // add a bit of the string starts with it
+      relevance += 5;
+  }
+  // compare string parts
+  searchString.split(/\s/).forEach(search=>{
+    value.split(/\s/).forEach(v=>{
+      if (v==search)
+        relevance += 20; // if a complete match, +20
+      else {
+        if (v.includes(search)) // the less of the string matched, lower relevance 
+          relevance += Math.max(0, 10 - (v.length - search.length));
+        if (v.startsWith(search))  // add a bit of the string starts with it
+          relevance += 5;
+      }           
+    });
+  });
+  return relevance;
+}
+
 /* Given 2 JSON structures (1st from apps.json, 2nd from an installed app)
 work out what to display re: versions and if we can update */
 function getVersionInfo(appListing, appInstalled) {
@@ -287,12 +322,12 @@ function atobSafe(input) {
   // This code was written by Tyler Akins and has been placed in the
   // public domain.  It would be nice if you left this header intact.
   // Base64 code from Tyler Akins -- http://rumkin.com
-  var keyStr = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  const keyStr = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
-  var output = '';
-  var chr1, chr2, chr3;
-  var enc1, enc2, enc3, enc4;
-  var i = 0;
+  let output = '';
+  let chr1, chr2, chr3;
+  let enc1, enc2, enc3, enc4;
+  let i = 0;
   // remove all characters that are not A-Z, a-z, 0-9, +, /, or =
   input = input.replace(/[^A-Za-z0-9+/=]/g, '');
   do {

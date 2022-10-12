@@ -437,7 +437,7 @@ function refreshLibrary(options) {
   let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
   filtersContainer.querySelector('.active').classList.remove('active');
   if(searchType == "chip") {
-    var hashFilter = filtersContainer.querySelector('.chip[filterid="'+searchValue+'"]');
+    let hashFilter = filtersContainer.querySelector('.chip[filterid="'+searchValue+'"]');
     if (hashFilter) hashFilter.classList.add('active');
   } else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
   // update the search box value
@@ -451,35 +451,6 @@ function refreshLibrary(options) {
   let visibleApps = appJSON.slice(); // clone so we don't mess with the original
   let sortedByRelevance = false;
   if (searchValue) {    
-    /* This gives us a relevance value based on how well the search string matches,
-    based on some relatively unscientific heuristics */
-    function searchRelevance(value, searchString) {
-      value = value.toLowerCase().trim();
-      // compare the full string
-      var relevance = 0;
-      if (value==searchString) // if a complete match, +20
-        relevance += 20;
-      else {
-        if (value.includes(searchString)) // the less of the string matched, lower relevance
-          relevance += Math.max(0, 10 - (value.length - searchString.length));
-        if (value.startsWith(searchString))  // add a bit of the string starts with it
-          relevance += 5;
-      }
-      // compare string parts
-      searchString.split(/\s/).forEach(search=>{
-        value.split(/\s/).forEach(v=>{
-          if (v==search)
-            relevance += 20; // if a complete match, +20
-          else {
-            if (v.includes(search)) // the less of the string matched, lower relevance 
-              relevance += Math.max(0, 10 - (v.length - search.length));
-            if (v.startsWith(search))  // add a bit of the string starts with it
-              relevance += 5;
-          }           
-        });
-      });
-      return relevance;
-    }
     // Now do our search, put the values in searchResult
     let searchResult; // array of { app:app, relevance:number }    
     if (searchType === "chip") {
