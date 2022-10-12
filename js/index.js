@@ -449,10 +449,45 @@ function refreshLibrary(options) {
   }
   // Now filter according to what was set
   let visibleApps = appJSON.slice(); // clone so we don't mess with the original
-  if (searchValue) {
+  let sortedByRelevance = false;
+  if (searchValue) {    
+    /* This gives us a relevance value based on how well the search string matches,
+    based on some relatively unscientific heuristics */
+    function searchRelevance(value, searchString) {
+      value = value.toLowerCase().trim();
+      // compare the full string
+      var relevance = 0;
+      if (value==searchString) // if a complete match, +20
+        relevance += 20;
+      else {
+        if (value.includes(searchString)) // the less of the string matched, lower relevance
+          relevance += Math.max(0, 10 - (value.length - searchString.length));
+        if (value.startsWith(searchString))  // add a bit of the string starts with it
+          relevance += 5;
+      }
+      // compare string parts
+      searchString.split(/\s/).forEach(search=>{
+        value.split(/\s/).forEach(v=>{
+          if (v==search)
+            relevance += 20; // if a complete match, +20
+          else {
+            if (v.includes(search)) // the less of the string matched, lower relevance 
+              relevance += Math.max(0, 10 - (v.length - search.length));
+            if (v.startsWith(search))  // add a bit of the string starts with it
+              relevance += 5;
+          }           
+        });
+      });
+      return relevance;
+    }
+    // Now do our search, put the values in searchResult
+    let searchResult; // array of { app:app, relevance:number }    
     if (searchType === "chip") {
       if (searchValue == "favourites") {
-        visibleApps = visibleApps.filter(app => app.id && (SETTINGS.favourites.filter(e => e == app.id).length));
+        searchResult = visibleApps.map(app => ({ 
+          app : app,
+          relevance : app.id?SETTINGS.favourites.filter(e => e == app.id).length:0
+        }));
       } else {
         // Some chips represent a metadata "type" element:
         // - the "Clocks" chip must show only apps with "type": "clock"
@@ -461,30 +496,47 @@ function refreshLibrary(options) {
         // If the type is NOT in the array below then the search will be tag-based instead
         // of type-based.
         const supportedMetadataTypes = ["clock", "widget", "launch", "textinput", "ram"];
-        visibleApps = visibleApps.filter(app => {
+        searchResult = visibleApps.map(app => {
           if (app.type && supportedMetadataTypes.includes(app.type.toLowerCase())) {
-            return app.type.toLowerCase() == searchValue.toLowerCase();
+            return { app:app, relevance:app.type.toLowerCase() == searchValue.toLowerCase() ? 1 : 0 }
           } else {
-            return app.tags && app.tags.split(',').includes(searchValue);
+            return { app:app, relevance: (app.tags && app.tags.split(',').includes(searchValue)) ? 1 : 0 };
           }
         });
       }
     } else if (searchType === "hash") {
-      visibleApps = visibleApps.filter(app =>
-        app.name.toLowerCase().includes(searchValue) ||
-        (app.tags && app.tags.includes(searchValue)) ||
-        app.id.toLowerCase().includes(searchValue));
+      sortedByRelevance = true;
+      searchResult = visibleApps.map(app => ({
+        app : app,
+        relevance :  
+          searchRelevance(app.id, searchValue) +
+          searchRelevance(app.name, searchValue) +
+          (app.tags && app.tags.includes(searchValue))
+        }));
     } else if (searchType === "id") {
-      visibleApps = visibleApps.filter(app => app.id.toLowerCase() == searchValue);
+      searchResult = visibleApps.map(app => ({
+        app:app, 
+        relevance: (app.id.toLowerCase() == searchValue) ? 1 : 0
+      }));
     } else if (searchType === "full" && searchValue) {
-      visibleApps = visibleApps.filter(app =>
-        app.name.toLowerCase().includes(searchValue) ||
-        app.description.toLowerCase().includes(searchValue) ||
-        (app.tags && app.tags.includes(searchValue)));
+      sortedByRelevance = true;
+      searchResult = visibleApps.map(app => ({
+        app:app,
+        relevance:
+          searchRelevance(app.id, searchValue) +
+          searchRelevance(app.name, searchValue)*(app.shortName?1:2) +
+          (app.shortName?searchRelevance(app.shortName, searchValue):0) + // if we have shortname, match on that as well
+          searchRelevance(app.description, searchValue)/5 + // match on description, but pay less attention
+          ((app.tags && app.tags.includes(searchValue))?10:0)
+        }));
     }
-  }
-
-  visibleApps.sort(appSorter);
+    // Now finally, filter, sort based on relevance and set the search result
+    visibleApps = searchResult.filter(a => a.relevance>0).sort((a,b) => b.relevance - a.relevance).map(a => a.app);
+  } 
+  // if not otherwise sorted, use 'sort by' option
+  if (!sortedByRelevance)
+    visibleApps.sort(appSorter);
+    
   if (activeSort) {
     if (activeSort=="created" || activeSort=="modified") {
       visibleApps = visibleApps.sort((a,b) =>
