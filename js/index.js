@@ -4,7 +4,9 @@ let files = []; // list of files on the Espruimo Device
 const DEFAULTSETTINGS = {
   pretokenise : true,
   favourites : ["boot","launch","setting"],
-  language : ""
+  language : "",
+  bleCompat: false, // 20 byte MTU BLE Compatibility mode
+  sendUsageStats: false  // send usage stats to banglejs.com
 };
 var SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
@@ -450,12 +452,12 @@ function refreshLibrary(options) {
   // Now filter according to what was set
   let visibleApps = appJSON.slice(); // clone so we don't mess with the original
   let sortedByRelevance = false;
-  if (searchValue) {    
+  if (searchValue) {
     // Now do our search, put the values in searchResult
-    let searchResult; // array of { app:app, relevance:number }    
+    let searchResult; // array of { app:app, relevance:number }
     if (searchType === "chip") {
       if (searchValue == "favourites") {
-        searchResult = visibleApps.map(app => ({ 
+        searchResult = visibleApps.map(app => ({
           app : app,
           relevance : app.id?SETTINGS.favourites.filter(e => e == app.id).length:0
         }));
@@ -479,14 +481,14 @@ function refreshLibrary(options) {
       sortedByRelevance = true;
       searchResult = visibleApps.map(app => ({
         app : app,
-        relevance :  
+        relevance :
           searchRelevance(app.id, searchValue) +
           searchRelevance(app.name, searchValue) +
           (app.tags && app.tags.includes(searchValue))
         }));
     } else if (searchType === "id") {
       searchResult = visibleApps.map(app => ({
-        app:app, 
+        app:app,
         relevance: (app.id.toLowerCase() == searchValue) ? 1 : 0
       }));
     } else if (searchType === "full" && searchValue) {
@@ -503,11 +505,11 @@ function refreshLibrary(options) {
     }
     // Now finally, filter, sort based on relevance and set the search result
     visibleApps = searchResult.filter(a => a.relevance>0).sort((a,b) => b.relevance - a.relevance).map(a => a.app);
-  } 
+  }
   // if not otherwise sorted, use 'sort by' option
   if (!sortedByRelevance)
     visibleApps.sort(appSorter);
-    
+
   if (activeSort) {
     if (activeSort=="created" || activeSort=="modified") {
       visibleApps = visibleApps.sort((a,b) =>
@@ -787,6 +789,10 @@ function getAppsToUpdate(options) {
 }
 
 function refreshMyApps() {
+  // if we've got a callback, call it first
+  if ("function"==typeof onRefreshMyApps)
+    onRefreshMyApps();
+  // Now update...
   let panelbody = document.querySelector("#myappscontainer .panel-body");
   let appsToUpdate = getAppsToUpdate(); // this writes canUpdate attributes to apps in device.appsInstalled
   panelbody.innerHTML = device.appsInstalled.sort(appSorterUpdatesFirst).map(appInstalled => {
@@ -838,6 +844,7 @@ function getInstalledApps(refresh) {
   // Get apps and files
   return Comms.getDeviceInfo()
     .then(info => {
+      device.uid = info.uid;
       device.id = info.id;
       device.version = info.version;
       device.appsInstalled = info.apps;
