@@ -98,8 +98,7 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
   });
 });
 
-httpGet("appdates.csv").then(csv=>{
-  document.querySelector(".sort-nav").classList.remove("hidden");
+if (Const.APP_DATES_CSV) httpGet(Const.APP_DATES_CSV).then(csv=>{
   // Firefox Date.parse doesn't understand our appdates.csv format
   function parseDate(datestamp) {
     // example: "2022-01-13 09:21:33 +0000"
@@ -110,11 +109,41 @@ httpGet("appdates.csv").then(csv=>{
   }
   csv.split("\n").forEach(line=>{
     let l = line.split(",");
-    appSortInfo[l[0]] = {
-      created : parseDate(l[1]),
-      modified : parseDate(l[2]),
-    };
+    if (l.length<3) return;
+    let key = l[0];
+    if (appSortInfo[key]==undefined)
+      appSortInfo[key] = {};
+    appSortInfo[key].created = parseDate(l[1]);
+    appSortInfo[key].modified = parseDate(l[2]);
   });
+  document.querySelector(".sort-nav").classList.remove("hidden");
+  document.querySelector(".sort-nav label[sortid='created']").classList.remove("hidden");
+  document.querySelector(".sort-nav label[sortid='modified']").classList.remove("hidden");
+}).catch(err=>{
+  console.log("No recent.csv - app sort disabled");
+});
+
+if (Const.APP_USAGE_JSON) httpGet(Const.APP_USAGE_JSON).then(jsonTxt=>{
+  var json;
+  try {
+    json = JSON.parse(jsonTxt);
+  } catch (e) {
+    console.warn("App usage JSON at "+Const.APP_USAGE_JSON+" couldn't be parsed");
+    return;
+  }
+  Object.keys(json.fav).forEach(key =>{
+    if (appSortInfo[key]==undefined)
+      appSortInfo[key] = {};
+    appSortInfo[key].favourites = json.fav[key];
+  });
+  Object.keys(json.app).forEach(key =>{
+    if (appSortInfo[key]==undefined)
+      appSortInfo[key] = {};
+    appSortInfo[key].installs = json.app[key];
+  });
+  document.querySelector(".sort-nav").classList.remove("hidden");
+  document.querySelector(".sort-nav label[sortid='installs']").classList.remove("hidden");
+  document.querySelector(".sort-nav label[sortid='favourites']").classList.remove("hidden");
 }).catch(err=>{
   console.log("No recent.csv - app sort disabled");
 });
@@ -337,8 +366,20 @@ function getAppHTML(app, appInstalled, forInterface) {
   let version = getVersionInfo(app, appInstalled);
   let versionInfo = version.text;
   let versionTitle = '';
-  if (app.id in appSortInfo && "object"==typeof appSortInfo[app.id].modified) {
-    versionTitle = `title="Last update: ${(appSortInfo[app.id].modified.toLocaleDateString())}"`;
+  let appFavourites;
+  if (app.id in appSortInfo) {
+    var infoTxt = [];
+    var info = appSortInfo[app.id];
+    if ("object"==typeof info.modified)
+      infoTxt.push(`Last update: ${(info.modified.toLocaleDateString())}`);
+    if (info.installs)
+      infoTxt.push(`${info.installs} reported installs`);
+    if (info.favourites) {
+      infoTxt.push(`${info.favourites} users favourited`);
+      appFavourites = info.favourites;
+    }
+    if (infoTxt.length)
+      versionTitle = `title="${infoTxt.join("\n")}"`;
   }
   if (versionInfo) versionInfo = ` <small ${versionTitle}>(${versionInfo})</small>`;
   let readme = `<a class="c-hand" onclick="showReadme('${app.id}')">Read more...</a>`;
@@ -359,7 +400,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   </div>
   <div class="tile-action">`;
   if (forInterface=="library") html += `
-    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favorite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
+    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}">${appFavourites?`<span>${appFavourites}</span>`:""}</i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
     <button class="btn btn-link btn-action btn-lg ${version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
@@ -367,7 +408,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     <button class="btn btn-link btn-action btn-lg ${appInstalled?"":"d-hide"}" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.custom?"":"d-hide"}" appid="${app.id}" title="Customise and Upload App"><i class="icon icon-menu"></i></button>`;
   if (forInterface=="myapps") html += `
-    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favorite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
+    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}">${appFavourites?`<span>${appFavourites}</span>`:""}</i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
     <button class="btn btn-link btn-action btn-lg ${version.canUpdate?'':'d-hide'}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>`;
@@ -511,7 +552,7 @@ function refreshLibrary(options) {
     visibleApps.sort(appSorter);
 
   if (activeSort) {
-    if (activeSort=="created" || activeSort=="modified") {
+    if (["created","modified","installs","favourites"].includes(activeSort)) {
       visibleApps = visibleApps.sort((a,b) =>
          (appSortInfo[b.id]||{})[activeSort] -
          (appSortInfo[a.id]||{})[activeSort]);
@@ -999,7 +1040,6 @@ librarySearchInput.addEventListener('input', evt => {
 let sortContainer = document.querySelector("#librarycontainer .sort-nav");
 sortContainer.addEventListener('click', ({ target }) => {
   if (target.classList.contains('active')) return;
-
   activeSort = target.getAttribute('sortid') || '';
   refreshSort();
   refreshLibrary();

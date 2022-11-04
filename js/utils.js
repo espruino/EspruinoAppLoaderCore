@@ -25,6 +25,9 @@ const Const = {
 
   /* The code to upload to the device show a progress bar on the screen (should define a fn. called 'p') */
   CODE_PROGRESSBAR : "g.drawRect(10,g.getHeight()-16,g.getWidth()-10,g.getHeight()-8).flip();p=x=>g.fillRect(10,g.getHeight()-16,10+(g.getWidth()-20)*x/100,g.getHeight()-8).flip();",
+
+  // APP_DATES_CSV   - If set, the URL of a file to get information on the latest apps from
+  // APP_USAGE_JSON  - If set, the URL of a file containing the most-used/most-favourited apps
 };
 
 let DEVICEINFO = [
@@ -251,11 +254,11 @@ function searchRelevance(value, searchString) {
       if (v==search)
         relevance += 20; // if a complete match, +20
       else {
-        if (v.includes(search)) // the less of the string matched, lower relevance 
+        if (v.includes(search)) // the less of the string matched, lower relevance
           relevance += Math.max(0, 10 - (v.length - search.length));
         if (v.startsWith(search))  // add a bit of the string starts with it
           relevance += 5;
-      }           
+      }
     });
   });
   return relevance;
