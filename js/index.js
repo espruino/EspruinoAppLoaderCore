@@ -554,8 +554,8 @@ function refreshLibrary(options) {
   if (activeSort) {
     if (["created","modified","installs","favourites"].includes(activeSort)) {
       visibleApps = visibleApps.sort((a,b) =>
-         (appSortInfo[b.id]||{})[activeSort] -
-         (appSortInfo[a.id]||{})[activeSort]);
+         ((appSortInfo[b.id]||{})[activeSort]||0) -
+         ((appSortInfo[a.id]||{})[activeSort]||0));
     } else throw new Error("Unknown sort type "+activeSort);
   }
 
