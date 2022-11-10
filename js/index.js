@@ -216,10 +216,25 @@ function iframeSetup(iframe, interfaceType, messageHandler) {
           });
         });
       } else if (msg.type=="readstoragefile") {
-        Comms.readStorageFile(msg.data/*filename*/).then(function(result) {
+        Comms.readStorageFile(msg.filename).then(function(result) {
           iframe.contentWindow.postMessage({
             type : "readstoragefilersp",
             data : result,
+            id : msg.id
+          });
+        });
+      } else if (msg.type=="readstorage") {
+        Comms.readFile(msg.filename).then(function(result) {
+          iframe.contentWindow.postMessage({
+            type : "readstoragersp",
+            data : result,
+            id : msg.id
+          });
+        });
+      } else if (msg.type=="writestorage") {
+        Comms.writeFile(msg.filename, msg.data).then(function() {
+          iframe.contentWindow.postMessage({
+            type : "writestoragersp",
             id : msg.id
           });
         });

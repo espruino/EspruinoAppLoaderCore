@@ -471,5 +471,14 @@ Bluetooth.print("\xFF");
       while (l!==undefined) { Bluetooth.print(l); l = f.readLine(); }
       Bluetooth.print("\xFF");
     })()\n`);
+  },
+  // Read a non-storagefile file
+  writeFile : (filename, data) => {
+    console.log(`<COMMS> writeFile ${JSON.stringify(filename)}`);
+    var cmds = AppInfo.getFileUploadCommands(filename, data);
+    Progress.show({title:`Writing ${JSON.stringify(filename)}`,percent:0});
+    return Comms.write("\x10"+Comms.getProgressCmd()+"\n").then(() =>
+      Comms.uploadCommandList(cmds, 0, cmds.length)
+    );
   }
 };
