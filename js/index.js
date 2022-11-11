@@ -1086,6 +1086,7 @@ function saveSettings() {
 // Link in settings DOM elements
 function settingsCheckbox(id, name) {
   let setting = document.getElementById(id);
+  if (setting===null) return; // no setting found
   function update() {
     setting.checked = SETTINGS[name];
   }
