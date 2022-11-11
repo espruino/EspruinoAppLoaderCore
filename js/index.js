@@ -768,7 +768,11 @@ function checkDependencies(app, uploadOptions) {
   return promise;
 }
 
-function updateApp(app) {
+/* Update an app to latest version.
+if options.noReset is true, don't reset the device before
+if options.noFinish is true, showUploadFinished isn't called (displaying the reboot message) */
+function updateApp(app, options) {
+  options = options||{};
   if (app.custom) return customApp(app);
   return Comms.getAppInfo(app).then(remove => {
     // remove = from appid.info, app = from apps.json
@@ -786,12 +790,12 @@ function updateApp(app) {
       data.storageFiles = data.storageFiles.filter(removeData)
     }
     remove.data = AppInfo.makeDataString(data)
-    return Comms.removeApp(remove, true);
+    return Comms.removeApp(remove, {containsFileList:true, noReset:options.noReset, noFinish:options.noFinish});
   }).then(()=>{
     showToast(`Updating ${app.name}...`);
     device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
     return checkDependencies(app);
-  }).then(()=>Comms.uploadApp(app,{device:device})
+  }).then(()=>Comms.uploadApp(app,{device:device,noReset:options.noReset, noFinish:options.noFinish})
   ).then((appJSON) => {
     if (appJSON) device.appsInstalled.push(appJSON);
     showToast(app.name+" Updated!", "success");
@@ -955,7 +959,7 @@ function installMultipleApps(appIds, promptName) {
         if (app===undefined) return resolve();
         Progress.show({title:`${app.name} (${appCount-apps.length}/${appCount})`,sticky:true});
         checkDependencies(app,"skip_reset")
-          .then(()=>Comms.uploadApp(app,{device:device, skipReset:true}))
+          .then(()=>Comms.uploadApp(app,{device:device, noReset:true, noFinish:true}))
           .then((appJSON) => {
             Progress.hide({sticky:true});
             if (appJSON) device.appsInstalled.push(appJSON);
@@ -968,11 +972,38 @@ function installMultipleApps(appIds, promptName) {
       }
       upload();
     });
-  }).then(()=>{
-    return Comms.setTime();
-  }).then(()=>{
+  }).then(()=> Comms.setTime()
+  ).then(()=> Comms.showUploadFinished()
+  ).then(()=>{
     showToast("Apps successfully installed!","success");
     return getInstalledApps(true);
+  });
+}
+
+function updateAllApps() {
+  let appsToUpdate = getAppsToUpdate({excludeCustomApps:true});
+  // get apps - don't auto-update custom apps since they need the
+  // customiser page running
+  let count = appsToUpdate.length;
+  if (!count) {
+    showToast("Update failed, no apps can be updated","error");
+    return;
+  }
+  function updater() {
+    if (!appsToUpdate.length) return Promise.resolve("Success");
+    let app = appsToUpdate.pop();
+    return updateApp(app, {noReset:true,noFinish:true}).then(function() {
+      return updater();
+    });
+  }
+  Comms.reset().then(_ =>
+    updater()
+  ).then(_ =>
+    Comms.showUploadFinished()
+  ).then(_ => {
+    showToast(`Updated ${count} apps`,"success");
+  }).catch(err => {
+    showToast("Update failed, "+err,"error");
   });
 }
 
@@ -996,26 +1027,7 @@ htmlToArray(document.querySelectorAll(".btn.refresh")).map(button => button.addE
   });
 }));
 htmlToArray(document.querySelectorAll(".btn.updateapps")).map(button => button.addEventListener("click", () => {
-  let appsToUpdate = getAppsToUpdate({excludeCustomApps:true});
-  // get apps - don't auto-update custom apps since they need the
-  // customiser page running
-  let count = appsToUpdate.length;
-  if (!count) {
-    showToast("Update failed, no apps can be updated","error");
-    return;
-  }
-  function updater() {
-    if (!appsToUpdate.length) return Promise.resolve("Success");
-    let app = appsToUpdate.pop();
-    return updateApp(app).then(function() {
-      return updater();
-    });
-  }
-  updater().then(msg => {
-    showToast(`Updated ${count} apps`,"success");
-  }).catch(err => {
-    showToast("Update failed, "+err,"error");
-  });
+  updateAllApps();
 }));
 connectMyDeviceBtn.addEventListener("click", () => {
   if (connectMyDeviceBtn.classList.contains('is-connected')) {

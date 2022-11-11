@@ -127,14 +127,15 @@ const Comms = {
       uploadCmd()
     });
   },
-  // Upload an app
+  /** Upload an app
+     app : an apps.json structure (i.e. with `storage`)
+     options : { device : { id : ..., version : ... } info about the currently connected device
+                 language : object of translations, eg 'lang/de_DE.json'
+                 noReset : if true, don't reset the device before
+                 noFinish : if true, showUploadFinished isn't called (displaying the reboot message)
+     } */
   uploadApp : (app,options) => {
     options = options||{};
-    /* app : an apps.json structure (i.e. with `storage`)
-       options : { skipReset : bool, // don't reset first
-                   device : { id : ..., version : ... } info about the currently connected device
-                   language : object of translations, eg 'lang/de_DE.json'
-       } */
     Progress.show({title:`Uploading ${app.name}`,sticky:true});
     return AppInfo.getFiles(app, {
       fileGetter : httpGet,
@@ -159,7 +160,7 @@ const Comms = {
         function doUploadFiles() {
         // No files left - print 'reboot' message
           if (fileContents.length==0) {
-            Comms.showUploadFinished().then(() => {
+            (options.noFinish ? Promise.resolve() : Comms.showUploadFinished()).then(() => {
               Progress.hide({sticky:true});
               resolve(appInfo);
             }).catch(function() {
@@ -183,7 +184,7 @@ const Comms = {
               return reject("");
             });
         }
-        if (options.skipReset) {
+        if (options.noReset) {
           doUpload();
         } else {
         // reset to ensure we have enough memory to upload what we need to
@@ -270,16 +271,19 @@ const Comms = {
         return app;
       });
   },
-  // Remove an app given an appinfo.id structure as JSON
-  removeApp : (app, containsFileList) => {
-    // expects an appid.info structure with minimum app.id
-    // if containsFileList is true, don't get data from watch
+  /** Remove an app given an appinfo.id structure as JSON
+  expects an appid.info structure with minimum app.id
+  if options.containsFileList is true, don't get data from watch
+  if options.noReset is true, don't reset the device before
+  if options.noFinish is true, showUploadFinished isn't called (displaying the reboot message)   */
+  removeApp : (app, options) => {
+    options = options||{};
     Progress.show({title:`Removing ${app.id}`,sticky:true});
     /* App Info now doesn't contain .files, so to erase, we need to
     read the info file ourselves. */
-    return Comms.reset().
+    return (options.noReset ? Promise.resolve() : Comms.reset()).
       then(()=>Comms.showMessage(`Erasing\n${app.id}...`)).
-      then(()=>containsFileList ? app : Comms.getAppInfo(app)).
+      then(()=>options.containsFileList ? app : Comms.getAppInfo(app)).
       then(app=>{
         let cmds = '\x10const s=require("Storage");\n';
         // remove App files: regular files, exact names only
@@ -311,7 +315,7 @@ const Comms = {
 
         return Comms.write(cmds)
       }).
-      then(()=>Comms.showUploadFinished()).
+      then(()=>options.noFinish ? Promise.resolve() : Comms.showUploadFinished()).
       then(()=>Progress.hide({sticky:true})).
       catch(function(reason) {
         Progress.hide({sticky:true});
