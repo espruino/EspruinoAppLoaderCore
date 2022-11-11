@@ -98,12 +98,22 @@ function parseJS(storageFile, options, app) {
       builtinModules.push("crypto");
     // add any modules that were defined for this app (no need to search for them!)
     builtinModules = builtinModules.concat(app.storage.map(f=>f.name).filter(name => name && !name.includes(".")));
+    // In some cases we can't minify!
+    let minify = options.settings.minify;
+    if (options.settings.minify) {
+      js = js.trim();
+      /* if we're uploading (function() {...}) code for app.settings.js then
+      minification destroys it because it doesn't have side effects. It's hard
+      to work around nicely, so disable minification in these cases */
+      if (js.match(/\(\s*function/) && js.match(/}\s*\)/))
+        minify = false;
+    }
     // TODO: we could look at installed app files and add any modules defined in those?
     return Espruino.transform(js, {
       SET_TIME_ON_WRITE : false,
       PRETOKENISE : options.settings.pretokenise,
       MODULE_URL : localModulesURL+"|https://www.espruino.com/modules",
-      MINIFICATION_LEVEL : options.settings.minify ? "ESPRIMA" : undefined,
+      MINIFICATION_LEVEL : minify ? "ESPRIMA" : undefined,
       builtinModules : builtinModules.join(",")
     }).then(content => {
       storageFile.content = content;
