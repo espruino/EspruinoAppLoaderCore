@@ -103,7 +103,7 @@ function parseJS(storageFile, options, app) {
       SET_TIME_ON_WRITE : false,
       PRETOKENISE : options.settings.pretokenise,
       MODULE_URL : localModulesURL+"|https://www.espruino.com/modules",
-      //MINIFICATION_LEVEL : "ESPRIMA", // disable due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
+      MINIFICATION_LEVEL : options.settings.minify ? "ESPRIMA" : undefined,
       builtinModules : builtinModules.join(",")
     }).then(content => {
       storageFile.content = content;

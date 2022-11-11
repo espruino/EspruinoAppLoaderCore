@@ -3,6 +3,7 @@ let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, m
 let files = []; // list of files on the Espruimo Device
 const DEFAULTSETTINGS = {
   pretokenise : true,
+  minify : false,  // disabled by default due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
   favourites : ["boot","launch","setting"],
   language : "",
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
@@ -1109,6 +1110,7 @@ function settingsCheckbox(id, name) {
   });
 }
 settingsCheckbox("settings-pretokenise", "pretokenise");
+settingsCheckbox("settings-minify", "minify");
 settingsCheckbox("settings-settime", "settime");
 loadSettings();
 
