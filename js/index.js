@@ -732,6 +732,20 @@ function customApp(app) {
 /// check for dependencies the app needs and install them if required
 function checkDependencies(app, uploadOptions) {
   let promise = Promise.resolve();
+  // Check for existing apps that might cause issues
+  if (app.provides_modules) {
+    app.provides_modules.forEach(module => {
+      let existing = device.appsInstalled.find(app =>
+        app.provides_modules && app.provides_modules.includes(module));
+      if (existing) {
+        let msg = `App ${app.id} provides module ${module} which is already provided by ${existing.id}`;
+        showToast(msg,"warning");
+        console.warn(msg);
+        // TODO: should we silently remove 'existing'?
+      }
+    });
+  }
+  // Check for apps which we may need to install
   if (app.dependencies) {
     Object.keys(app.dependencies).forEach(dependency=>{
       var dependencyType = app.dependencies[dependency];
@@ -761,6 +775,9 @@ function checkDependencies(app, uploadOptions) {
       } else if (dependencyType=="app") {
         console.log(`Searching for dependency on app ID '${dependency}'`);
         handleDependency(app=>app.id==dependency);
+      } else if (dependencyType=="module") {
+        console.log(`Searching for dependency for module '${dependency}'`);
+        handleDependency(app=>app.provides_modules && app.provides_modules.includes(dependency));
       } else
         throw new Error(`Dependency type '${dependencyType}' not supported`);
 
