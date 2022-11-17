@@ -83,7 +83,7 @@ function translateJS(options, app, code) {
 
 // Run JS through EspruinoTools to pull in modules/etc
 function parseJS(storageFile, options, app) {
-  if (storageFile.url && storageFile.url.endsWith(".js") && !storageFile.url.endsWith(".min.js")) {
+  if (storageFile.name.endsWith(".js") && ((storageFile.url && !storageFile.url.endsWith(".min.js")) || (!storageFile.url && storageFile.content))) {
     // if original file ends in '.js'...
     let js = storageFile.content;
     // check for language translations
