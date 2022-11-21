@@ -1,7 +1,7 @@
 // Node.js
 if ("undefined"!=typeof module) {
   Espruino = require("../lib/espruinotools.js");
-  heatshrink = require("../lib/heatshrink.js");
+  heatshrink = require("../../webtools/heatshrink.js");
 }
 
 // How many bytes of code to we attempt to upload in one go?
