@@ -750,7 +750,10 @@ function checkDependencies(app, uploadOptions) {
     Object.keys(app.dependencies).forEach(dependency=>{
       var dependencyType = app.dependencies[dependency];
       function handleDependency(dependencyChecker) {
-        let found = device.appsInstalled.find(dependencyChecker);
+        // Look up installed apps in our app JSON to get full info on them
+        let appJSONInstalled = device.appsInstalled.map(app => appJSON.find(a=>a.id==app.id)).filter(app=>app!=undefined);
+        // now see if we can find one matching our dependency
+        let found = appJSONInstalled.find(dependencyChecker);
         if (found)
           console.log(`Found dependency in installed app '${found.id}'`);
         else {
