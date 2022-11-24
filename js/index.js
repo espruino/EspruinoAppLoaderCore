@@ -764,7 +764,9 @@ function checkDependencies(app, uploadOptions) {
           console.log(`Dependency not installed. Installing app id '${found.id}'`);
           promise = promise.then(()=>new Promise((resolve,reject)=>{
             console.log(`Install dependency '${dependency}':'${found.id}'`);
-            return Comms.uploadApp(found,{device:device}).then(appJSON => {
+            return checkDependencies(found)
+                   .then(() => Comms.uploadApp(found,{device:device}))
+                   .then(appJSON => {
               if (appJSON) device.appsInstalled.push(appJSON);
               resolve();
             });
