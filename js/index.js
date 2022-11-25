@@ -192,7 +192,17 @@ function getAppDescription(app) {
 }
 
 /** Setup IFRAME callbacks for handleCustomApp and handleInterface */
-function iframeSetup(iframe, interfaceType, messageHandler) {
+function iframeSetup(options) {
+  var iframe = options.iframe;
+  var modal = options.modal;
+  document.body.append(modal);
+  htmlToArray(modal.getElementsByTagName("a")).forEach(button => {
+    button.addEventListener("click",event => {
+      event.preventDefault();
+      modal.remove();
+      if (options.onClose) options.onClose("Window closed");
+    });
+  });
   // when iframe is loaded, call 'onInit' with info about the device
   iframe.addEventListener("load", function() {
     console.log("IFRAME loaded");
@@ -200,7 +210,10 @@ function iframeSetup(iframe, interfaceType, messageHandler) {
     otherwise pass to messageHandler because handleCustomApp may want to handle it */
     iframe.contentWindow.addEventListener("message",function(event) {
       let msg = event.data;
-      if (msg.type=="eval") {
+      if (msg.type=="close") {
+        modal.remove();
+        if (options.onClose) options.onClose("Window closed");
+      } else if (msg.type=="eval") {
         Puck.eval(msg.data, function(result) {
           iframe.contentWindow.postMessage({
             type : "evalrsp",
@@ -239,12 +252,12 @@ function iframeSetup(iframe, interfaceType, messageHandler) {
             id : msg.id
           });
         });
-      } else if (messageHandler) messageHandler(event);
+      } else if (options.messageHandler) options.messageHandler(event);
     }, false);
     // send the 'init' message
     iframe.contentWindow.postMessage({
       type: "init",
-      expectedInterface: interfaceType,
+      expectedInterface: options.jsFile,
       data: device
     },"*");
   }, false);
@@ -273,17 +286,12 @@ function handleCustomApp(appTemplate) {
         </div>
       </div>
     </div>`);
-    document.body.append(modal);
-    htmlToArray(modal.getElementsByTagName("a")).forEach(button => {
-      button.addEventListener("click",event => {
-        event.preventDefault();
-        modal.remove();
-        reject("Window closed");
-      });
-    });
-
     let iframe = modal.getElementsByTagName("iframe")[0];
-    iframeSetup(iframe, "customize.js", function(event) {
+    iframeSetup({ iframe : iframe,
+                  modal : modal,
+                  jsFile : "customize.js",
+                  onClose: reject,
+                  messageHandler : function(event) {
       let msg = event.data;
       if (msg.type=="app") {
         let appFiles = msg.data;
@@ -310,7 +318,7 @@ function handleCustomApp(appTemplate) {
             reject('Upload failed, ' + err, 'error');
           });
       }
-    }, false);
+    }});
   });
 }
 
@@ -333,18 +341,14 @@ function handleAppInterface(app) {
         </div>
       </div>
     </div>`);
-    document.body.append(modal);
-    htmlToArray(modal.getElementsByTagName("a")).forEach(button => {
-      button.addEventListener("click",event => {
-        event.preventDefault();
-        modal.remove();
-        //reject("Window closed");
-      });
-    });
     let iframe = modal.getElementsByTagName("iframe")[0];
-    iframeSetup(iframe, "interface.js", function(event) {
+    iframeSetup({ iframe : iframe,
+                  modal : modal,
+                  jsFile : "interface.js",
+                  // onClose: reject, // we don't need to reject when the window is closed
+                  messageHandler : function(event) {
       // nothing custom needed in here
-    });
+    }});
     iframe.src = `apps/${app.id}/${app.interface}`;
   });
 }
