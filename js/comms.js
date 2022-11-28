@@ -285,29 +285,29 @@ const Comms = {
       then(()=>Comms.showMessage(`Erasing\n${app.id}...`)).
       then(()=>options.containsFileList ? app : Comms.getAppInfo(app)).
       then(app=>{
-        let cmds = '\x10const s=require("Storage");\n';
+        let cmds = '';
         // remove App files: regular files, exact names only
         if ("string"!=typeof app.files) {
           console.warn("App file "+app.id+".info doesn't have a 'files' field");
           app.files=app.id+".info";
         }
-        cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10s.erase(${toJS(file)});\n`).join("");
+        cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("Storage").erase(${toJS(file)});\n`).join("");
         // remove app Data: (dataFiles and storageFiles)
         const data = AppInfo.parseDataString(app.data)
         const isGlob = f => /[?*]/.test(f)
         //   regular files, can use wildcards
         cmds += data.dataFiles.map(file => {
-          if (!isGlob(file)) return `\x10s.erase(${toJS(file)});\n`;
+          if (!isGlob(file)) return `\x10require("Storage").erase(${toJS(file)});\n`;
           const regex = new RegExp(globToRegex(file))
-          return `\x10s.list(${regex}).forEach(f=>s.erase(f));\n`;
+          return `\x10require("Storage").list(${regex}).forEach(f=>require("Storage").erase(f));\n`;
         }).join("");
         //   storageFiles, can use wildcards
         cmds += data.storageFiles.map(file => {
-          if (!isGlob(file)) return `\x10s.open(${toJS(file)},'r').erase();\n`;
+          if (!isGlob(file)) return `\x10require("Storage").open(${toJS(file)},'r').erase();\n`;
           // storageFiles have a chunk number appended to their real name
           const regex = globToRegex(file+'\u0001')
           // open() doesn't want the chunk number though
-          let cmd = `\x10s.list(${regex}).forEach(f=>s.open(f.substring(0,f.length-1),'r').erase());\n`
+          let cmd = `\x10require("Storage").list(${regex}).forEach(f=>require("Storage").open(f.substring(0,f.length-1),'r').erase());\n`
           // using a literal \u0001 char fails (not sure why), so escape it
           return cmd.replace('\u0001', '\\x01')
         }).join("");
