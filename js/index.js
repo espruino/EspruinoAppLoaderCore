@@ -4,7 +4,7 @@ let files = []; // list of files on the Espruimo Device
 const DEFAULTSETTINGS = {
   pretokenise : true,
   minify : false,  // disabled by default due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
-  favourites : ["boot","launch","setting"],
+  favourites : ["launch"],
   language : "",
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
   sendUsageStats: false  // send usage stats to banglejs.com
@@ -357,11 +357,7 @@ function changeAppFavourite(favourite, app) {
   if (favourite) {
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
   } else {
-    if ([ "boot","setting"].includes(app.id)) {
-      showToast(app.name + ' is required, can\'t remove it' , 'warning');
-    }else {
-      SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
-    }
+    SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
   }
   saveSettings();
   refreshLibrary();
@@ -1184,7 +1180,12 @@ if (btn) btn.addEventListener("click",event=>{
 // Install all favourite apps in one go
 btn = document.getElementById("installfavourite");
 if (btn) btn.addEventListener("click",event=>{
-    const nonCustomFavourites = SETTINGS.favourites.filter(appId => appJSON.find(app => app.id === appId && !app.custom));
+    let nonCustomFavourites = SETTINGS.favourites.filter(appId => appJSON.find(app => app.id === appId && !app.custom));
+    const mustHave = [ "boot","setting" ]; // apps that we absolutely need installed
+    mustHave.forEach(id => {
+      if (!nonCustomFavourites.includes(id))
+        nonCustomFavourites.unshift(id);
+    });
     installMultipleApps(nonCustomFavourites, "favourite").catch(err=>{
     Progress.hide({sticky:true});
     showToast("App Install failed, "+err,"error");
