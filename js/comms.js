@@ -312,8 +312,7 @@ const Comms = {
           return cmd.replace('\u0001', '\\x01')
         }).join("");
         console.log("<COMMS> removeApp", cmds);
-
-        return Comms.write(cmds)
+        if (cmds!="") return Comms.write(cmds);
       }).
       then(()=>options.noFinish ? Promise.resolve() : Comms.showUploadFinished()).
       then(()=>Progress.hide({sticky:true})).
