@@ -246,7 +246,9 @@ function iframeSetup(options) {
           });
         });
       } else if (msg.type=="writestorage") {
+        Progress.show({title:`Uploading ${JSON.stringify(msg.filename)}`,sticky:true});
         Comms.writeFile(msg.filename, msg.data).then(function() {
+          Progress.hide({sticky:true});
           iframe.contentWindow.postMessage({
             type : "writestoragersp",
             id : msg.id
