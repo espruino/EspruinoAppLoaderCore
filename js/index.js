@@ -747,6 +747,7 @@ function checkDependencies(app, uploadOptions) {
       }
     });
   }
+  // could check provides_widgets here, but hey, why can't the user have 2 battery widgets if they want?
   // Check for apps which we may need to install
   if (app.dependencies) {
     Object.keys(app.dependencies).forEach(dependency=>{
@@ -762,7 +763,11 @@ function checkDependencies(app, uploadOptions) {
           let foundApps = appJSON.filter(dependencyChecker);
           if (!foundApps.length) throw new Error(`Dependency of '${dependency}' listed, but nothing satisfies it!`);
           console.log(`Apps ${foundApps.map(f=>`'${f.id}'`).join("/")} implements '${dependencyType}:${dependency}'`);
-          found = foundApps[0]; // choose first app in list
+          found = foundApps.find(app => app.default);
+          if (!found) {
+            console.warn("Looking for dependency, but no default app found - using first in list");
+            found = foundApps[0]; // choose first app in list
+          }
           console.log(`Dependency not installed. Installing app id '${found.id}'`);
           promise = promise.then(()=>new Promise((resolve,reject)=>{
             console.log(`Install dependency '${dependency}':'${found.id}'`);
@@ -785,6 +790,9 @@ function checkDependencies(app, uploadOptions) {
       } else if (dependencyType=="module") {
         console.log(`Searching for dependency for module '${dependency}'`);
         handleDependency(app=>app.provides_modules && app.provides_modules.includes(dependency));
+      } else if (dependencyType=="widget") {
+        console.log(`Searching for dependency for widget '${dependency}'`);
+        handleDependency(app=>app.provides_widgets && app.provides_widgets.includes(dependency));
       } else
         throw new Error(`Dependency type '${dependencyType}' not supported`);
 
