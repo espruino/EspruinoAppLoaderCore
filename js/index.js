@@ -1,5 +1,6 @@
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
+let appCounts = {};
 let files = []; // list of files on the Espruimo Device
 const DEFAULTSETTINGS = {
   pretokenise : true,
@@ -132,14 +133,18 @@ if (Const.APP_USAGE_JSON) httpGet(Const.APP_USAGE_JSON).then(jsonTxt=>{
     console.warn("App usage JSON at "+Const.APP_USAGE_JSON+" couldn't be parsed");
     return;
   }
+  appCounts.favs = 0;
   Object.keys(json.fav).forEach(key =>{
     if (appSortInfo[key]==undefined)
       appSortInfo[key] = {};
+    if (json.fav[key] > appCounts.favs) appCounts.favs = json.fav[key];
     appSortInfo[key].favourites = json.fav[key];
   });
+  appCounts.installs = 0;
   Object.keys(json.app).forEach(key =>{
     if (appSortInfo[key]==undefined)
       appSortInfo[key] = {};
+    if (json.app[key] > appCounts.installs) appCounts.installs = json.app[key];
     appSortInfo[key].installs = json.app[key];
   });
   document.querySelector(".sort-nav").classList.remove("hidden");
@@ -391,9 +396,9 @@ function getAppHTML(app, appInstalled, forInterface) {
     if ("object"==typeof info.modified)
       infoTxt.push(`Last update: ${(info.modified.toLocaleDateString())}`);
     if (info.installs)
-      infoTxt.push(`${info.installs} reported installs`);
+      infoTxt.push(`${info.installs} reported installs (${(info.installs / appCounts.installs * 100).toFixed(0)}%)`);
     if (info.favourites) {
-      infoTxt.push(`${info.favourites} users favourited`);
+      infoTxt.push(`${info.favourites} users favourited (${(info.favourites / appCounts.favs * 100).toFixed(0)}%)`);
       appFavourites = info.favourites;
     }
     if (infoTxt.length)
