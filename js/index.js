@@ -738,19 +738,100 @@ function customApp(app) {
 
 /// check for dependencies the app needs and install them if required
 function checkDependencies(app, uploadOptions) {
+  uploadOptions = uploadOptions || {};
+  if (uploadOptions.checkForClashes === undefined)
+    uploadOptions.checkForClashes = true;
+
   let promise = Promise.resolve();
-  // Check for existing apps that might cause issues
-  if (app.provides_modules) {
-    app.provides_modules.forEach(module => {
-      let existing = device.appsInstalled.find(app =>
-        app.provides_modules && app.provides_modules.includes(module));
+  // Look up installed apps in our app JSON to get full info on them
+  let appJSONInstalled = device.appsInstalled.map(app => appJSON.find(a=>a.id==app.id)).filter(app=>app!=undefined);
+
+  function showQuery(msg, appToRemove) {
+    promise = promise.then(()=>new Promise((resolve,reject) => {
+      let modal = htmlElement(`<div class="modal active">
+        <a href="#close" class="modal-overlay " aria-label="Close"></a>
+        <div class="modal-container">
+          <div class="modal-header">
+            <a href="#close" class="btn btn-clear float-right" aria-label="Close"></a>
+            <div class="modal-title h5">App Dependencies</div>
+          </div>
+          <div class="modal-body">
+            <div class="content">
+              ${msg}. What would you like to do?
+            </div>
+          </div>
+          <div class="modal-footer">
+            <a href="#" class="btn btn-primary btn-replace" btnType="replace">Replace</a>
+            <a href="#" class="btn btn-cancel">Cancel</a>
+            <a href="#" class="btn btn-keep">Keep Both</a>
+          </div>
+        </div>
+      </div>`);
+      document.body.append(modal);
+      htmlToArray(modal.getElementsByTagName("a")).forEach(button => {
+        button.addEventListener("click",event => {
+          event.preventDefault();
+          modal.remove();
+          if (event.target.classList.contains("btn-replace")) {
+            // replace the old one - just remove it
+            Comms.removeApp(appToRemove).then(() => {
+              device.appsInstalled = device.appsInstalled.filter(a=>a.id!=appToRemove.id);
+              resolve()
+            });
+          } else if (event.target.classList.contains("btn-keep")) {
+            // Keep both - we'll just continue as-is
+            resolve();
+          } else { // was probably close/cancel
+            reject("User cancelled");
+          }
+        });
+      });
+    }));
+  }
+
+  if (uploadOptions.checkForClashes) {
+    // Check for existing apps that might cause issues
+    if (app.provides_modules) {
+      app.provides_modules.forEach(module => {
+        let existing = appJSONInstalled.find(app =>
+          app.provides_modules && app.provides_modules.includes(module));
+        if (existing) {
+          let msg = `App "${app.name}" provides module "${module}" which is already provided by "${existing.name}"`;
+          showQuery(msg, existing);
+        }
+      });
+    }
+    if (app.provides_widgets) {
+      app.provides_widgets.forEach(widget => {
+        let existing = appJSONInstalled.find(app =>
+          app.provides_widgets && app.provides_widgets.includes(widget));
+        if (existing) {
+          let msg = `App "${app.name}" provides widget type "${widget}" which is already provided by "${existing.name}"`;
+          showQuery(msg, existing);
+        }
+      });
+    }
+    if (app.type=="launch") {
+      let existing = appJSONInstalled.find(app => app.type=="launch");
       if (existing) {
-        let msg = `App ${app.id} provides module ${module} which is already provided by ${existing.id}`;
-        showToast(msg,"warning");
-        console.warn(msg);
-        // TODO: should we silently remove 'existing'?
+        let msg = `App "${app.name}" is a launcher but you already have "${existing.name}" installed`;
+        showQuery(msg, existing);
       }
-    });
+    }
+    if (app.type=="textinput") {
+      let existing = appJSONInstalled.find(app => app.type=="textinput");
+      if (existing) {
+        let msg = `App "${app.name}" handles Text Input but you already have "${existing.name}" installed`;
+        showQuery(msg, existing);
+      }
+    }
+    if (app.type=="notify") {
+      let existing = appJSONInstalled.find(app => app.type=="notify");
+      if (existing) {
+        let msg = `App "${app.name}" handles Notifications but you already have "${existing.name}" installed`;
+        showQuery(msg, existing);
+      }
+    }
   }
   // could check provides_widgets here, but hey, why can't the user have 2 battery widgets if they want?
   // Check for apps which we may need to install
@@ -758,8 +839,7 @@ function checkDependencies(app, uploadOptions) {
     Object.keys(app.dependencies).forEach(dependency=>{
       var dependencyType = app.dependencies[dependency];
       function handleDependency(dependencyChecker) {
-        // Look up installed apps in our app JSON to get full info on them
-        let appJSONInstalled = device.appsInstalled.map(app => appJSON.find(a=>a.id==app.id)).filter(app=>app!=undefined);
+
         // now see if we can find one matching our dependency
         let found = appJSONInstalled.find(dependencyChecker);
         if (found)
@@ -800,7 +880,6 @@ function checkDependencies(app, uploadOptions) {
         handleDependency(app=>app.provides_widgets && app.provides_widgets.includes(dependency));
       } else
         throw new Error(`Dependency type '${dependencyType}' not supported`);
-
     });
   }
   return promise;
@@ -832,7 +911,7 @@ function updateApp(app, options) {
   }).then(()=>{
     showToast(`Updating ${app.name}...`);
     device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
-    return checkDependencies(app);
+    return checkDependencies(app,{checkForClashes:false});
   }).then(()=>Comms.uploadApp(app,{device:device,noReset:options.noReset, noFinish:options.noFinish})
   ).then((appJSON) => {
     if (appJSON) device.appsInstalled.push(appJSON);
