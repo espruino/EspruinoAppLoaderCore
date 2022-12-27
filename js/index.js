@@ -1050,7 +1050,7 @@ function getInstalledApps(refresh) {
 <table class="table"><tbody>
   <tr><td><b>Device Type</b></td><td>${device.id}</td></tr>
   <tr><td><b>Firmware Version</b></td><td>${device.version}</td></tr>
-  <tr><td><b>Apps Installed</b></td><td>${(device.appsInstalled||[]).map(a=>a.id).join(", ")}</td></tr>
+  <tr><td><b>Apps Installed</b></td><td>${(device.appsInstalled || []).map(a => `${a.id} (${a.version})`).join(", ")}</td></tr>
 </tbody></table>`;
       }
     })
