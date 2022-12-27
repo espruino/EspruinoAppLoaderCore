@@ -1285,3 +1285,15 @@ if (btn) btn.addEventListener("click",event=>{
     showToast("App Install failed, "+err,"error");
   });
 });
+
+// Create a new issue on github
+btn = document.getElementById("newGithubIssue");
+if (btn) btn.addEventListener("click", event => {
+  const urlTemplate = "https://github.com/espruino/BangleApps/issues/new?template=bangle-bug-report-custom-form.yaml&fwversion={version}&apps={apps}";
+  const apps = (device.appsInstalled || []).map(a => `${a.id} (${a.version})`).join("\n");
+  const version = device.connected ? device.version : "";
+
+  const url = urlTemplate.replace("{version}", encodeURIComponent(version)).replace("{apps}", encodeURIComponent(apps));
+
+  window.open(url, '_blank');
+});
