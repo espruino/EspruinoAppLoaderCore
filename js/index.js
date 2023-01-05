@@ -1050,7 +1050,7 @@ function getInstalledApps(refresh) {
 <table class="table"><tbody>
   <tr><td><b>Device Type</b></td><td>${device.id}</td></tr>
   <tr><td><b>Firmware Version</b></td><td>${device.version}</td></tr>
-  <tr><td><b>Apps Installed</b></td><td>${(device.appsInstalled||[]).map(a=>a.id).join(", ")}</td></tr>
+  <tr><td><b>Apps Installed</b></td><td>${(device.appsInstalled || []).map(a => `${a.id} (${a.version})`).join(", ")}</td></tr>
 </tbody></table>`;
       }
     })
@@ -1284,4 +1284,16 @@ if (btn) btn.addEventListener("click",event=>{
     Progress.hide({sticky:true});
     showToast("App Install failed, "+err,"error");
   });
+});
+
+// Create a new issue on github
+btn = document.getElementById("newGithubIssue");
+if (btn) btn.addEventListener("click", event => {
+  const urlTemplate = "https://github.com/espruino/BangleApps/issues/new?template=bangle-bug-report-custom-form.yaml&fwversion={version}&apps={apps}";
+  const apps = (device.appsInstalled || []).map(a => `${a.id} (${a.version})`).join("\n");
+  const version = device.connected ? device.version : "";
+
+  const url = urlTemplate.replace("{version}", encodeURIComponent(version)).replace("{apps}", encodeURIComponent(apps));
+
+  window.open(url, '_blank');
 });
