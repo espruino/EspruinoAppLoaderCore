@@ -98,6 +98,18 @@ function parseJS(storageFile, options, app) {
       builtinModules.push("crypto");
     // add any modules that were defined for this app (no need to search for them!)
     builtinModules = builtinModules.concat(app.storage.map(f=>f.name).filter(name => name && !name.includes(".")));
+    // Check for modules in pre-installed apps?
+    if (options.device.appsInstalled)
+      options.device.appsInstalled.forEach(app => {
+        /* we can't use provides_modules here because these apps are loaded
+        from the app.info file which doesn't have it. Instead, look for files
+        with no extension listed in 'app.files'. */
+        if (!app.files) return;
+        app.files.split(",").forEach(file => {
+          if (file.length && !file.includes("."))
+            builtinModules.push(file);
+        });
+      });
     // In some cases we can't minify!
     let minify = options.settings.minify;
     if (options.settings.minify) {
@@ -296,6 +308,8 @@ var AppInfo = {
 
   /*
     uploadOptions : {
+      apps : appJSON, - list of all apps from JSON
+      needsApp : function(app) - returns a promise which resolves with the app object, this installs the given app
       checkForClashes : bool - check for existing apps that may get in the way
       showQuery : IF checkForClashes=true, showQuery(msg, appToRemove) returns a promise
     }
@@ -307,7 +321,7 @@ var AppInfo = {
 
     let promise = Promise.resolve();
     // Look up installed apps in our app JSON to get full info on them
-    let appJSONInstalled = device.appsInstalled.map(app => appJSON.find(a=>a.id==app.id)).filter(app=>app!=undefined);
+    let appJSONInstalled = device.appsInstalled.map(app => uploadOptions.apps.find(a=>a.id==app.id)).filter(app=>app!=undefined);
     // Check for existing apps that might cause issues
     if (uploadOptions.checkForClashes) {
       if (app.provides_modules) {
@@ -363,7 +377,7 @@ var AppInfo = {
           if (found)
             console.log(`Found dependency in installed app '${found.id}'`);
           else {
-            let foundApps = appJSON.filter(dependencyChecker);
+            let foundApps = uploadOptions.apps.filter(dependencyChecker);
             if (!foundApps.length) throw new Error(`Dependency of '${dependency}' listed, but nothing satisfies it!`);
             console.log(`Apps ${foundApps.map(f=>`'${f.id}'`).join("/")} implements '${dependencyType}:${dependency}'`);
             found = foundApps.find(app => app.default);
@@ -374,8 +388,8 @@ var AppInfo = {
             console.log(`Dependency not installed. Installing app id '${found.id}'`);
             promise = promise.then(()=>new Promise((resolve,reject)=>{
               console.log(`Install dependency '${dependency}':'${found.id}'`);
-              return checkDependencies(found)
-                     .then(() => Comms.uploadApp(found,{device:device}))
+              return AppInfo.checkDependencies(found, device, uploadOptions)
+                     .then(() => uploadOptions.needsApp(found))
                      .then(appJSON => {
                 if (appJSON) device.appsInstalled.push(appJSON);
                 resolve();

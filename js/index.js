@@ -739,6 +739,7 @@ function customApp(app) {
 /// check for dependencies the app needs and install them if required
 function checkDependencies(app, uploadOptions) {
   uploadOptions = uploadOptions||{};
+  uploadOptions.apps = appJSON;
   uploadOptions.showQuery = function(msg, appToRemove) {
     return new Promise((resolve,reject) => {
       let modal = htmlElement(`<div class="modal active">
@@ -781,6 +782,7 @@ function checkDependencies(app, uploadOptions) {
       });
     });
   };
+  uploadOptions.needsApp = app => Comms.uploadApp(app,{device:device});
   return AppInfo.checkDependencies(app, device, uploadOptions);
 }
 
