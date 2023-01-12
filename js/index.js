@@ -738,16 +738,9 @@ function customApp(app) {
 
 /// check for dependencies the app needs and install them if required
 function checkDependencies(app, uploadOptions) {
-  uploadOptions = uploadOptions || {};
-  if (uploadOptions.checkForClashes === undefined)
-    uploadOptions.checkForClashes = true;
-
-  let promise = Promise.resolve();
-  // Look up installed apps in our app JSON to get full info on them
-  let appJSONInstalled = device.appsInstalled.map(app => appJSON.find(a=>a.id==app.id)).filter(app=>app!=undefined);
-
-  function showQuery(msg, appToRemove) {
-    promise = promise.then(()=>new Promise((resolve,reject) => {
+  uploadOptions = uploadOptions||{};
+  uploadOptions.showQuery = function(msg, appToRemove) {
+    return new Promise((resolve,reject) => {
       let modal = htmlElement(`<div class="modal active">
         <a href="#close" class="modal-overlay " aria-label="Close"></a>
         <div class="modal-container">
@@ -786,103 +779,9 @@ function checkDependencies(app, uploadOptions) {
           }
         });
       });
-    }));
-  }
-
-  if (uploadOptions.checkForClashes) {
-    // Check for existing apps that might cause issues
-    if (app.provides_modules) {
-      app.provides_modules.forEach(module => {
-        let existing = appJSONInstalled.find(app =>
-          app.provides_modules && app.provides_modules.includes(module));
-        if (existing) {
-          let msg = `App "${app.name}" provides module "${module}" which is already provided by "${existing.name}"`;
-          showQuery(msg, existing);
-        }
-      });
-    }
-    if (app.provides_widgets) {
-      app.provides_widgets.forEach(widget => {
-        let existing = appJSONInstalled.find(app =>
-          app.provides_widgets && app.provides_widgets.includes(widget));
-        if (existing) {
-          let msg = `App "${app.name}" provides widget type "${widget}" which is already provided by "${existing.name}"`;
-          showQuery(msg, existing);
-        }
-      });
-    }
-    if (app.type=="launch") {
-      let existing = appJSONInstalled.find(app => app.type=="launch");
-      if (existing) {
-        let msg = `App "${app.name}" is a launcher but you already have "${existing.name}" installed`;
-        showQuery(msg, existing);
-      }
-    }
-    if (app.type=="textinput") {
-      let existing = appJSONInstalled.find(app => app.type=="textinput");
-      if (existing) {
-        let msg = `App "${app.name}" handles Text Input but you already have "${existing.name}" installed`;
-        showQuery(msg, existing);
-      }
-    }
-    if (app.type=="notify") {
-      let existing = appJSONInstalled.find(app => app.type=="notify");
-      if (existing) {
-        let msg = `App "${app.name}" handles Notifications but you already have "${existing.name}" installed`;
-        showQuery(msg, existing);
-      }
-    }
-  }
-  // could check provides_widgets here, but hey, why can't the user have 2 battery widgets if they want?
-  // Check for apps which we may need to install
-  if (app.dependencies) {
-    Object.keys(app.dependencies).forEach(dependency=>{
-      var dependencyType = app.dependencies[dependency];
-      function handleDependency(dependencyChecker) {
-
-        // now see if we can find one matching our dependency
-        let found = appJSONInstalled.find(dependencyChecker);
-        if (found)
-          console.log(`Found dependency in installed app '${found.id}'`);
-        else {
-          let foundApps = appJSON.filter(dependencyChecker);
-          if (!foundApps.length) throw new Error(`Dependency of '${dependency}' listed, but nothing satisfies it!`);
-          console.log(`Apps ${foundApps.map(f=>`'${f.id}'`).join("/")} implements '${dependencyType}:${dependency}'`);
-          found = foundApps.find(app => app.default);
-          if (!found) {
-            console.warn("Looking for dependency, but no default app found - using first in list");
-            found = foundApps[0]; // choose first app in list
-          }
-          console.log(`Dependency not installed. Installing app id '${found.id}'`);
-          promise = promise.then(()=>new Promise((resolve,reject)=>{
-            console.log(`Install dependency '${dependency}':'${found.id}'`);
-            return checkDependencies(found)
-                   .then(() => Comms.uploadApp(found,{device:device}))
-                   .then(appJSON => {
-              if (appJSON) device.appsInstalled.push(appJSON);
-              resolve();
-            });
-          }));
-        }
-      }
-
-      if (dependencyType=="type") {
-        console.log(`Searching for dependency on app TYPE '${dependency}'`);
-        handleDependency(app=>app.type==dependency);
-      } else if (dependencyType=="app") {
-        console.log(`Searching for dependency on app ID '${dependency}'`);
-        handleDependency(app=>app.id==dependency);
-      } else if (dependencyType=="module") {
-        console.log(`Searching for dependency for module '${dependency}'`);
-        handleDependency(app=>app.provides_modules && app.provides_modules.includes(dependency));
-      } else if (dependencyType=="widget") {
-        console.log(`Searching for dependency for widget '${dependency}'`);
-        handleDependency(app=>app.provides_widgets && app.provides_widgets.includes(dependency));
-      } else
-        throw new Error(`Dependency type '${dependencyType}' not supported`);
     });
-  }
-  return promise;
+  };
+  return AppInfo.checkDependencies(app, device, uploadOptions);
 }
 
 /* Update an app to latest version.
