@@ -318,6 +318,8 @@ var AppInfo = {
     uploadOptions = uploadOptions || {};
     if (uploadOptions.checkForClashes === undefined)
       uploadOptions.checkForClashes = true;
+    if (uploadOptions.apps === undefined)
+      uploadOptions.apps = appJSON;
 
     let promise = Promise.resolve();
     // Look up installed apps in our app JSON to get full info on them
