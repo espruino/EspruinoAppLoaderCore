@@ -309,9 +309,11 @@ var AppInfo = {
   /*
     uploadOptions : {
       apps : appJSON, - list of all apps from JSON
-      needsApp : function(app) - returns a promise which resolves with the app object, this installs the given app
+      needsApp : function(app, uploadOptions) - returns a promise which resolves with the app object, this installs the given app
       checkForClashes : bool - check for existing apps that may get in the way
       showQuery : IF checkForClashes=true, showQuery(msg, appToRemove) returns a promise
+      ... PLUS what can be supplied to Comms.uploadApp
+        device, language, noReset, noFinish
     }
   */
   checkDependencies : (app, device, uploadOptions) => {
@@ -391,7 +393,7 @@ var AppInfo = {
             promise = promise.then(()=>new Promise((resolve,reject)=>{
               console.log(`Install dependency '${dependency}':'${found.id}'`);
               return AppInfo.checkDependencies(found, device, uploadOptions)
-                     .then(() => uploadOptions.needsApp(found))
+                     .then(() => uploadOptions.needsApp(found, uploadOptions))
                      .then(appJSON => {
                 if (appJSON) device.appsInstalled.push(appJSON);
                 resolve();

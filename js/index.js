@@ -736,10 +736,14 @@ function customApp(app) {
   });
 }
 
-/// check for dependencies the app needs and install them if required
+/* check for dependencies the app needs and install them if required
+uploadOptions is an object, see AppInfo.checkDependencies for what can be in it
+*/
 function checkDependencies(app, uploadOptions) {
   uploadOptions = uploadOptions||{};
   uploadOptions.apps = appJSON;
+  uploadOptions.device = device;
+  uploadOptions.language = LANGUAGE;
   uploadOptions.showQuery = function(msg, appToRemove) {
     return new Promise((resolve,reject) => {
       let modal = htmlElement(`<div class="modal active">
@@ -782,7 +786,7 @@ function checkDependencies(app, uploadOptions) {
       });
     });
   };
-  uploadOptions.needsApp = app => Comms.uploadApp(app,{device:device});
+  uploadOptions.needsApp = (app,uploadOptions) => Comms.uploadApp(app,uploadOptions);
   return AppInfo.checkDependencies(app, device, uploadOptions);
 }
 
@@ -976,7 +980,7 @@ function installMultipleApps(appIds, promptName) {
         let app = apps.shift();
         if (app===undefined) return resolve();
         Progress.show({title:`${app.name} (${appCount-apps.length}/${appCount})`,sticky:true});
-        checkDependencies(app,"skip_reset")
+        checkDependencies(app,{device:device, noReset:true, noFinish:true})
           .then(()=>Comms.uploadApp(app,{device:device, noReset:true, noFinish:true}))
           .then((appJSON) => {
             Progress.hide({sticky:true});
