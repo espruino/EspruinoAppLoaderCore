@@ -245,23 +245,27 @@ function searchRelevance(value, searchString) {
   else {
     if (value.includes(searchString)) // the less of the string matched, lower relevance
       relevance += Math.max(0, 10 - (value.length - searchString.length));
-    if (value.startsWith(searchString))  // add a bit of the string starts with it
+    if (value.startsWith(searchString))  // add a bit if the string starts with it
+      relevance += 5;
+    if (value.includes("("+searchString+")"))  // add a bit if it's in brackets
       relevance += 5;
   }
   // compare string parts
-  searchString.split(/\s/).forEach(search=>{
-    value.split(/\s/).forEach(v=>{
+  var partRelevance = 0;
+  var valueParts = value.split(/[\s(),.-]/).filter(p=>p.length);
+  searchString.split(/[\s-(),.-]/).forEach(search=>{
+    valueParts.forEach(v=>{
       if (v==search)
-        relevance += 20; // if a complete match, +20
+      partRelevance += 20; // if a complete match, +20
       else {
         if (v.includes(search)) // the less of the string matched, lower relevance
-          relevance += Math.max(0, 10 - (v.length - search.length));
+        partRelevance += Math.max(0, 10 - (v.length - search.length));
         if (v.startsWith(search))  // add a bit of the string starts with it
-          relevance += 5;
+        partRelevance += 10;
       }
     });
   });
-  return relevance;
+  return relevance + 0|(50*partRelevance/valueParts.length);
 }
 
 /* Given 2 JSON structures (1st from apps.json, 2nd from an installed app)

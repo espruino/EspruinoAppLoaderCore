@@ -568,7 +568,7 @@ function refreshLibrary(options) {
         }));
     }
     // Now finally, filter, sort based on relevance and set the search result
-    visibleApps = searchResult.filter(a => a.relevance>0).sort((a,b) => b.relevance - a.relevance).map(a => a.app);
+    visibleApps = searchResult.filter(a => a.relevance>0).sort((a,b) => (b.relevance-(0|b.sortorder)) - (a.relevance-(0|a.sortorder))).map(a => a.app);
   }
   // if not otherwise sorted, use 'sort by' option
   if (!sortedByRelevance)
