@@ -71,7 +71,7 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
 }).catch(error=>{
   console.warn("APPS FILE NOT FOUND "+Const.APPS_JSON_FILE);
   console.log("Attempting search - SLOW");
-  let baseurl = window.location.href.replace(/\/[^\/]*$/,"/");
+  let baseurl = window.location.href.replace(/\/[^/]*$/,"/");
   let appsURL = baseurl+"apps";
   httpGet(appsURL).then(htmlText=>{
     showToast(Const.APPS_JSON_FILE+" can't be read, scanning 'apps' folder for apps","warning");
@@ -606,7 +606,7 @@ function refreshLibrary(options) {
           console.error("No entrypoint found for "+appid);
           return;
         }
-        let baseurl = window.location.href.replace(/\/[^\/]*$/,"/");
+        let baseurl = window.location.href.replace(/\/[^/]*$/,"/");
         baseurl = baseurl.substr(0,baseurl.lastIndexOf("/"));
         let url = baseurl+"/apps/"+app.id+"/"+file.url;
         window.open(`https://espruino.com/ide/emulator.html?codeurl=${url}&upload`);
