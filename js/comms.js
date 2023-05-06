@@ -204,6 +204,7 @@ const Comms = {
         }
 
         if (result.startsWith("debug>")) {
+          console.log("<COMMS> watch was in debug mode, interrupting.", result);
           // we got a debug prompt - we interrupted the watch while JS was executing
           // so we're in debug mode, issue another ctrl-c to bump the watch out of it
           Puck.write("\x03", resolve);
