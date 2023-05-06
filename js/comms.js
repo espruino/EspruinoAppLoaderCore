@@ -202,6 +202,17 @@ const Comms = {
           Progress.hide({sticky:true});
           return reject("");
         }
+
+        if (result.startsWith("debug>")) {
+          // we got a debug prompt - we interrupted the watch while JS was executing
+          // so we're in debug mode, issue another ctrl-c to bump the watch out of it
+          Puck.write("\x03", resolve);
+        } else {
+          resolve(result);
+        }
+      });
+    }).
+      then((result) => new Promise((resolve, reject) => {
         console.log("<COMMS> Ctrl-C gave",JSON.stringify(result));
         if (result.includes("ERROR") && !noReset) {
           console.log("<COMMS> Got error, resetting to be sure.");
@@ -252,8 +263,7 @@ const Comms = {
           console.log("<COMMS> getDeviceInfo", info);
           resolve(info);
         }, true /* callback on newline */);
-      });
-    });
+      }));
   },
   // Get an app's info file from Bangle.js
   getAppInfo : app => {
