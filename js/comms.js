@@ -45,6 +45,9 @@ const Comms = {
       if (result=="" && (tries-- > 0)) {
         console.log(`<COMMS> reset: no response. waiting ${tries}...`);
         Puck.write("\x03",rstHandler);
+      } else if (result.endsWith("debug>")) {
+        console.log(`<COMMS> reset: watch in debug mode, interrupting...`);
+        Puck.write("\x03",rstHandler);
       } else {
         console.log(`<COMMS> reset: rebooted - sending commands to clear out any boot code`);
         // see https://github.com/espruino/BangleApps/issues/1759
