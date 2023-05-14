@@ -206,19 +206,30 @@ const Comms = {
           return reject("");
         }
 
-        if (result.startsWith("debug>")) {
-          console.log("<COMMS> watch was in debug mode, interrupting.", result);
-          // we got a debug prompt - we interrupted the watch while JS was executing
-          // so we're in debug mode, issue another ctrl-c to bump the watch out of it
-          Puck.write("\x03", resolve);
-        } else {
-          resolve(result);
-        }
+        let interrupts = 0;
+        const checkCtrlC = result => {
+          if (result.endsWith("debug>")) {
+            if (interrupts > 3) {
+              console.log("<COMMS> can't interrupt watch out of debug mode, giving up.", result);
+              reject("");
+              return;
+            }
+            console.log("<COMMS> watch was in debug mode, interrupting.", result);
+            // we got a debug prompt - we interrupted the watch while JS was executing
+            // so we're in debug mode, issue another ctrl-c to bump the watch out of it
+            Puck.write("\x03", checkCtrlC);
+            interrupts++;
+          } else {
+            resolve(result);
+          }
+        };
+
+        checkCtrlC(result);
       });
     }).
       then((result) => new Promise((resolve, reject) => {
         console.log("<COMMS> Ctrl-C gave",JSON.stringify(result));
-        if ((result.includes("ERROR") || results.endsWith("\r\ndebug>")) && !noReset) {
+        if (result.includes("ERROR") && !noReset) {
           console.log("<COMMS> Got error, resetting to be sure.");
           // If the ctrl-c gave an error, just reset totally and
           // try again (need to display 'BTN3' message)
