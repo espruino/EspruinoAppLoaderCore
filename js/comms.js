@@ -218,7 +218,7 @@ const Comms = {
     }).
       then((result) => new Promise((resolve, reject) => {
         console.log("<COMMS> Ctrl-C gave",JSON.stringify(result));
-        if (result.includes("ERROR") && !noReset) {
+        if ((result.includes("ERROR") || results.endsWith("\r\ndebug>")) && !noReset) {
           console.log("<COMMS> Got error, resetting to be sure.");
           // If the ctrl-c gave an error, just reset totally and
           // try again (need to display 'BTN3' message)
