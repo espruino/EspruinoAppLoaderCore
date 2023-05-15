@@ -45,6 +45,9 @@ const Comms = {
       if (result=="" && (tries-- > 0)) {
         console.log(`<COMMS> reset: no response. waiting ${tries}...`);
         Puck.write("\x03",rstHandler);
+      } else if (result.endsWith("debug>")) {
+        console.log(`<COMMS> reset: watch in debug mode, interrupting...`);
+        Puck.write("\x03",rstHandler);
       } else {
         console.log(`<COMMS> reset: rebooted - sending commands to clear out any boot code`);
         // see https://github.com/espruino/BangleApps/issues/1759
@@ -202,6 +205,29 @@ const Comms = {
           Progress.hide({sticky:true});
           return reject("");
         }
+
+        let interrupts = 0;
+        const checkCtrlC = result => {
+          if (result.endsWith("debug>")) {
+            if (interrupts > 3) {
+              console.log("<COMMS> can't interrupt watch out of debug mode, giving up.", result);
+              reject("");
+              return;
+            }
+            console.log("<COMMS> watch was in debug mode, interrupting.", result);
+            // we got a debug prompt - we interrupted the watch while JS was executing
+            // so we're in debug mode, issue another ctrl-c to bump the watch out of it
+            Puck.write("\x03", checkCtrlC);
+            interrupts++;
+          } else {
+            resolve(result);
+          }
+        };
+
+        checkCtrlC(result);
+      });
+    }).
+      then((result) => new Promise((resolve, reject) => {
         console.log("<COMMS> Ctrl-C gave",JSON.stringify(result));
         if (result.includes("ERROR") && !noReset) {
           console.log("<COMMS> Got error, resetting to be sure.");
@@ -252,8 +278,7 @@ const Comms = {
           console.log("<COMMS> getDeviceInfo", info);
           resolve(info);
         }, true /* callback on newline */);
-      });
-    });
+      }));
   },
   // Get an app's info file from Bangle.js
   getAppInfo : app => {
