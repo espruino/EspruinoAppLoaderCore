@@ -534,13 +534,10 @@ function refreshLibrary(options) {
         // If the type is NOT in the array below then the search will be tag-based instead
         // of type-based.
         const supportedMetadataTypes = ["clock", "widget", "launch", "textinput", "ram"];
-        searchResult = visibleApps.map(app => {
-          if (app.type && supportedMetadataTypes.includes(app.type.toLowerCase())) {
-            return { app:app, relevance:app.type.toLowerCase() == searchValue.toLowerCase() ? 1 : 0 }
-          } else {
-            return { app:app, relevance: (app.tags && app.tags.split(',').includes(searchValue)) ? 1 : 0 };
-          }
-        });
+        if (supportedMetadataTypes.includes(searchValue.toLowerCase()))
+          searchResult = visibleApps.map(app => ({ app:app, relevance: (app.type||"app").toLowerCase() == searchValue.toLowerCase() ? 1 : 0 }));
+        else
+          searchResult = visibleApps.map(app => ({ app:app, relevance: (app.tags && app.tags.split(',').includes(searchValue)) ? 1 : 0 }));
       }
     } else if (searchType === "hash") {
       sortedByRelevance = true;
