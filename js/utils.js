@@ -26,6 +26,9 @@ const Const = {
   /* The code to upload to the device show a progress bar on the screen (should define a fn. called 'p') */
   CODE_PROGRESSBAR : "g.drawRect(10,g.getHeight()-16,g.getWidth()-10,g.getHeight()-8).flip();p=x=>g.fillRect(10,g.getHeight()-16,10+(g.getWidth()-20)*x/100,g.getHeight()-8).flip();",
 
+  /* Maximum number of apps shown in the library, then a 'Show more...' entry is added.. */
+  MAX_APPS_SHOWN : 30,
+
   // APP_DATES_CSV   - If set, the URL of a file to get information on the latest apps from
   // APP_USAGE_JSON  - If set, the URL of a file containing the most-used/most-favourited apps
 };
