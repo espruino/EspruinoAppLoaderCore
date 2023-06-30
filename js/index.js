@@ -50,6 +50,14 @@ function appJSONLoadedHandler() {
   // finally update what we're showing
   promise.then(function() {
     refreshLibrary();
+    // if ?id=...&readme is in URL, show it
+    if (window.location.search) {
+      let searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.has("id") && searchParams.has("readme")) {
+        var id = searchParams.get("id").toLowerCase();
+        showReadme(null, id);
+      }
+    }
   });
 }
 
@@ -181,7 +189,8 @@ function showChangeLog(appid, installedVersion) {
   httpGet(`apps/${appid}/ChangeLog`).
     then(show).catch(()=>show("No Change Log available"));
 }
-function showReadme(appid) {
+function showReadme(event, appid) {
+  if (event) event.preventDefault();
   let app = appNameToApp(appid);
   let appPath = `apps/${appid}/`;
   let markedOptions = { baseUrl : appPath };
@@ -406,11 +415,12 @@ function getAppHTML(app, appInstalled, forInterface) {
       versionTitle = `title="${infoTxt.join("\n")}"`;
   }
   if (versionInfo) versionInfo = ` <small ${versionTitle}>(${versionInfo})</small>`;
-  let readme = `<a class="c-hand" onclick="showReadme('${app.id}')">Read more...</a>`;
+  let appurl = window.location.origin + window.location.pathname + "?id=" + encodeURIComponent(app.id);
+  let readme = `<a class="c-hand" href="${appurl}&readme" onclick="showReadme(event,'${app.id}')">Read more...</a>`;
   let favourite = SETTINGS.favourites.find(e => e == app.id);
   let githubLink = Const.APP_SOURCECODE_URL ?
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
-  let appurl = window.location.origin + window.location.pathname + "?id=" + encodeURIComponent(app.id);
+
 
   let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile">
   <div class="tile-icon">
@@ -485,8 +495,8 @@ function refreshLibrary(options) {
     searchValue = decodeURIComponent(window.location.hash.slice(1)).toLowerCase();
     searchType = "hash";
   }
-  let searchParams = new URLSearchParams(window.location.search);
   if (window.location.search) {
+    let searchParams = new URLSearchParams(window.location.search);
     if (searchParams.has("id")) {
       searchValue = searchParams.get("id").toLowerCase();
       searchType = "id";
