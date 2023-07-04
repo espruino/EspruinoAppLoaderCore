@@ -8,7 +8,7 @@ const DEFAULTSETTINGS = {
   favourites : ["launch"],
   language : "",
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
-  sendUsageStats: false  // send usage stats to banglejs.com
+  sendUsageStats: true  // send usage stats to banglejs.com
 };
 var SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
