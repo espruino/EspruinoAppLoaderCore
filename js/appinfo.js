@@ -41,6 +41,23 @@ function toJS(txt, options) {
   return js;
 }
 
+function translateString(options, app, value) {
+  let language = options.language;
+  // strip out formatting at beginning/end
+  let match = value.match(/^([.<>\- /\n/]*)([^<>!?]*?)([.<>!?\- /\n/]*)$/);
+  let textToTranslate = match ? match[2] : value;
+  // now translate
+  if (language[app.id] && language[app.id][textToTranslate]) {
+    return match[1]+language[app.id][textToTranslate]+match[3];
+  } else if (language.GLOBAL[textToTranslate]) {
+    return match[1]+language.GLOBAL[textToTranslate]+match[3];
+  } else {
+    // Unhandled translation...
+    //console.log("Untranslated ",tokenString);
+  }
+  return undefined; // no translation
+}
+
 // Translate any strings in the app that are prefixed with /*LANG*/
 // see https://github.com/espruino/BangleApps/issues/136
 function translateJS(options, app, code) {
@@ -53,19 +70,9 @@ function translateJS(options, app, code) {
     let tokenString = code.substring(tok.startIdx, tok.endIdx);
     if (tok.type=="STRING" && previousString.includes("/*LANG*/")) {
       previousString=previousString.replace("/*LANG*/","");
-      let language = options.language;
-      // strip out formatting at beginning/end
-      let match = tok.value.match(/^([.<>\- /\n/]*)([^<>!?]*?)([.<>!?\- /\n/]*)$/);
-      let textToTranslate = match ? match[2] : tok.value;
-      // now translate
-      if (language[app.id] && language[app.id][textToTranslate]) {
-        tokenString = JSON.stringify(match[1]+language[app.id][textToTranslate]+match[3]);
-      } else if (language.GLOBAL[textToTranslate]) {
-        tokenString = JSON.stringify(match[1]+language.GLOBAL[textToTranslate]+match[3]);
-      } else {
-        // Unhandled translation...
-        //console.log("Untranslated ",tokenString);
-      }
+      let translation = translateString(options,app, tok.value);
+      if (translation!==undefined)
+        tokenString = JSON.stringify(translation);
       // remap any chars that we don't think we can display in Espruino's
       // built in fonts.
       tokenString = Utils.convertStringToISOLatin(tokenString);
@@ -181,6 +188,12 @@ var AppInfo = {
   getFiles : (app,options) => {
     options = options||{};
     return new Promise((resolve,reject) => {
+      // translate app names
+      if (options.language) {
+        if (app.shortName)
+          app.shortName = translateString(options, app, app.shortName)||app.shortName;
+        app.name = translateString(options, app, app.name)||app.name;
+      }
       // Load all files
       let appFiles = [].concat(
         app.storage,

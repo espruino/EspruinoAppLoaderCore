@@ -123,8 +123,8 @@ var IGNORE_ARRAY_ACCESS = [
   "WIDGETS"
 ];
 
-var BASEDIR = __dirname+"/../";
-Espruino = require(BASEDIR+"core/lib/espruinotools.js");
+var BASEDIR = __dirname+"/../../";
+Espruino = require("../lib/espruinotools.js");
 var fs = require("fs");
 var APPSDIR = BASEDIR+"apps/";
 
@@ -139,7 +139,7 @@ function log(s) {
   console.log(s);
 }
 
-var apploader = require("./lib/apploader.js");
+var apploader = require("../lib/apploader.js");
 apploader.init({
   DEVICEID : "BANGLEJS2"
 });
@@ -203,7 +203,9 @@ function scanJS(js, shortFilePath) {
       if (previousString.includes("/*LANG*/")) { // translated!
         addString(translatedStrings, tok.value, shortFilePath);
       } else if (tok.str.startsWith("`")) { // it's a tempated String!
-        tok.str.match(/\$\{[^\}]*\}/g).forEach(match => scanJS(match.slice(2,-1), shortFilePath));
+        var matches = tok.str.match(/\$\{[^\}]*\}/g);
+        if (matches!=null)
+          matches.forEach(match => scanJS(match.slice(2,-1), shortFilePath));
       } else { // untranslated - potential to translate?
         // filter out numbers
         if (!isNotString(tok.value, wasFnCall, wasArrayAccess)) {
@@ -235,6 +237,9 @@ apps.forEach((app,appIdx) => {
     var fileContents = fs.readFileSync(filePath).toString();
     scanJS(fileContents, shortFilePath);
   });
+  var shortFilePath = "apps/"+app.id+"/metadata.json";
+  if (app.shortName) addString(translatedStrings, app.shortName, shortFilePath);
+  addString(translatedStrings, app.name, shortFilePath);
 });
 untranslatedStrings.sort((a,b)=>a.uses - b.uses);
 translatedStrings.sort((a,b)=>a.uses - b.uses);
