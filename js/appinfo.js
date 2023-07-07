@@ -69,6 +69,14 @@ function translateJS(options, app, code) {
       // remap any chars that we don't think we can display in Espruino's
       // built in fonts.
       tokenString = Utils.convertStringToISOLatin(tokenString);
+    } else if (tok.str.startsWith("`")) {
+      // it's a tempated String! scan all clauses inside it and re-run on the JS in those
+      var re = /\$\{[^\}]*\}/g;
+      while ((match = re.exec(tokenString)) != null) {
+        var orig = match[0];
+        var replacement = translateJS(options, app, orig.slice(2,-1));
+        tokenString = tokenString.substr(0,match.index+2) + replacement + tokenString.substr(match.index + orig.length-1);
+      }
     }
     outjs += previousString+tokenString;
     lastIdx = tok.endIdx;
