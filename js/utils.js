@@ -361,3 +361,28 @@ function atobSafe(input) {
   } while (i < input.length);
   return output;
 }
+
+var Utils = {
+  Const : Const,
+  DEVICEINFO : DEVICEINFO,
+  CODEPAGE_CONVERSIONS : CODEPAGE_CONVERSIONS,
+  convertStringToISOLatin : convertStringToISOLatin,
+  escapeHtml : escapeHtml,
+  globToRegex : globToRegex,
+  htmlToArray : htmlToArray,
+  htmlElement : htmlElement,
+  httpGet : httpGet,
+  toJS : toJS,
+  appSorter : appSorter,
+  appSorterUpdatesFirst : appSorterUpdatesFirst,
+  searchRelevance : searchRelevance,
+  getVersionInfo : getVersionInfo,
+  isAppUpdateable : isAppUpdateable,
+  versionLess : versionLess,
+  debounce : debounce,
+  atobSafe : atobSafe
+};
+
+if ("undefined"!=typeof module)
+  module.exports = Utils;
+

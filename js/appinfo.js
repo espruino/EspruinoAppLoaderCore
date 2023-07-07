@@ -1,6 +1,7 @@
 // Node.js
 if ("undefined"!=typeof module) {
   Espruino = require("../lib/espruinotools.js");
+  Utils = require("./utils.js");
   heatshrink = require("../../webtools/heatshrink.js");
 }
 
@@ -67,7 +68,7 @@ function translateJS(options, app, code) {
       }
       // remap any chars that we don't think we can display in Espruino's
       // built in fonts.
-      tokenString = convertStringToISOLatin(tokenString);
+      tokenString = Utils.convertStringToISOLatin(tokenString);
     }
     outjs += previousString+tokenString;
     lastIdx = tok.endIdx;
