@@ -842,7 +842,7 @@ function updateApp(app, options) {
     showToast(`Updating ${app.name}...`);
     device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
     return checkDependencies(app,{checkForClashes:false});
-  }).then(()=>Comms.uploadApp(app,{device:device,noReset:options.noReset, noFinish:options.noFinish})
+  }).then(()=>Comms.uploadApp(app,{device:device,language:LANGUAGE,noReset:options.noReset, noFinish:options.noFinish})
   ).then((appJSON) => {
     if (appJSON) device.appsInstalled.push(appJSON);
     showToast(app.name+" Updated!", "success");
@@ -1006,7 +1006,7 @@ function installMultipleApps(appIds, promptName) {
         if (app===undefined) return resolve();
         Progress.show({title:`${app.name} (${appCount-apps.length}/${appCount})`,sticky:true});
         checkDependencies(app,{device:device, noReset:true, noFinish:true})
-          .then(()=>Comms.uploadApp(app,{device:device, noReset:true, noFinish:true}))
+          .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE, noReset:true, noFinish:true}))
           .then((appJSON) => {
             Progress.hide({sticky:true});
             if (appJSON) device.appsInstalled.push(appJSON);
