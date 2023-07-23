@@ -1227,3 +1227,24 @@ if (btn) btn.addEventListener("click", event => {
 
   window.open(url, '_blank');
 });
+
+btn = document.getElementById("screenshot");
+if (btn) btn.addEventListener("click",event=>{
+  showToast("Creating screenshot, please wait...");
+  Comms.write("\x10g.dump();\n").then((s)=>{
+    console.log("data",s);
+
+    var link = document.createElement("a");
+    link.download = "screenshot.bmp";
+    link.target = "_blank";
+    link.href = s.split("\n")[0];
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    delete link;
+
+    showToast("Screenshot command processed","success");
+  }, err=>{
+    showToast("Error creating screenshot watch: "+err,"error");
+  });
+});
