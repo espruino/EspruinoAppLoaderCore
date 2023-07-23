@@ -1230,21 +1230,44 @@ if (btn) btn.addEventListener("click", event => {
 
 btn = document.getElementById("screenshot");
 if (btn) btn.addEventListener("click",event=>{
-  showToast("Creating screenshot, please wait...");
+  let url;
+  Progress.show({title:"Creating screenshot",interval:10,percent:"animate",sticky:true});
   Comms.write("\x10g.dump();\n").then((s)=>{
-    console.log("data",s);
+    let oImage = new Image();
+    oImage.onload = function(){
+      Progress.show({title:"Converting screenshot",percent:90,sticky:true});
+      let oCanvas = document.createElement('canvas');
+      oCanvas.width = oImage.width;
+      oCanvas.height = oImage.height;
+      let oCtx = oCanvas.getContext('2d');
+      oCtx.drawImage(oImage, 0, 0);
+      url = oCanvas.toDataURL();
 
-    var link = document.createElement("a");
-    link.download = "screenshot.bmp";
-    link.target = "_blank";
-    link.href = s.split("\n")[0];
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    delete link;
+      let screenshotHtml = `
+        <div style="text-align: center;">
+          <img align="center" src="${url}"></img>
+        </div>
+      `
 
-    showToast("Screenshot command processed","success");
+      showPrompt("Save Screenshot?",screenshotHtml, undefined, false).then((r)=>{
+        Progress.show({title:"Saving screenshot",percent:99,sticky:true});
+        let link = document.createElement("a");
+        link.download = "screenshot.png";
+        link.target = "_blank";
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }).catch(()=>{
+      }).finally(()=>{
+        Progress.hide({sticky:true});
+      });
+    }
+    oImage.src = s.split("\n")[0];
+    Progress.hide({sticky:true});
+    Progress.show({title:"Screenshot done",percent:85,sticky:true});
+
   }, err=>{
-    showToast("Error creating screenshot watch: "+err,"error");
+    showToast("Error creating screenshot: "+err,"error");
   });
 });
