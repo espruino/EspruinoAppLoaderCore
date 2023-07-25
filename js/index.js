@@ -1228,3 +1228,53 @@ if (btn) btn.addEventListener("click", event => {
 
   window.open(url, '_blank');
 });
+
+btn = document.getElementById("screenshot");
+if (btn) btn.addEventListener("click",event=>{
+  getInstalledApps(false).then(()=>{
+    if (device.id=="BANGLEJS"){
+      showPrompt("Screenshot","Screenshots are not supported on Bangle.js 1",{ok:1});
+    } else {
+      let url;
+      Progress.show({title:"Creating screenshot",interval:10,percent:"animate",sticky:true});
+      Comms.write("\x10g.dump();\n").then((s)=>{
+        let oImage = new Image();
+        oImage.onload = function(){
+          Progress.show({title:"Converting screenshot",percent:90,sticky:true});
+          let oCanvas = document.createElement('canvas');
+          oCanvas.width = oImage.width;
+          oCanvas.height = oImage.height;
+          let oCtx = oCanvas.getContext('2d');
+          oCtx.drawImage(oImage, 0, 0);
+          url = oCanvas.toDataURL();
+  
+          let screenshotHtml = `
+            <div style="text-align: center;">
+              <img align="center" src="${url}"></img>
+            </div>
+          `
+  
+          showPrompt("Save Screenshot?",screenshotHtml, undefined, false).then((r)=>{
+            Progress.show({title:"Saving screenshot",percent:99,sticky:true});
+            let link = document.createElement("a");
+            link.download = "screenshot.png";
+            link.target = "_blank";
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }).catch(()=>{
+          }).finally(()=>{
+            Progress.hide({sticky:true});
+          });
+        }
+        oImage.src = s.split("\n")[0];
+        Progress.hide({sticky:true});
+        Progress.show({title:"Screenshot done",percent:85,sticky:true});
+  
+      }, err=>{
+        showToast("Error creating screenshot: "+err,"error");
+      });
+    }
+  });
+});
