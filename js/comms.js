@@ -481,7 +481,8 @@ const Comms = {
     const CHUNKSIZE = 384;
     return Comms.readTextBlock(`\x03\x10(function() {
 var s = require("Storage").read(${JSON.stringify(filename)});
-Bluetooth.println(((s.length+2)/3)<<2); // estimate file size
+if (s===undefined) s="";
+Bluetooth.println(((s.length+2)/3)<<2);
 for (var i=0;i<s.length;i+=${CHUNKSIZE}) Bluetooth.print(btoa(s.substr(i,${CHUNKSIZE})));
 Bluetooth.print("\xFF");
 })()\n`).then(text => {
