@@ -484,7 +484,7 @@ var s = require("Storage").read(${JSON.stringify(filename)});
 if (s===undefined) s="";
 Bluetooth.println(((s.length+2)/3)<<2);
 for (var i=0;i<s.length;i+=${CHUNKSIZE}) Bluetooth.print(btoa(s.substr(i,${CHUNKSIZE})));
-Bluetooth.print("\xFF");
+Bluetooth.print("\\xFF");
 })()\n`).then(text => {
       return atobSafe(text);
     });
@@ -498,7 +498,7 @@ Bluetooth.print("\xFF");
       Bluetooth.println(f.getLength());
       var l = f.readLine();
       while (l!==undefined) { Bluetooth.print(l); l = f.readLine(); }
-      Bluetooth.print("\xFF");
+      Bluetooth.print("\\xFF");
     })()\n`);
   },
   // Read a non-storagefile file
