@@ -954,6 +954,7 @@ function getInstalledApps(refresh) {
       device.uid = info.uid;
       device.id = info.id;
       device.version = info.version;
+      device.exptr = info.exptr;
       device.appsInstalled = info.apps;
       haveInstalledApps = true;
       if ("function"==typeof onFoundDeviceInfo)
@@ -1247,13 +1248,13 @@ if (btn) btn.addEventListener("click",event=>{
           let oCtx = oCanvas.getContext('2d');
           oCtx.drawImage(oImage, 0, 0);
           url = oCanvas.toDataURL();
-  
+
           let screenshotHtml = `
             <div style="text-align: center;">
               <img align="center" src="${url}"></img>
             </div>
           `
-  
+
           showPrompt("Save Screenshot?",screenshotHtml, undefined, false).then((r)=>{
             Progress.show({title:"Saving screenshot",percent:99,sticky:true});
             let link = document.createElement("a");
@@ -1271,7 +1272,7 @@ if (btn) btn.addEventListener("click",event=>{
         oImage.src = s.split("\n")[0];
         Progress.hide({sticky:true});
         Progress.show({title:"Screenshot done",percent:85,sticky:true});
-  
+
       }, err=>{
         showToast("Error creating screenshot: "+err,"error");
       });

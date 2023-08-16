@@ -142,7 +142,12 @@ function parseJS(storageFile, options, app) {
       PRETOKENISE : options.settings.pretokenise,
       MODULE_URL : localModulesURL+"|https://www.espruino.com/modules",
       MINIFICATION_LEVEL : minify ? "ESPRIMA" : undefined,
-      builtinModules : builtinModules.join(",")
+      builtinModules : builtinModules.join(","),
+      boardData : {
+        BOARD: options.device.id,
+        VERSION: options.device.version,
+        EXPTR: options.device.exptr
+      }
     }).then(content => {
       storageFile.content = content;
       return storageFile;
