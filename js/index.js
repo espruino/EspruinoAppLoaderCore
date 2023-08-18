@@ -1152,6 +1152,7 @@ function settingsCheckbox(id, name) {
     setting.checked = SETTINGS[name];
   }
   SETTINGS_HOOKS[name] = update;
+  update(); // set initial value
   setting.addEventListener('click', function() {
     SETTINGS[name] = setting.checked;
     saveSettings();
