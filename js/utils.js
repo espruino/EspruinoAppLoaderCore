@@ -170,7 +170,8 @@ function htmlElement(str) {
   return div.firstChild;
 }
 function httpGet(url) {
-  let isBinary = !(url.endsWith(".js") || url.endsWith(".json") || url.endsWith(".csv") || url.endsWith(".txt"));
+  let textExtensions = [".js", ".json", ".csv", ".txt", ".md"];
+  let isBinary = !textExtensions.some(ext => url.endsWith(ext));
   return new Promise((resolve,reject) => {
     let oReq = new XMLHttpRequest();
     oReq.addEventListener("load", () => {
