@@ -328,6 +328,7 @@ function debounce(actualFunction, delayInMs) {
 
 // version of 'window.atob' that doesn't fail on 'not correctly encoded' strings
 function atobSafe(input) {
+  if (input===undefined) return undefined;
   // Copied from https://github.com/strophe/strophejs/blob/e06d027/src/polyfills.js#L149
   // This code was written by Tyler Akins and has been placed in the
   // public domain.  It would be nice if you left this header intact.
@@ -340,7 +341,7 @@ function atobSafe(input) {
   let i = 0;
   // remove all characters that are not A-Z, a-z, 0-9, +, /, or =
   input = input.replace(/[^A-Za-z0-9+/=]/g, '');
-  do {
+  while (i < input.length) {
     enc1 = keyStr.indexOf(input.charAt(i++));
     enc2 = keyStr.indexOf(input.charAt(i++));
     enc3 = keyStr.indexOf(input.charAt(i++));
@@ -358,7 +359,7 @@ function atobSafe(input) {
     if (enc4 !== 64) {
       output = output + String.fromCharCode(chr3);
     }
-  } while (i < input.length);
+  }
   return output;
 }
 
