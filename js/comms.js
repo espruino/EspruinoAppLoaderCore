@@ -317,19 +317,19 @@ const Comms = {
           console.warn("App file "+app.id+".info doesn't have a 'files' field");
           app.files=app.id+".info";
         }
-        cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("Storage").erase(${toJS(file)});\n`).join("");
+        cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("Storage").erase(${toJSString(file)});\n`).join("");
         // remove app Data: (dataFiles and storageFiles)
         const data = AppInfo.parseDataString(app.data)
         const isGlob = f => /[?*]/.test(f)
         //   regular files, can use wildcards
         cmds += data.dataFiles.map(file => {
-          if (!isGlob(file)) return `\x10require("Storage").erase(${toJS(file)});\n`;
+          if (!isGlob(file)) return `\x10require("Storage").erase(${toJSString(file)});\n`;
           const regex = new RegExp(globToRegex(file))
           return `\x10require("Storage").list(${regex}).forEach(f=>require("Storage").erase(f));\n`;
         }).join("");
         //   storageFiles, can use wildcards
         cmds += data.storageFiles.map(file => {
-          if (!isGlob(file)) return `\x10require("Storage").open(${toJS(file)},'r').erase();\n`;
+          if (!isGlob(file)) return `\x10require("Storage").open(${toJSString(file)},'r').erase();\n`;
           // storageFiles have a chunk number appended to their real name
           const regex = globToRegex(file+'\u0001')
           // open() doesn't want the chunk number though

@@ -9,7 +9,7 @@ if ("undefined"!=typeof module) {
 const CHUNKSIZE = 1024;
 
 // Converts a string into most efficient way to send to Espruino (either json, base64, or compressed base64)
-function toJS(txt, options) {
+function asJSExpr(txt, options) {
   /* options = {
     noHeatshrink : bool // don't allow heatshrink - this ensures the result will always be a String (Heatshrink makes an ArrayBuffer)
   }*/
@@ -71,11 +71,12 @@ function translateJS(options, app, code) {
     if (tok.type=="STRING" && previousString.includes("/*LANG*/")) {
       previousString=previousString.replace("/*LANG*/","");
       let translation = translateString(options,app, tok.value);
-      if (translation!==undefined)
-        tokenString = JSON.stringify(translation);
-      // remap any chars that we don't think we can display in Espruino's
-      // built in fonts.
-      tokenString = Utils.convertStringToISOLatin(tokenString);
+      if (translation!==undefined) {
+        // remap any chars that we don't think we can display in Espruino's
+        // built in fonts.
+        translation = Utils.convertStringToISOLatin(translation);
+        tokenString = toJSString(translation);
+      }
     } else if (tok.str.startsWith("`")) {
       // it's a tempated String! scan all clauses inside it and re-run on the JS in those
       var re = /\$\{[^}]*\}/g;
@@ -161,9 +162,9 @@ var AppInfo = {
   getFileUploadCommands : (filename, data) => {
     var cmd = "";
     // write code in chunks, in case it is too big to fit in RAM (fix #157)
-    var cmd = `\x10require('Storage').write(${JSON.stringify(filename)},${toJS(data.substr(0,CHUNKSIZE))},0,${data.length});`;
+    var cmd = `\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(0,CHUNKSIZE))},0,${data.length});`;
     for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
-      cmd += `\n\x10require('Storage').write(${JSON.stringify(filename)},${toJS(data.substr(i,CHUNKSIZE))},${i});`;
+      cmd += `\n\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(i,CHUNKSIZE))},${i});`;
     return cmd;
   },
   /* Get a list of commands needed to upload a storage file */
@@ -171,7 +172,7 @@ var AppInfo = {
     var cmd = "";
     // write code in chunks, in case it is too big to fit in RAM (fix #157)
     function getWriteData(offset) {
-      return toJS(data.substr(offset,CHUNKSIZE), {noHeatshrink:true});
+      return asJSExpr(data.substr(offset,CHUNKSIZE), {noHeatshrink:true});
       // noHeatshrink:true fixes https://github.com/espruino/BangleApps/issues/2068
       // If we give f.write `[65,66,67]` it writes it as `65,66,67` rather than `"ABC"`
       // so we must ensure we always return a String

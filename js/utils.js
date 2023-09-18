@@ -205,8 +205,35 @@ function httpGet(url) {
     oReq.send();
   });
 }
-function toJS(txt) {
-  return JSON.stringify(txt);
+function toJSString(s) {
+  if ("string"!=typeof s) throw new Error("Expecting argument to be a String")
+  // Could use JSON.stringify, but this doesn't convert char codes that are in UTF8 range
+  // This is the same logic that we use in Gadgetbridge
+  let json = "\"";
+  for (let i=0;i<s.length;i++) {
+    let ch = s.charCodeAt(i); // 0..255
+    let nextCh = (i+1<s.length ? s.charCodeAt(i+1) : 0); // 0..255
+    //rawString = rawString+ch+",";
+    if (ch<8) {
+      // if the next character is a digit, it'd be interpreted
+      // as a 2 digit octal character, so we can't use `\0` to escape it
+      if (nextCh>='0' && nextCh<='7') json += "\\x0" + ch;
+      else json += "\\" + ch;
+    } else if (ch==8) json += "\\b";
+    else if (ch==9) json += "\\t";
+    else if (ch==10) json += "\\n";
+    else if (ch==11) json += "\\v";
+    else if (ch==12) json += "\\f";
+    else if (ch==34) json += "\\\""; // quote
+    else if (ch==92) json += "\\\\"; // slash
+    else if (ch<32 || ch==127 || ch==173 ||
+              ((ch>=0xC2) && (ch<=0xF4))) // unicode start char range
+        json += "\\x"+(ch&255).toString(16).padStart(2,0);
+    else if (ch>255)
+        json += "\\u"+(ch&65535).toString(16).padStart(4,0);
+    else json += s[i];
+  }
+  return json + "\"";
 }
 // callback for sorting apps
 function appSorter(a,b) {
@@ -374,7 +401,7 @@ var Utils = {
   htmlToArray : htmlToArray,
   htmlElement : htmlElement,
   httpGet : httpGet,
-  toJS : toJS,
+  toJSString : toJSString,
   appSorter : appSorter,
   appSorterUpdatesFirst : appSorterUpdatesFirst,
   searchRelevance : searchRelevance,
