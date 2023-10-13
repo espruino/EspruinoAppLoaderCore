@@ -21,7 +21,7 @@ const Comms = {
   },
   // When upload is finished, show a message (or reload)
   showUploadFinished : () => {
-    if (Const.LOAD_APP_AFTER_UPLOAD || Const.SINGLE_APP_ONLY) return Comms.write("\x10load()\n");
+    if (SETTINGS.autoReload || Const.LOAD_APP_AFTER_UPLOAD || Const.SINGLE_APP_ONLY) return Comms.write("\x10load()\n");
     else return Comms.showMessage(Const.MESSAGE_RELOAD);
   },
   // Gets a text command to append to what's being sent to show progress. If progress==undefined, it's the first command

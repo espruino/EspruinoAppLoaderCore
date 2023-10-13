@@ -5,10 +5,13 @@ let files = []; // list of files on the Espruimo Device
 const DEFAULTSETTINGS = {
   pretokenise : true,
   minify : false,  // disabled by default due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
+  settime : false, // Always update time when we connect
   favourites : ["launch"],
   language : "",
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
-  sendUsageStats: true  // send usage stats to banglejs.com
+  sendUsageStats: true,  // send usage stats to banglejs.com
+  alwaysAllowUpdate : false, //  Always show "reinstall app" buttonregardless of the version
+  autoReload: false //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
 };
 var SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
@@ -1162,6 +1165,7 @@ settingsCheckbox("settings-pretokenise", "pretokenise");
 settingsCheckbox("settings-minify", "minify");
 settingsCheckbox("settings-settime", "settime");
 settingsCheckbox("settings-alwaysAllowUpdate", "alwaysAllowUpdate");
+settingsCheckbox("settings-autoReload", "autoReload");
 loadSettings();
 
 let btn;
