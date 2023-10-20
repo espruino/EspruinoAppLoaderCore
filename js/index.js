@@ -280,6 +280,22 @@ function iframeSetup(options) {
       expectedInterface: options.jsFile,
       data: device
     },"*");
+    // Push any data received back through to IFRAME
+    if (Comms.isConnected())
+    console.log("Adding Comms.on('data') handler for iframe");
+      Comms.on("data", data => {
+        if (!iframe.contentWindow) {
+          // if no frame, disable
+          console.log("Removing Comms.on('data') handler");
+          Comms.on("data");
+          return;
+        }
+        iframe.contentWindow.postMessage({
+          type : "recvdata",
+          data : data
+        });
+    });
+
   }, false);
 }
 

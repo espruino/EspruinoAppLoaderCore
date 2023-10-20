@@ -396,6 +396,10 @@ const Comms = {
     let cmd = "reset();load()\n";
     return Comms.write(cmd);
   },
+  // Check if we're connected
+  isConnected: () => {
+    return !!Puck.getConnection();
+  },
   // Force a disconnect from the device
   disconnectDevice: () => {
     let connection = Puck.getConnection();
@@ -510,5 +514,30 @@ Bluetooth.print("\\xFF");
     return Comms.write("\x10"+Comms.getProgressCmd()+"\n").then(() =>
       Comms.uploadCommandList(cmds, 0, cmds.length)
     );
+  },
+  // Faking EventEmitter
+  handlers : {},
+  on : function(id, callback) { // calling with callback=undefined will disable
+    if (id!="data") throw new Error("Only data callback is supported");
+    var connection = Puck.getConnection();
+    if (!connection) throw new Error("No active connection");
+    /* This is a bit of a mess - the Puck.js lib only supports one callback with `.on`. If you
+    do Puck.getConnection().on('data') then it blows away the default one which is used for
+    .write/.eval and you can't get it back unless you reconnect. So rather than trying to fix the
+    Puck lib we just copy in the default handler here. */
+    if (callback===undefined) {
+      connection.on("data", function(d) { // the default handler
+        connection.received += d;
+        connection.hadData = true;
+        if (connection.cb)  connection.cb(d);
+      });
+    } else {
+      connection.on("data", function(d) {
+        connection.received += d;
+        connection.hadData = true;
+        if (connection.cb)  connection.cb(d);
+        callback();
+      });
+    }
   }
 };
