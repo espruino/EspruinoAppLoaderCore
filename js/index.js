@@ -263,6 +263,14 @@ function iframeSetup(options) {
             id : msg.id
           });
         });
+      } else if (msg.type=="readstoragejson") {
+        Comms.readFile(msg.filename).then(function(result) {
+          iframe.contentWindow.postMessage({
+            type : "readstoragejsonrsp",
+            data : Utils.parseRJSON(result),
+            id : msg.id
+          });
+        });
       } else if (msg.type=="writestorage") {
         Progress.show({title:`Uploading ${JSON.stringify(msg.filename)}`,sticky:true});
         Comms.writeFile(msg.filename, msg.data).then(function() {

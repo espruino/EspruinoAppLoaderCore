@@ -391,6 +391,76 @@ function atobSafe(input) {
   return output;
 }
 
+
+// parse relaxed JSON which Espruino's writeJSON uses for settings/etc (returns undefined on failure)
+function parseRJSON(str) {
+  let lex = Espruino.Core.Utils.getLexer(str);
+  let tok = lex.next();
+  function match(s) {
+    if (tok.str!=s) throw new Error("Expecting "+s+" got "+JSON.stringify(tok.str));
+    tok = lex.next();
+  }
+
+  function recurse() {
+    let final = "";
+    while (tok!==undefined) {
+      if (tok.type == "NUMBER") {
+        let v = parseFloat(tok.str);
+        tok = lex.next();
+        return v;
+      }
+      if (tok.str == "-") {
+        tok = lex.next();
+        let v = -parseFloat(tok.str);
+        tok = lex.next();
+        return v;
+      }
+      if (tok.type == "STRING") {
+        let v = tok.value;
+        tok = lex.next();
+        return v;
+      }
+      if (tok.type == "ID") switch (tok.str) {
+        case "true" : tok = lex.next(); return true;
+        case "false" : tok = lex.next(); return false;
+        case "null" : tok = lex.next(); return null;
+      }
+      if (tok.str == "[") {
+        tok = lex.next();
+        let arr = [];
+        while (tok.str != ']') {
+          arr.push(recurse());
+          if (tok.str != ']') match(",");
+        }
+        match("]");
+        return arr;
+      }
+      if (tok.str == "{") {
+        tok = lex.next();
+        let obj = {};
+        while (tok.str != '}') {
+          let key = tok.type=="STRING" ? tok.value : tok.str;
+          tok = lex.next();
+          match(":");
+          obj[key] = recurse();
+          if (tok.str != '}') match(",");
+        }
+        match("}");
+        return obj;
+      }
+      match("EOF");
+    }
+  }
+
+  let json = undefined;
+  try {
+    json = recurse();
+  } catch (e) {
+    console.log("RJSON parse error", e);
+  }
+  return json;
+}
+
 var Utils = {
   Const : Const,
   DEVICEINFO : DEVICEINFO,
@@ -409,7 +479,8 @@ var Utils = {
   isAppUpdateable : isAppUpdateable,
   versionLess : versionLess,
   debounce : debounce,
-  atobSafe : atobSafe
+  atobSafe : atobSafe,    // version of 'window.atob' that doesn't fail on 'not correctly encoded' strings
+  parseRJSON : parseRJSON // parse relaxed JSON which Espruino's writeJSON uses for settings/etc (returns undefined on failure)
 };
 
 if ("undefined"!=typeof module)
