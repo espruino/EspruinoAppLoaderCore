@@ -353,7 +353,7 @@ function handleCustomApp(appTemplate) {
 
         getInstalledApps()
           .then(()=>checkDependencies(app))
-          .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
+          .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE, noFinish:msg.noFinish}))
           .then(()=>{
             Progress.hide({sticky:true});
             resolve();
