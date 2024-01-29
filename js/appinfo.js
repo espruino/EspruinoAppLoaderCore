@@ -138,6 +138,14 @@ function parseJS(storageFile, options, app) {
         minify = false;
     }
     // TODO: we could look at installed app files and add any modules defined in those?
+    /* Don't run code that we're going to be uploading direct through EspruinoTools. This is 
+    usually an icon, and we don't want it pretokenised, minifying won't do anything, and really
+    we don't want anything touching it at all. */
+    if (storageFile.evaluate) {
+      storageFile.content = js;
+      return storageFile;
+    }
+    // Now run through EspruinoTools for pretokenising/compiling/modules/etc
     return Espruino.transform(js, {
       SET_TIME_ON_WRITE : false,
       PRETOKENISE : options.settings.pretokenise,
@@ -160,9 +168,8 @@ function parseJS(storageFile, options, app) {
 var AppInfo = {
   /* Get a list of commands needed to upload the file */
   getFileUploadCommands : (filename, data) => {
-    var cmd = "";
     // write code in chunks, in case it is too big to fit in RAM (fix #157)
-    var cmd = `\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(0,CHUNKSIZE))},0,${data.length});`;
+    let cmd = `\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(0,CHUNKSIZE))},0,${data.length});`;
     for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
       cmd += `\n\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(i,CHUNKSIZE))},${i});`;
     return cmd;
@@ -227,7 +234,7 @@ var AppInfo = {
               evaluate : storageFile.evaluate,
               noOverwrite : storageFile.noOverwrite,
               dataFile : !!storageFile.dataFile
-            }}).then(storageFile => parseJS(storageFile,options,app));
+            }}).then(storageFile => parseJS(storageFile, options, app));
         else return Promise.resolve();
       })).then(fileContents => { // now we just have a list of files + contents...
         // filter out empty files
