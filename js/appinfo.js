@@ -74,7 +74,7 @@ function translateJS(options, app, code) {
       if (translation!==undefined) {
         // remap any chars that we don't think we can display in Espruino's
         // built in fonts.
-        translation = Utils.convertStringToISOLatin(translation);
+        translation = Utils.convertStringToISO8859_1(translation);
         tokenString = toJSString(translation);
       }
     } else if (tok.str.startsWith("`")) {
