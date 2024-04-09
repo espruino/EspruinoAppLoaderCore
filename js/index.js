@@ -162,6 +162,12 @@ if (Const.APP_USAGE_JSON) httpGet(Const.APP_USAGE_JSON).then(jsonTxt=>{
   document.querySelector(".sort-nav").classList.remove("hidden");
   document.querySelector(".sort-nav label[sortid='installs']").classList.remove("hidden");
   document.querySelector(".sort-nav label[sortid='favourites']").classList.remove("hidden");
+  // actually set to sort on favourites
+  if (activeSort != "favourites") {
+    activeSort = "favourites";
+    refreshSort();
+    refreshLibrary();
+  }
 }).catch(err=>{
   console.log("No recent.csv - app sort disabled");
 });
