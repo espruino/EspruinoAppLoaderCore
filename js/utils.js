@@ -70,71 +70,49 @@ let DEVICEINFO = [
   }*/
 ];
 
-/* When a char is not in Espruino's codepage, try and use
+/* When a char is not in Espruino's iso8859-1 codepage, try and use
 these conversions */
 const CODEPAGE_CONVERSIONS = {
-  "æ":"e",
-  "å":"a",
   "ą":"a",
   "ā":"a",
-  "à":"a",
   "č":"c",
   "ć":"c",
-  "ç":"c",
   "ě":"e",
   "ę":"e",
   "ē":"e",
-  "è":"e",
-  "é":"e",
   "ģ":"g",
-  "í":"i",
   "ī":"i",
-  "ï":"i",
   "ķ":"k",
   "ļ":"l",
   "ł":"l",
   "ń":"n",
   "ņ":"n",
   "ő":"o",
-  "ó":"o",
-  "ò":"o",
-  "ø":"o",
   "ř":"r",
   "ś":"s",
   "š":"s",
-  "ú":"u",
   "ū":"u",
-  "ü":"u",
   "ż":"z",
   "ź":"z",
   "ž":"z",
   "Ą":"A",
   "Ā":"A",
-  "À":"A",
   "Č":"C",
   "Ć":"C",
-  "Ç":"C",
   "Ě":"E",
   "Ę":"E",
   "Ē":"E",
-  "È":"E",
-  "É":"E",
   "Ģ":"G",
-  "Ï":"I",
   "Ķ":"K",
   "Ļ":"L",
   "Ł":"L",
   "Ń":"N",
   "Ņ":"N",
   "Ő":"O",
-  "Ó":"O",
-  "Ò":"O",
   "Ř":"R",
   "Ś":"S",
   "Š":"S",
   "Ū":"U",
-  "Ú":"U",
-  "Ü":"U",
   "Ż":"Z",
   "Ź":"Z",
   "Ž":"Z",
@@ -142,12 +120,16 @@ const CODEPAGE_CONVERSIONS = {
 
 /// Convert any character that cannot be displayed by Espruino's built in fonts
 /// originally https://github.com/espruino/EspruinoAppLoaderCore/pull/11/files
-function convertStringToISOLatin(originalStr) {
+function convertStringToISO8859_1(originalStr) {
   var chars = originalStr.split('');
   for (var i = 0; i < chars.length; i++) {
     var ch = chars[i];
     if (CODEPAGE_CONVERSIONS[ch])
       chars[i] = CODEPAGE_CONVERSIONS[ch];
+    else if (chars[i].charCodeAt() > 255) {
+      console.log("Skipped conversion of char: '" + chars[i] + "'");
+      chars[i] = "?";
+    }
   }
   var translatedStr = chars.join('');
   if (translatedStr != originalStr)
@@ -481,7 +463,7 @@ var Utils = {
   Const : Const,
   DEVICEINFO : DEVICEINFO,
   CODEPAGE_CONVERSIONS : CODEPAGE_CONVERSIONS,
-  convertStringToISOLatin : convertStringToISOLatin,
+  convertStringToISO8859_1 : convertStringToISO8859_1,
   escapeHtml : escapeHtml,
   globToRegex : globToRegex,
   htmlToArray : htmlToArray,
