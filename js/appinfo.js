@@ -138,7 +138,7 @@ function parseJS(storageFile, options, app) {
         minify = false;
     }
     // TODO: we could look at installed app files and add any modules defined in those?
-    /* Don't run code that we're going to be uploading direct through EspruinoTools. This is 
+    /* Don't run code that we're going to be uploading direct through EspruinoTools. This is
     usually an icon, and we don't want it pretokenised, minifying won't do anything, and really
     we don't want anything touching it at all. */
     if (storageFile.evaluate) {
@@ -147,6 +147,7 @@ function parseJS(storageFile, options, app) {
     }
     // Now run through EspruinoTools for pretokenising/compiling/modules/etc
     return Espruino.transform(js, {
+      SAVE_ON_SEND : -1, // ensure EspruinoTools doesn't try and wrap this is write commands, also stops pretokenise from assuming we're writing to RAM
       SET_TIME_ON_WRITE : false,
       PRETOKENISE : options.settings.pretokenise,
       MODULE_URL : localModulesURL+"|https://www.espruino.com/modules",
