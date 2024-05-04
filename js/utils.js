@@ -73,6 +73,7 @@ let DEVICEINFO = [
 /* When a char is not in Espruino's iso8859-1 codepage, try and use
 these conversions */
 const CODEPAGE_CONVERSIONS = {
+  // letters
   "ą":"a",
   "ā":"a",
   "č":"c",
@@ -81,6 +82,7 @@ const CODEPAGE_CONVERSIONS = {
   "ę":"e",
   "ē":"e",
   "ģ":"g",
+  "ğ":"g",
   "ī":"i",
   "ķ":"k",
   "ļ":"l",
@@ -91,6 +93,7 @@ const CODEPAGE_CONVERSIONS = {
   "ř":"r",
   "ś":"s",
   "š":"s",
+  "ş":"s",
   "ū":"u",
   "ż":"z",
   "ź":"z",
@@ -102,7 +105,9 @@ const CODEPAGE_CONVERSIONS = {
   "Ě":"E",
   "Ę":"E",
   "Ē":"E",
+  "Ğ":"G",
   "Ģ":"G",
+  "ı":"i",
   "Ķ":"K",
   "Ļ":"L",
   "Ł":"L",
@@ -112,10 +117,15 @@ const CODEPAGE_CONVERSIONS = {
   "Ř":"R",
   "Ś":"S",
   "Š":"S",
+  "Ş":"S",
   "Ū":"U",
   "Ż":"Z",
   "Ź":"Z",
   "Ž":"Z",
+
+  // separators
+  " ":" ",
+  " ":" ",
 };
 
 /// Convert any character that cannot be displayed by Espruino's built in fonts
