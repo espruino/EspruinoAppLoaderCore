@@ -523,6 +523,7 @@ function refreshLibrary(options) {
   // Work out what we should be filtering, based on the URL
   let searchType = ""; // possible values: hash, chip, full, id
   let searchValue = ""; // the actual value to search for
+  let searchChip = ""; // if a chip was selected, this is the one to use
 
   if (window.location.hash) {
     searchValue = decodeURIComponent(window.location.hash.slice(1)).toLowerCase();
@@ -539,17 +540,19 @@ function refreshLibrary(options) {
       searchType = "full";
     }
     if (searchParams.has("c")) {
-      searchValue = searchParams.get("c").toLowerCase();
-      searchType = "chip";
+      searchChip = searchParams.get("c").toLowerCase();
     }
   }
-  if (searchType === "hash" && chips.indexOf(searchValue)>=0)
-    searchType = "chip";
+  if (searchType === "hash" && chips.indexOf(searchValue)>=0) {
+    searchType = "";
+    searchValue = "";
+    searchChip = searchValue;
+  }
   // Update the 'chips' to match the current window location
   let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
   filtersContainer.querySelector('.active').classList.remove('active');
-  if(searchType == "chip") {
-    let hashFilter = filtersContainer.querySelector('.chip[filterid="'+searchValue+'"]');
+  if(searchChip) {
+    let hashFilter = filtersContainer.querySelector('.chip[filterid="'+searchChip+'"]');
     if (hashFilter) hashFilter.classList.add('active');
   } else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
   // update the search box value
@@ -562,29 +565,28 @@ function refreshLibrary(options) {
   // Now filter according to what was set
   let visibleApps = appJSON.slice(); // clone so we don't mess with the original
   let sortedByRelevance = false;
+  // filter visibleApps by chip
+  let searchResult; // array of { app:app, relevance:number }
+  if (searchChip) {
+    if (searchChip == "favourites") {
+      visibleApps = visibleApps.filter(app => app.id?SETTINGS.favourites.filter(e => e == app.id).length:0);
+    } else {
+      // Some chips represent a metadata "type" element:
+      // - the "Clocks" chip must show only apps with "type": "clock"
+      // - the "Widgets" chip must show only apps with "type": "widget"
+      // and so on.
+      // If the type is NOT in the array below then the search will be tag-based instead
+      // of type-based.
+      const supportedMetadataTypes = ["clock", "widget", "launch", "textinput", "ram"];
+      if (supportedMetadataTypes.includes(searchChip.toLowerCase()))
+        visibleApps = visibleApps.filter(app => (app.type||"app").toLowerCase() == searchChip.toLowerCase() );
+      else
+        visibleApps = visibleApps.filter(app => app.tags && app.tags.split(',').includes(searchChip) );
+    }
+  }
+  // Now do our search, put the values in searchResult
   if (searchValue) {
-    // Now do our search, put the values in searchResult
-    let searchResult; // array of { app:app, relevance:number }
-    if (searchType === "chip") {
-      if (searchValue == "favourites") {
-        searchResult = visibleApps.map(app => ({
-          app : app,
-          relevance : app.id?SETTINGS.favourites.filter(e => e == app.id).length:0
-        }));
-      } else {
-        // Some chips represent a metadata "type" element:
-        // - the "Clocks" chip must show only apps with "type": "clock"
-        // - the "Widgets" chip must show only apps with "type": "widget"
-        // and so on.
-        // If the type is NOT in the array below then the search will be tag-based instead
-        // of type-based.
-        const supportedMetadataTypes = ["clock", "widget", "launch", "textinput", "ram"];
-        if (supportedMetadataTypes.includes(searchValue.toLowerCase()))
-          searchResult = visibleApps.map(app => ({ app:app, relevance: (app.type||"app").toLowerCase() == searchValue.toLowerCase() ? 1 : 0 }));
-        else
-          searchResult = visibleApps.map(app => ({ app:app, relevance: (app.tags && app.tags.split(',').includes(searchValue)) ? 1 : 0 }));
-      }
-    } else if (searchType === "hash") {
+    if (searchType === "hash") {
       sortedByRelevance = true;
       searchResult = visibleApps.map(app => ({
         app : app,
@@ -1140,9 +1142,13 @@ const searchInputChangedDebounced = debounce(function() {
   refreshLibrary({dontChangeSearchBox:true});
 }, 300);
 librarySearchInput.addEventListener('input', evt => {
-  var searchValue = evt.target.value.toLowerCase();
+  let searchValue = evt.target.value.toLowerCase();
   // Update window URL
-  window.history.replaceState(null, null, "?q=" + searchValue);
+  let c = "";
+  let searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.has("c"))
+    c = `c=${encodeURIComponent(searchParams.get("c").toLowerCase())}&`;
+  window.history.replaceState(null, null, `?${c}q=${encodeURIComponent(searchValue)}`);
   searchInputChangedDebounced();
 });
 
