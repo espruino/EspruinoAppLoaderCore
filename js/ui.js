@@ -117,13 +117,14 @@ function showPrompt(title, text, buttons, shouldEscapeHtml) {
             ${(shouldEscapeHtml) ? escapeHtml(text).replace(/\n/g,'<br/>') : text}
           </div>
         </div>
-        ${Object.keys(buttons).length ? `<div class="modal-footer">
+        ${Object.keys(buttons).length ? `
           <div class="modal-footer">
             ${buttons.yes?'<button class="btn btn-primary" isyes="1">Yes</button>':''}
             ${buttons.no?'<button class="btn" isyes="0">No</button>':''}
             ${buttons.ok?'<button class="btn" isyes="1">Ok</button>':''}
+            ${buttons.footer?`<span style="float:left">${buttons.footer}<span>`:""}
           </div>
-        </div>`:``}
+        `:``}
       </div>
     </div>`);
     document.body.append(modal);

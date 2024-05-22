@@ -205,7 +205,8 @@ function showReadme(event, appid) {
   let markedOptions = { baseUrl : appPath };
   function show(contents) {
     if (!contents) return;
-    showPrompt(app.name + " Documentation", marked(contents, markedOptions), {ok: true}, false).catch(() => {});
+    let footerText = `<a href="${window.location.origin+window.location.pathname+"?id="+appid+"&readme"}">(Link)</a>`;
+    showPrompt(app.name + " Documentation", marked(contents, markedOptions), {ok: true, footer: footerText}, false).catch(() => {});
   }
   httpGet(appPath+app.readme).then(show).catch(()=>show("Failed to load README."));
 }
