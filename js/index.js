@@ -320,7 +320,7 @@ function handleCustomApp(appTemplate) {
   if (!appTemplate.custom) throw new Error("App doesn't have custom HTML");
   // if it needs a connection, do that first
   if (appTemplate.customConnect && !device.connected)
-    return getInstalledApps().then(() => handleCustomApp(appTemplate));
+    return getDeviceInfo().then(() => handleCustomApp(appTemplate));
   // otherwise continue
   return new Promise((resolve,reject) => {
     let modal = htmlElement(`<div class="modal active">
@@ -358,7 +358,7 @@ function handleCustomApp(appTemplate) {
         console.log("Received custom app", app);
         modal.remove();
 
-        getInstalledApps()
+        getDeviceInfo()
           .then(()=>checkDependencies(app))
           .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE, noFinish: msg.options && msg.options.noFinish}))
           .then(()=>{
@@ -745,7 +745,7 @@ function showScreenshots(appId) {
 // =========================================== My Apps
 
 function uploadApp(app) {
-  return getInstalledApps().then(()=>{
+  return getDeviceInfo().then(()=>{
     if (device.appsInstalled.some(i => i.id === app.id)) {
       return updateApp(app);
     }
@@ -774,7 +774,7 @@ function uploadApp(app) {
 
 function removeApp(app) {
   return showPrompt("Delete","Really remove '"+app.name+"'?").then(() => {
-    return getInstalledApps().then(()=>{
+    return getDeviceInfo().then(()=>{
       // a = from appid.info, app = from apps.json
       return Comms.removeApp(device.appsInstalled.find(a => a.id === app.id));
     });
@@ -983,7 +983,7 @@ function refreshMyApps() {
 }
 
 let haveInstalledApps = false;
-function getInstalledApps(refresh) {
+function getDeviceInfo(refresh) {
   if (haveInstalledApps && !refresh) {
     return Promise.resolve(device.appsInstalled);
   }
@@ -995,6 +995,7 @@ function getInstalledApps(refresh) {
       device.id = info.id;
       device.version = info.version;
       device.exptr = info.exptr;
+      device.storageStats = info.storageStats;
       device.appsInstalled = info.apps;
       haveInstalledApps = true;
       if ("function"==typeof onFoundDeviceInfo)
@@ -1016,11 +1017,39 @@ function getInstalledApps(refresh) {
       const deviceInfoElem = document.getElementById("more-deviceinfo");
       if (deviceInfoElem) {
         deviceInfoElem.style.display = "inherit";
+        let storageRow = "";
+        if (device.storageStats?.totalBytes) {
+          const stats = device.storageStats;
+          const totalKB = (stats.totalBytes / 1000).toFixed(2);
+          const usedKB = (stats.fileBytes / 1000).toFixed(2);
+          const trashKB = (stats.trashBytes / 1000).toFixed(2);
+          const freeKB = (stats.freeBytes / 1000).toFixed(2);
+          const bytePrc = 100 / stats.totalBytes;
+          const usedPrc = bytePrc * stats.fileBytes;
+          const trashPrc = bytePrc * stats.trashBytes;
+          const freePrc = bytePrc * stats.freeBytes;
+          if (isNaN(usedPrc) || isNaN(trashPrc) || isNaN(freePrc)) {
+            console.error("Unexpected error: Could not calculate storage statistics");
+          } else {
+            storageRow = `
+<tr><td><b>Storage</b></td><td>
+  <p style="margin-bottom:.4rem;">${totalKB} KiB in total, ${stats.fileCount} files used, ${stats.trashCount} files trashed.</p>
+  <div class="bar" style="margin-bottom:.3rem;">
+    <!-- These styles prevent overflow of text if the bar item is too small to fit all the text -->
+    <style>.bar-item{white-space:nowrap;padding-left:.1rem;padding-right:.1rem;}</style>
+    <div class="bar-item tooltip bg-error"   data-tooltip="${usedKB} KiB, ${usedPrc.toFixed(2)}% used"    style="width:${usedPrc}%; color:hsl(218 16% 2%)">${usedPrc.toFixed(0)}% used</div>
+    <div class="bar-item tooltip bg-warning" data-tooltip="${trashKB} KiB, ${trashPrc.toFixed(2)}% trash" style="width:${trashPrc}%;color:hsl(218 16% 7%)">${trashPrc.toFixed(0)}% trash</div>
+    <div class="bar-item tooltip bg-success" data-tooltip="${freeKB} KiB, ${freePrc.toFixed(2)}% free"    style="width:${freePrc}%; color:hsl(218 16% 7%)">${freePrc.toFixed(0)}% free</div>
+  </div>
+</td></tr>`;
+          }
+        }
         const deviceInfoContentElem = document.getElementById("more-deviceinfo-content");
         deviceInfoContentElem.innerHTML = `
 <table class="table"><tbody>
   <tr><td><b>Device Type</b></td><td>${device.id}</td></tr>
   <tr><td><b>Firmware Version</b></td><td>${device.version}</td></tr>
+  ${storageRow}
   <tr><td><b>Apps Installed</b></td><td>${(device.appsInstalled || []).map(a => `${a.id} (${a.version})`).join(", ")}</td></tr>
 </tbody></table>`;
       }
@@ -1064,7 +1093,7 @@ function installMultipleApps(appIds, promptName) {
   ).then(()=> Comms.showUploadFinished()
   ).then(()=>{
     showToast("Apps successfully installed!","success");
-    return getInstalledApps(true);
+    return getDeviceInfo(true);
   });
 }
 
@@ -1110,7 +1139,7 @@ function handleConnectionChange(connected) {
 }
 
 htmlToArray(document.querySelectorAll(".btn.refresh")).map(button => button.addEventListener("click", () => {
-  getInstalledApps(true).catch(err => {
+  getDeviceInfo(true).catch(err => {
     showToast("Getting app list failed, "+err,"error");
   });
 }));
@@ -1123,7 +1152,7 @@ connectMyDeviceBtn.addEventListener("click", () => {
     const deviceInfoElem = document.getElementById("more-deviceinfo");
     if (deviceInfoElem) deviceInfoElem.style.display = "none";
   } else {
-    getInstalledApps(true).catch(err => {
+    getDeviceInfo(true).catch(err => {
       showToast("Device connection failed, "+err,"error");
       Comms.disconnectDevice();
     });
@@ -1243,7 +1272,7 @@ if (btn) btn.addEventListener("click",event=>{
     Progress.hide({sticky:true});
     device.appsInstalled = [];
     showToast("All apps removed","success");
-    return getInstalledApps(true);
+    return getDeviceInfo(true);
   }).catch(err=>{
     Progress.hide({sticky:true});
     showToast("App removal failed, "+err,"error");
@@ -1279,7 +1308,7 @@ if (btn) btn.addEventListener("click", event => {
 
 btn = document.getElementById("screenshot");
 if (btn) btn.addEventListener("click",event=>{
-  getInstalledApps(false).then(()=>{
+  getDeviceInfo(false).then(()=>{
     if (device.id=="BANGLEJS"){
       showPrompt("Screenshot","Screenshots are not supported on Bangle.js 1",{ok:1});
     } else {
