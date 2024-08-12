@@ -196,9 +196,9 @@ const Comms = {
       });
     });
   },
-  // Get Device ID and version, plus a JSON list of installed apps
+  // Get Device ID, version, storage stats, and a JSON list of installed apps
   getDeviceInfo : (noReset) => {
-    Progress.show({title:`Getting app list...`,sticky:true});
+    Progress.show({title:`Getting device info...`,sticky:true});
     return new Promise((resolve,reject) => {
       Puck.write("\x03",(result) => {
         if (result===null) {
@@ -240,7 +240,7 @@ const Comms = {
           return;
         }
 
-        let cmd, finalJS = `E.toJS([process.env.BOARD,process.env.VERSION,process.env.EXPTR,0|getTime(),E.CRC32(getSerial()+NRF.getAddress())]).substr(1)`;
+        let cmd, finalJS = `JSON.stringify(require("Storage").getStats?require("Storage").getStats():{})+","+E.toJS([process.env.BOARD,process.env.VERSION,process.env.EXPTR,0|getTime(),E.CRC32(getSerial()+NRF.getAddress())]).substr(1)`;
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
           cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
         else
@@ -259,12 +259,13 @@ const Comms = {
           let appList;
           try {
             appList = JSON.parse(appListJSON);
-            // unpack the last 4 elements which are board info (See finalJS above)
+            // unpack the last 6 elements which are board info (See finalJS above)
             info.uid = appList.pop(); // unique ID for watch (hash of internal serial number and MAC)
             info.currentTime = appList.pop()*1000; // time in ms
             info.exptr = appList.pop(); // used for compilation
             info.version = appList.pop();
             info.id = appList.pop();
+            info.storageStats = appList.pop(); // how much storage has been used
             // if we just have 'null' then it means we have no apps
             if (appList.length==1 && appList[0]==null)
               appList = [];
