@@ -320,7 +320,7 @@ function handleCustomApp(appTemplate) {
   if (!appTemplate.custom) throw new Error("App doesn't have custom HTML");
   // if it needs a connection, do that first
   if (appTemplate.customConnect && !device.connected)
-    return getDeviceInfo().then(() => handleCustomApp(appTemplate));
+    return getInstalledApps().then(() => handleCustomApp(appTemplate));
   // otherwise continue
   return new Promise((resolve,reject) => {
     let modal = htmlElement(`<div class="modal active">
@@ -358,7 +358,7 @@ function handleCustomApp(appTemplate) {
         console.log("Received custom app", app);
         modal.remove();
 
-        getDeviceInfo()
+        getInstalledApps()
           .then(()=>checkDependencies(app))
           .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE, noFinish: msg.options && msg.options.noFinish}))
           .then(()=>{
@@ -745,7 +745,7 @@ function showScreenshots(appId) {
 // =========================================== My Apps
 
 function uploadApp(app) {
-  return getDeviceInfo().then(()=>{
+  return getInstalledApps().then(()=>{
     if (device.appsInstalled.some(i => i.id === app.id)) {
       return updateApp(app);
     }
@@ -774,7 +774,7 @@ function uploadApp(app) {
 
 function removeApp(app) {
   return showPrompt("Delete","Really remove '"+app.name+"'?").then(() => {
-    return getDeviceInfo().then(()=>{
+    return getInstalledApps().then(()=>{
       // a = from appid.info, app = from apps.json
       return Comms.removeApp(device.appsInstalled.find(a => a.id === app.id));
     });
@@ -983,7 +983,7 @@ function refreshMyApps() {
 }
 
 let haveInstalledApps = false;
-function getDeviceInfo(refresh) {
+function getInstalledApps(refresh) {
   if (haveInstalledApps && !refresh) {
     return Promise.resolve(device.appsInstalled);
   }
@@ -1093,7 +1093,7 @@ function installMultipleApps(appIds, promptName) {
   ).then(()=> Comms.showUploadFinished()
   ).then(()=>{
     showToast("Apps successfully installed!","success");
-    return getDeviceInfo(true);
+    return getInstalledApps(true);
   });
 }
 
@@ -1139,7 +1139,7 @@ function handleConnectionChange(connected) {
 }
 
 htmlToArray(document.querySelectorAll(".btn.refresh")).map(button => button.addEventListener("click", () => {
-  getDeviceInfo(true).catch(err => {
+  getInstalledApps(true).catch(err => {
     showToast("Getting app list failed, "+err,"error");
   });
 }));
@@ -1152,7 +1152,7 @@ connectMyDeviceBtn.addEventListener("click", () => {
     const deviceInfoElem = document.getElementById("more-deviceinfo");
     if (deviceInfoElem) deviceInfoElem.style.display = "none";
   } else {
-    getDeviceInfo(true).catch(err => {
+    getInstalledApps(true).catch(err => {
       showToast("Device connection failed, "+err,"error");
       Comms.disconnectDevice();
     });
@@ -1272,7 +1272,7 @@ if (btn) btn.addEventListener("click",event=>{
     Progress.hide({sticky:true});
     device.appsInstalled = [];
     showToast("All apps removed","success");
-    return getDeviceInfo(true);
+    return getInstalledApps(true);
   }).catch(err=>{
     Progress.hide({sticky:true});
     showToast("App removal failed, "+err,"error");
@@ -1308,7 +1308,7 @@ if (btn) btn.addEventListener("click", event => {
 
 btn = document.getElementById("screenshot");
 if (btn) btn.addEventListener("click",event=>{
-  getDeviceInfo(false).then(()=>{
+  getInstalledApps(false).then(()=>{
     if (device.id=="BANGLEJS"){
       showPrompt("Screenshot","Screenshots are not supported on Bangle.js 1",{ok:1});
     } else {
