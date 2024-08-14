@@ -1012,6 +1012,8 @@ function getInstalledApps(refresh) {
         console.log("SETTINGS.settime=true and >2 seconds out - updating time");
         return Comms.setTime();
       }
+    })
+    .then(() => {
       // Show device info in more page:
       const deviceInfoElem = document.getElementById("more-deviceinfo");
       if (deviceInfoElem) {
