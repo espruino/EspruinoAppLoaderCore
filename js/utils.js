@@ -49,7 +49,7 @@ let DEVICEINFO = [
   }, {
     id : "PUCKJS",
     name : "Puck.js",
-    features : ["BLE","BLEHID","NFC","GYRO","ACCEL","MAG"],
+    features : ["BLE","BLEHID","NFC","GYRO","ACCEL","MAG","RGBLED"],
     img : "https://www.espruino.com/img/PUCKJS_thumb.jpg"
   }, {
     id : "PIXLJS",
@@ -57,6 +57,11 @@ let DEVICEINFO = [
     features : ["BLE","BLEHID","NFC","GRAPHICS"],
     g : { width : 128, height : 64, bpp : 1 },
     img : "https://www.espruino.com/img/PIXLJS_thumb.jpg"
+  }, {
+    id : "JOLTJS",
+    name : "Jolt.js",
+    features : ["BLE","BLEHID","RGBLED"],
+    img : "https://www.espruino.com/img/JOLTJS_thumb.jpg"
   }, {
     id : "MDBT42Q",
     name : "MDBT42Q",
