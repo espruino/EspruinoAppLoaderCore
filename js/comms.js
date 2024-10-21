@@ -537,7 +537,7 @@ Bluetooth.print("\\xFF");
         connection.received += d;
         connection.hadData = true;
         if (connection.cb)  connection.cb(d);
-        callback();
+        callback(d);
       });
     }
   }
