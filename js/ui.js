@@ -72,7 +72,7 @@ const Progress = {
 
 /// Add progress handler so we get nice uploads
 Puck.writeProgress = function(charsSent, charsTotal) {
-  if (charsSent===undefined) {
+  if (charsSent===undefined || charsTotal<10) {
     Progress.hide();
     return;
   }
