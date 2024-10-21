@@ -1308,6 +1308,7 @@ if (btn) btn.addEventListener("click", event => {
   window.open(url, '_blank');
 });
 
+// Screenshot button
 btn = document.getElementById("screenshot");
 if (btn) btn.addEventListener("click",event=>{
   getInstalledApps(false).then(()=>{
@@ -1357,3 +1358,14 @@ if (btn) btn.addEventListener("click",event=>{
     }
   });
 });
+
+// Open terminal button
+if (Espruino.Core.Terminal)
+  Espruino.Core.Terminal.OVERRIDE_CONTENTS = "Click here and type to communicate with Bangle.js";
+btn = document.getElementById("terminalEnable");
+if (btn) btn.addEventListener("click",event=>{
+    document.getElementById("terminalEnable").remove();
+    document.querySelector(".editor__canvas").style.display = "inherit";
+    Comms.on("data",x=>Espruino.Core.Terminal.outputDataHandler(x))
+    Espruino.Core.Terminal.setInputDataHandler(function(d) { Comms.write(d); })
+  });
