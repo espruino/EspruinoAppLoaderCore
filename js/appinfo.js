@@ -100,6 +100,8 @@ function translateJS(options, app, code) {
 
 // Run JS through EspruinoTools to pull in modules/etc
 function parseJS(storageFile, options, app) {
+  options = options||{};
+  options.device = options.device||{};
   if (storageFile.url && storageFile.url.endsWith(".js") && !storageFile.url.endsWith(".min.js")) {
     // if original file ends in '.js'...
     let js = storageFile.content;
@@ -111,8 +113,12 @@ function parseJS(storageFile, options, app) {
     if (typeof window!=="undefined")
       localModulesURL = window.location.origin + window.location.pathname.replace(/[^/]*$/,"") + "modules";
     let builtinModules = ["Flash","Storage","heatshrink","tensorflow","locale","notify"];
-    if (options && options.device && options.device.id=="BANGLEJS2")
-      builtinModules.push("crypto");
+    // FIXME: now we check options.device.modules below, do we need the hard-coded list above?
+    if (options.device.modules)
+      options.device.modules.forEach(mod => {
+        if (!builtinModules.includes(mod)) builtinModules.push(mod);
+      });
+
     // add any modules that were defined for this app (no need to search for them!)
     builtinModules = builtinModules.concat(app.storage.map(f=>f.name).filter(name => name && !name.includes(".")));
     // Check for modules in pre-installed apps?

@@ -995,6 +995,7 @@ function getInstalledApps(refresh) {
       device.id = info.id;
       device.version = info.version;
       device.exptr = info.exptr;
+      device.modules = info.modules||[];
       device.storageStats = info.storageStats;
       device.appsInstalled = info.apps;
       haveInstalledApps = true;

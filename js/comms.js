@@ -240,7 +240,7 @@ const Comms = {
           return;
         }
 
-        let cmd, finalJS = `JSON.stringify(require("Storage").getStats?require("Storage").getStats():{})+","+E.toJS([process.env.BOARD,process.env.VERSION,process.env.EXPTR,0|getTime(),E.CRC32(getSerial()+NRF.getAddress())]).substr(1)`;
+        let cmd, finalJS = `JSON.stringify(require("Storage").getStats?require("Storage").getStats():{})+","+E.toJS([process.env.BOARD,process.env.VERSION,process.env.EXPTR,process.env.MODULES,0|getTime(),E.CRC32(getSerial()+NRF.getAddress())]).substr(1)`;
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
           cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
         else
@@ -262,6 +262,7 @@ const Comms = {
             // unpack the last 6 elements which are board info (See finalJS above)
             info.uid = appList.pop(); // unique ID for watch (hash of internal serial number and MAC)
             info.currentTime = appList.pop()*1000; // time in ms
+            info.modules = appList.pop().split(","); // see what modules we have internally so we don't have to upload them if they exist
             info.exptr = appList.pop(); // used for compilation
             info.version = appList.pop();
             info.id = appList.pop();
