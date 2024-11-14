@@ -390,6 +390,16 @@ var AppInfo = {
           }
         });
       }
+      if (app.provides_features) {
+        app.provides_features.forEach(feature => {
+          let existing = appJSONInstalled.find(app =>
+            app.provides_features && app.provides_features.includes(feature));
+          if (existing) {
+            let msg = `App "${app.name}" provides feature '"${feature}"' which is already provided by "${existing.name}"`;
+            promise = promise.then(() => uploadOptions.showQuery(msg, existing));
+          }
+        });
+      }
       if (app.type=="launch") {
         let existing = appJSONInstalled.find(app => app.type=="launch");
         if (existing) {
