@@ -124,7 +124,7 @@ const Comms = {
         }
         // Actually write the command with a 'print OK' at the end, and use responseHandler
         // to deal with the response. If OK we call uploadCmd to upload the next block
-        Puck.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}Bluetooth.println("OK")\n`,responseHandler, true /* wait for a newline*/);
+        Puck.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}${Const.CONNECTION_DEVICE}.println("OK")\n`,responseHandler, true /* wait for a newline*/);
       }
 
       uploadCmd()
@@ -240,11 +240,12 @@ const Comms = {
           return;
         }
 
-        let cmd, finalJS = `JSON.stringify(require("Storage").getStats?require("Storage").getStats():{})+","+E.toJS([process.env.BOARD,process.env.VERSION,process.env.EXPTR,process.env.MODULES,0|getTime(),E.CRC32(getSerial()+NRF.getAddress())]).substr(1)`;
+        let cmd, finalJS = `JSON.stringify(require("Storage").getStats?require("Storage").getStats():{})+","+E.toJS([process.env.BOARD,process.env.VERSION,process.env.EXPTR,process.env.MODULES,0|getTime(),E.CRC32(getSerial()+(global.NRF?NRF.getAddress():0))]).substr(1)`;
+        let device = Const.CONNECTION_DEVICE;
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
-          cmd = `\x10Bluetooth.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
+          cmd = `\x10${device}.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
         else
-          cmd = `\x10Bluetooth.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};Bluetooth.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")});Bluetooth.println(${finalJS})\n`;
+          cmd = `\x10${device}.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};${device}.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")});${device}.println(${finalJS})\n`;
         Puck.write(cmd, (appListStr,err) => {
           Progress.hide({sticky:true});
           // we may have received more than one line - we're looking for an array (starting with '[')
@@ -252,6 +253,7 @@ const Comms = {
           var appListJSON = lines.find(l => l[0]=="[");
           // check to see if we got our data
           if (!appListJSON) {
+            console.log("No JSON, just got: "+JSON.stringify(appListStr));
             return reject("No response from device. Is 'Programmable' set to 'Off'?");
           }
           // now try and parse
@@ -285,7 +287,7 @@ const Comms = {
   },
   // Get an app's info file from Bangle.js
   getAppInfo : app => {
-    return Comms.write(`\x10Bluetooth.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`).
+    return Comms.write(`\x10${Const.CONNECTION_DEVICE}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`).
       then(appJSON=>{
         let app;
         try {
@@ -371,7 +373,7 @@ const Comms = {
         }
       }
       // Use write with newline here so we wait for it to finish
-      let cmd = '\x10E.showMessage("Erasing...");require("Storage").eraseAll();Bluetooth.println("OK");reset()\n';
+      let cmd = `\x10E.showMessage("Erasing...");require("Storage").eraseAll();${Const.CONNECTION_DEVICE}.println("OK");reset()\n`;
       Puck.write(cmd, handleResult, true /* wait for newline */);
     }).then(() => new Promise(resolve => {
       console.log("<COMMS> removeAllApps: Erase complete, waiting 500ms for 'reset()'");
@@ -489,9 +491,9 @@ const Comms = {
     return Comms.readTextBlock(`\x03\x10(function() {
 var s = require("Storage").read(${JSON.stringify(filename)});
 if (s===undefined) s="";
-Bluetooth.println(((s.length+2)/3)<<2);
-for (var i=0;i<s.length;i+=${CHUNKSIZE}) Bluetooth.print(btoa(s.substr(i,${CHUNKSIZE})));
-Bluetooth.print("\\xFF");
+${Const.CONNECTION_DEVICE}.println(((s.length+2)/3)<<2);
+for (var i=0;i<s.length;i+=${CHUNKSIZE}) ${Const.CONNECTION_DEVICE}.print(btoa(s.substr(i,${CHUNKSIZE})));
+${Const.CONNECTION_DEVICE}.print("\\xFF");
 })()\n`).then(text => {
       return atobSafe(text);
     });
@@ -502,10 +504,10 @@ Bluetooth.print("\\xFF");
     console.log(`<COMMS> readStorageFile ${JSON.stringify(filename)}`);
     return Comms.readTextBlock(`\x03\x10(function() {
       var f = require("Storage").open(${JSON.stringify(filename)},"r");
-      Bluetooth.println(f.getLength());
+      ${Const.CONNECTION_DEVICE}.println(f.getLength());
       var l = f.readLine();
-      while (l!==undefined) { Bluetooth.print(l); l = f.readLine(); }
-      Bluetooth.print("\\xFF");
+      while (l!==undefined) { ${Const.CONNECTION_DEVICE}.print(l); l = f.readLine(); }
+      ${Const.CONNECTION_DEVICE}.print("\\xFF");
     })()\n`);
   },
   // Read a non-storagefile file
