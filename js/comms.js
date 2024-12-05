@@ -541,14 +541,18 @@ ${Const.CONNECTION_DEVICE}.print("\\xFF");
     Puck lib we just copy in the default handler here. */
     if (callback===undefined) {
       connection.on("data", function(d) { // the default handler
-        connection.received += d;
-        connection.hadData = true;
+        if (!Puck.RECEIVED_NOT_IN_DATA_HANDLER) {
+          connection.received += d;
+          connection.hadData = true;
+        }
         if (connection.cb)  connection.cb(d);
       });
     } else {
       connection.on("data", function(d) {
-        connection.received += d;
-        connection.hadData = true;
+        if (!Puck.RECEIVED_NOT_IN_DATA_HANDLER) {
+          connection.received += d;
+          connection.hadData = true;
+        }
         if (connection.cb)  connection.cb(d);
         callback(d);
       });
