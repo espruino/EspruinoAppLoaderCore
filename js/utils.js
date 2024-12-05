@@ -32,6 +32,12 @@ const Const = {
   /* Maximum number of apps shown in the library, then a 'Show more...' entry is added.. */
   MAX_APPS_SHOWN : 30,
 
+  /* If true, store files using 'fs' module which is a FAT filesystem on SD card, not on internal Storage */
+  FILES_IN_FS : false,
+
+  /* Don't try and reset the device when we're connecting/sending apps */
+  NO_RESET : false,
+
   // APP_DATES_CSV   - If set, the URL of a file to get information on the latest apps from
   // APP_USAGE_JSON  - If set, the URL of a file containing the most-used/most-favourited apps
 };

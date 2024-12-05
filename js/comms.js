@@ -8,6 +8,7 @@ console.log("=============================================")
 const Comms = {
   // Write the given data, returns a promise
   write : (data) => new Promise((resolve,reject) => {
+    if (data===undefined) throw new Error("Comms.write(undefined) called!")
     return Puck.write(data,function(result) {
       if (result===null) return reject("");
       resolve(result);
@@ -38,6 +39,7 @@ const Comms = {
   // Reset the device, if opt=="wipe" erase any saved code
   reset : (opt) => new Promise((resolve,reject) => {
     let tries = 8;
+    if (Const.NO_RESET) return resolve();
     console.log("<COMMS> reset");
     Puck.write(`\x03\x10reset(${opt=="wipe"?"1":""});\n`,function rstHandler(result) {
       console.log("<COMMS> reset: got "+JSON.stringify(result));
@@ -51,7 +53,7 @@ const Comms = {
       } else {
         console.log(`<COMMS> reset: rebooted - sending commands to clear out any boot code`);
         // see https://github.com/espruino/BangleApps/issues/1759
-        Puck.write("\x10clearInterval();clearWatch();global.Bangle&&Bangle.removeAllListeners();E.removeAllListeners();NRF.removeAllListeners();\n",function() {
+        Puck.write("\x10clearInterval();clearWatch();global.Bangle&&Bangle.removeAllListeners();E.removeAllListeners();global.NRF&&NRF.removeAllListeners();\n",function() {
           console.log(`<COMMS> reset: complete.`);
           setTimeout(resolve,250);
         });
@@ -244,7 +246,9 @@ const Comms = {
         let device = Const.CONNECTION_DEVICE;
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
           cmd = `\x10${device}.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
-        else
+        else if (Const.FILES_IN_FS) // file in a FAT filesystem
+          cmd = `\x10${device}.print("[");if (!require("fs").statSync("APPINFO"))require("fs").mkdir("APPINFO");require("fs").readdirSync("APPINFO").forEach(f=>{var j=JSON.parse(require("fs").readFileSync("APPINFO/"+f))||"{}";${device}.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")});${device}.println(${finalJS})\n`;
+        else // the default, files in Storage
           cmd = `\x10${device}.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};${device}.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")});${device}.println(${finalJS})\n`;
         Puck.write(cmd, (appListStr,err) => {
           Progress.hide({sticky:true});
@@ -287,7 +291,10 @@ const Comms = {
   },
   // Get an app's info file from Bangle.js
   getAppInfo : app => {
-    return Comms.write(`\x10${Const.CONNECTION_DEVICE}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`).
+    var cmd;
+    if (Const.FILES_IN_FS) cmd = `\x10${Const.CONNECTION_DEVICE}.println(require("fs").readFileSync(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
+    else cmd = `\x10${Const.CONNECTION_DEVICE}.println(require("fs").readFileSync(${JSON.stringify("APPINFO/"+AppInfo.getAppInfoFilename(app))})||"null")\n`;
+    return Comms.write(cmd).
       then(appJSON=>{
         let app;
         try {
@@ -397,7 +404,7 @@ const Comms = {
   },
   // Reset the device
   resetDevice : () => {
-    let cmd = "reset();load()\n";
+    let cmd = "load();\n";
     return Comms.write(cmd);
   },
   // Check if we're connected

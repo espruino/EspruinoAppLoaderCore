@@ -175,11 +175,15 @@ function parseJS(storageFile, options, app) {
 var AppInfo = {
   /* Get a list of commands needed to upload the file */
   getFileUploadCommands : (filename, data) => {
-    // write code in chunks, in case it is too big to fit in RAM (fix #157)
-    let cmd = `\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(0,CHUNKSIZE))},0,${data.length});`;
-    for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
-      cmd += `\n\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(i,CHUNKSIZE))},${i});`;
-    return cmd;
+    if (Const.FILES_IN_FS) {
+      return `\n\x10require('fs').writeFileSync(${JSON.stringify(filename)},${asJSExpr(data)});`;
+    } else {
+      // write code in chunks, in case it is too big to fit in RAM (fix #157)
+      let cmd = `\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(0,CHUNKSIZE))},0,${data.length});`;
+      for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
+        cmd += `\n\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(i,CHUNKSIZE))},${i});`;
+      return cmd;
+    }
   },
   /* Get a list of commands needed to upload a storage file */
   getStorageFileUploadCommands : (filename, data) => {
@@ -278,6 +282,8 @@ var AppInfo = {
   getAppInfoFilename : (app) => {
     if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
       return "app.info";
+    else if (Const.FILES_IN_FS)
+      return "APPINFO/"+app.id+".info";
     else
       return app.id+".info";
   },
