@@ -35,6 +35,9 @@ const Const = {
   /* If true, store files using 'fs' module which is a FAT filesystem on SD card, not on internal Storage */
   FILES_IN_FS : false,
 
+  /* How many bytes of code to we attempt to upload in one go? */
+  UPLOAD_CHUNKSIZE: 1024,
+
   /* Don't try and reset the device when we're connecting/sending apps */
   NO_RESET : false,
 

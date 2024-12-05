@@ -5,9 +5,6 @@ if ("undefined"!=typeof module) {
   heatshrink = require("../../webtools/heatshrink.js");
 }
 
-// How many bytes of code to we attempt to upload in one go?
-const CHUNKSIZE = 1024;
-
 // Converts a string into most efficient way to send to Espruino (either json, base64, or compressed base64)
 function asJSExpr(txt, options) {
   /* options = {
@@ -175,8 +172,12 @@ function parseJS(storageFile, options, app) {
 var AppInfo = {
   /* Get a list of commands needed to upload the file */
   getFileUploadCommands : (filename, data) => {
+    const CHUNKSIZE = Const.UPLOAD_CHUNKSIZE;
     if (Const.FILES_IN_FS) {
-      return `\n\x10require('fs').writeFileSync(${JSON.stringify(filename)},${asJSExpr(data)});`;
+      let cmd = `\x10require('fs').writeFileSync(${JSON.stringify(filename)},${asJSExpr(data.substr(0,CHUNKSIZE))});`;
+      for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
+        cmd += `\n\x10require('fs').appendFileSync(${JSON.stringify(filename)},${asJSExpr(data.substr(i,CHUNKSIZE))});`;
+      return cmd;
     } else {
       // write code in chunks, in case it is too big to fit in RAM (fix #157)
       let cmd = `\x10require('Storage').write(${JSON.stringify(filename)},${asJSExpr(data.substr(0,CHUNKSIZE))},0,${data.length});`;
@@ -187,6 +188,7 @@ var AppInfo = {
   },
   /* Get a list of commands needed to upload a storage file */
   getStorageFileUploadCommands : (filename, data) => {
+    const CHUNKSIZE = Const.UPLOAD_CHUNKSIZE;
     var cmd = "";
     // write code in chunks, in case it is too big to fit in RAM (fix #157)
     function getWriteData(offset) {
