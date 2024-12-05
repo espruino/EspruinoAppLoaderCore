@@ -328,7 +328,10 @@ const Comms = {
           console.warn("App file "+app.id+".info doesn't have a 'files' field");
           app.files=app.id+".info";
         }
-        cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("Storage").erase(${toJSString(file)});\n`).join("");
+        if (Const.FILES_IN_FS)
+          cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("fs").unlinkSync(${toJSString(file)});\n`).join("");
+        else
+          cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("Storage").erase(${toJSString(file)});\n`).join("");
         // remove app Data: (dataFiles and storageFiles)
         const data = AppInfo.parseDataString(app.data)
         const isGlob = f => /[?*]/.test(f)
