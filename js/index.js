@@ -427,6 +427,21 @@ function showTab(tabname) {
   document.getElementById(tabname).style.display = "inherit";
 }
 
+let librarySearchInput = document.querySelector("#searchform input");
+const searchInputChangedDebounced = debounce(function() {
+  refreshLibrary({dontChangeSearchBox:true});
+}, 300);
+librarySearchInput.addEventListener('input', evt => {
+  let searchValue = evt.target.value.toLowerCase();
+  // Update window URL
+  let c = "";
+  let searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.has("c"))
+    c = `c=${encodeURIComponent(searchParams.get("c").toLowerCase())}&`;
+  window.history.replaceState(null, null, `?${c}q=${encodeURIComponent(searchValue)}`);
+  searchInputChangedDebounced();
+});
+
 // =========================================== App Info
 
 function getAppHTML(app, appInstalled, forInterface) {
@@ -1172,21 +1187,6 @@ filtersContainer.addEventListener('click', ({ target }) => {
   // Update window URL
   window.history.replaceState(null, null, "?c=" + filterName);
   refreshLibrary();
-});
-
-let librarySearchInput = document.querySelector("#searchform input");
-const searchInputChangedDebounced = debounce(function() {
-  refreshLibrary({dontChangeSearchBox:true});
-}, 300);
-librarySearchInput.addEventListener('input', evt => {
-  let searchValue = evt.target.value.toLowerCase();
-  // Update window URL
-  let c = "";
-  let searchParams = new URLSearchParams(window.location.search);
-  if (searchParams.has("c"))
-    c = `c=${encodeURIComponent(searchParams.get("c").toLowerCase())}&`;
-  window.history.replaceState(null, null, `?${c}q=${encodeURIComponent(searchValue)}`);
-  searchInputChangedDebounced();
 });
 
 let sortContainer = document.querySelector("#librarycontainer .sort-nav");
