@@ -83,7 +83,7 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
   console.warn("APPS FILE NOT FOUND "+Const.APPS_JSON_FILE);
   console.log("Attempting search - SLOW");
   let baseurl = window.location.href.replace(/\/[^/]*$/,"/");
-  let appsURL = baseurl+"apps";
+  let appsURL = baseurl+"apps/";
   httpGet(appsURL).then(htmlText=>{
     showToast(Const.APPS_JSON_FILE+" can't be read, scanning 'apps' folder for apps","warning");
     var parser = new DOMParser();
