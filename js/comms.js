@@ -293,7 +293,7 @@ const Comms = {
   getAppInfo : app => {
     var cmd;
     if (Const.FILES_IN_FS) cmd = `\x10${Const.CONNECTION_DEVICE}.println(require("fs").readFileSync(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
-    else cmd = `\x10${Const.CONNECTION_DEVICE}.println(require("fs").readFileSync(${JSON.stringify("APPINFO/"+AppInfo.getAppInfoFilename(app))})||"null")\n`;
+    else cmd = `\x10${Const.CONNECTION_DEVICE}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
     return Comms.write(cmd).
       then(appJSON=>{
         let app;
