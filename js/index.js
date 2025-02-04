@@ -759,12 +759,25 @@ function showScreenshots(appId) {
 
 // =========================================== My Apps
 
-function uploadApp(app) {
+function uploadApp(app, options) {
+  options = options||{};
+  if (app.type == "defaultconfig" && !options.force) {
+    return showPrompt("Default Configuration Install","<b>This will remove all apps and data from your Bangle</b> and will install a new set of apps. Please ensure you have backed up your Bangle first. Continue?",{yes:1,no:1},false)
+    .then(() => showPrompt("Device Erasure","<b>Everything will be deleted from your Bangle.</b> Are you really sure?",{yes:1,no:1},false))
+    .then(() => Comms.removeAllApps())
+    .then(() => uploadApp(app, {force:true}))
+    .catch(err => {
+      showToast("Configuration install failed, "+err,"error");
+      refreshMyApps();
+      refreshLibrary();
+    });
+  }
+
   return getInstalledApps().then(()=>{
     if (device.appsInstalled.some(i => i.id === app.id)) {
       return updateApp(app);
     }
-    checkDependencies(app)
+    return checkDependencies(app)
       .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
       .then((appJSON) => {
         Progress.hide({ sticky: true });
@@ -780,7 +793,7 @@ function uploadApp(app) {
         refreshLibrary();
       });
   }).catch(err => {
-    showToast("Device connection failed, "+err,"error");
+    showToast("App Upload failed, "+err,"error");
     // remove loading indicator
     refreshMyApps();
     refreshLibrary();

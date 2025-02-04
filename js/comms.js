@@ -158,7 +158,7 @@ const Comms = {
         let appInfo = undefined;
         if (appInfoFile)
           appInfo = JSON.parse(appInfoFile.content);
-        else if (app.type!="RAM")
+        else if (app.type!="RAM" && app.type!="defaultconfig")
           reject(`${appInfoFileName} not found`);
 
         // Upload each file one at a time

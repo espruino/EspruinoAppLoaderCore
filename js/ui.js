@@ -98,7 +98,7 @@ function showToast(message, type, timeout) {
   }, timeout || 5000);
 }
 
-/// Show a yes/no prompt
+/// Show a yes/no prompt. resolve for true, reject for false
 function showPrompt(title, text, buttons, shouldEscapeHtml) {
   if (!buttons) buttons={yes:1,no:1};
   if (typeof(shouldEscapeHtml) === 'undefined' || shouldEscapeHtml === null) shouldEscapeHtml = true;

@@ -253,7 +253,7 @@ var AppInfo = {
         // filter out empty files
         fileContents = fileContents.filter(x=>x!==undefined);
         // if it's a 'ram' app, don't add any app JSON file
-        if (app.type=="RAM") return fileContents;
+        if (app.type=="RAM" || app.type=="defaultconfig") return fileContents;
         // Add app's info JSON
         return AppInfo.createAppJSON(app, fileContents);
       }).then(fileContents => {
