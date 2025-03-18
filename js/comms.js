@@ -252,6 +252,12 @@ const Comms = {
           cmd = `\x10${device}.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};${device}.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")});${device}.println(${finalJS})\n`;
         Puck.write(cmd, (appListStr,err) => {
           Progress.hide({sticky:true});
+          if (!appListStr) appListStr="";
+          var connection = Puck.getConnection();
+          if (connection) {
+            appListStr = appListStr+"\n"+connection.received; // add *any* information we have received so far, including what was returned
+            connection.received = ""; // clear received data just in case
+          }
           // we may have received more than one line - we're looking for an array (starting with '[')
           var lines = appListStr ? appListStr.split("\n").map(l=>l.trim()) : [];
           var appListJSON = lines.find(l => l[0]=="[");
