@@ -70,16 +70,6 @@ const Progress = {
   }
 };
 
-/// Add progress handler so we get nice uploads
-Puck.writeProgress = function(charsSent, charsTotal) {
-  if (charsSent===undefined || charsTotal<10) {
-    Progress.hide();
-    return;
-  }
-  let percent = Math.round(charsSent*100/charsTotal);
-  Progress.show({percent: percent});
-}
-
 /// Show a 'toast' message for status
 function showToast(message, type, timeout) {
   // toast-primary, toast-success, toast-warning or toast-error

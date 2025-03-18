@@ -239,7 +239,7 @@ function iframeSetup(options) {
         modal.remove();
         if (options.onClose) options.onClose("Window closed");
       } else if (msg.type=="eval") {
-        Puck.eval(msg.data, function(result) {
+        Comms.eval(msg.data).then(function(result) {
           iframe.contentWindow.postMessage({
             type : "evalrsp",
             data : result,
@@ -247,7 +247,7 @@ function iframeSetup(options) {
           });
         });
       } else if (msg.type=="write") {
-        Puck.write(msg.data, function(result) {
+        Comms.write(msg.data).then(function(result) {
           iframe.contentWindow.postMessage({
             type : "writersp",
             data : result,

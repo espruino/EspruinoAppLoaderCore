@@ -1,19 +1,131 @@
 //Puck.debug=3;
-console.log("=============================================")
-console.log("Type 'Puck.debug=3' for full BLE debug info")
-console.log("=============================================")
+console.log("================================================")
+console.log("Type 'Comms.debug()' to enable Comms debug info")
+console.log("================================================")
 
-// TODO: Add Comms.write/eval which return promises, and move over to using those
-// FIXME: use UART lib so that we handle errors properly
+/*
+
+Puck = {
+  /// Are we writing debug information? 0 is no, 1 is some, 2 is more, 3 is all.
+  debug : UART.debug,
+  /// Used internally to write log information - you can replace this with your own function
+  log : function(level, s) { if (level <= this.debug) console.log("<UART> "+s)},
+  /// Called with the current send progress or undefined when done - you can replace this with your own function
+  writeProgress : function() {},
+  connect : UART.connect,
+  write : UART.write,
+  eval : UART.eval,
+  isConnected : () => UART.isConnected() && UART.getConnection().isOpen,
+  getConnection : UART.getConnection,
+  close : UART.close,
+  RECEIVED_NOT_IN_DATA_HANDLER : true, // hack for Comms.on
+};
+// FIXME: disconnected event?
+*/
+
+/// Add progress handler so we get nice upload progress shown
+{
+  let COMMS = (typeof UART !== undefined)?UART:Puck;
+  COMMS.writeProgress = function(charsSent, charsTotal) {
+    if (charsSent===undefined || charsTotal<10) {
+      Progress.hide();
+      return;
+    }
+    let percent = Math.round(charsSent*100/charsTotal);
+    Progress.show({percent: percent});
+  };
+}
+
 const Comms = {
-  // Write the given data, returns a promise
-  write : (data) => new Promise((resolve,reject) => {
+// ================================================================================
+//                                                                 Low Level Comms
+  /// enable debug print statements
+  debug : () => {
+    if (typeof UART !== undefined)
+      UART.debug = 3;
+    else
+      Puck.debug = 3;
+  },
+
+  /** Write the given data, returns a promise containing the data received immediately after sending the command
+    options = {
+      waitNewLine : bool // wait for a newline (rather than just 300ms of inactivity)
+    }
+  */
+  write : (data, options) => {
     if (data===undefined) throw new Error("Comms.write(undefined) called!")
-    return Puck.write(data,function(result) {
-      if (result===null) return reject("");
-      resolve(result);
-    });
-  }),
+    options = options||{};
+    if (typeof UART !== undefined) { // New method
+      return UART.write(data, undefined, !!options.waitNewLine);
+    } else { // Old method
+      return new Promise((resolve,reject) =>
+        Puck.write(data, result => {
+          if (result===null) return reject("");
+          resolve(result);
+        }, !!options.waitNewLine)
+      );
+    }
+  },
+  /// Evaluate the given expression, return the result as a promise
+  eval : (expr) => {
+    if (expr===undefined) throw new Error("Comms.eval(undefined) called!")
+    if (typeof UART === undefined) { // New method
+      return UART.eval(expr);
+    } else { // Old method
+      return new Promise((resolve,reject) =>
+        Puck.eval(expr, result => {
+          if (result===null) return reject("");
+          resolve(result);
+        })
+      );
+    }
+  },
+  /// Return true if we're connected, false if not
+  isConnected : () => {
+    if (typeof UART !== undefined) { // New method
+      return UART.isConnected();
+    } else { // Old method
+      return Puck.isConnected();
+    }
+  },
+  /// Get the currently active connection object
+  getConnection : () => {
+    if (typeof UART !== undefined) { // New method
+      return UART.getConnection();
+    } else { // Old method
+      return Puck.getConnection();
+    }
+  },
+  // Faking EventEmitter
+  handlers : {},
+  on : function(id, callback) { // calling with callback=undefined will disable
+    if (id!="data") throw new Error("Only data callback is supported");
+    var connection = Puck.getConnection();
+    if (!connection) throw new Error("No active connection");
+    /* This is a bit of a mess - the Puck.js lib only supports one callback with `.on`. If you
+    do Puck.getConnection().on('data') then it blows away the default one which is used for
+    .write/.eval and you can't get it back unless you reconnect. So rather than trying to fix the
+    Puck lib we just copy in the default handler here. */
+    if (callback===undefined) {
+      connection.on("data", function(d) { // the default handler
+        if (!Puck.RECEIVED_NOT_IN_DATA_HANDLER) {
+          connection.received += d;
+          connection.hadData = true;
+        }
+        if (connection.cb)  connection.cb(d);
+      });
+    } else {
+      connection.on("data", function(d) {
+        if (!Puck.RECEIVED_NOT_IN_DATA_HANDLER) {
+          connection.received += d;
+          connection.hadData = true;
+        }
+        if (connection.cb)  connection.cb(d);
+        callback(d);
+      });
+    }
+  },
+// ================================================================================
   // Show a message on the screen (if available)
   showMessage : (txt) => {
     console.log(`<COMMS> showMessage ${JSON.stringify(txt)}`);
@@ -37,29 +149,32 @@ const Comms = {
     }
   },
   // Reset the device, if opt=="wipe" erase any saved code
-  reset : (opt) => new Promise((resolve,reject) => {
+  reset : (opt) => {
     let tries = 8;
-    if (Const.NO_RESET) return resolve();
+    if (Const.NO_RESET) return Promise.resolve();
     console.log("<COMMS> reset");
-    Puck.write(`\x03\x10reset(${opt=="wipe"?"1":""});\n`,function rstHandler(result) {
+
+    function rstHandler(result) {
       console.log("<COMMS> reset: got "+JSON.stringify(result));
-      if (result===null) return reject("Connection failed");
+      if (result===null) return Promise.reject("Connection failed");
       if (result=="" && (tries-- > 0)) {
         console.log(`<COMMS> reset: no response. waiting ${tries}...`);
-        Puck.write("\x03",rstHandler);
+        return Comms.write("\x03").then(rstHandler);
       } else if (result.endsWith("debug>")) {
         console.log(`<COMMS> reset: watch in debug mode, interrupting...`);
-        Puck.write("\x03",rstHandler);
+        return Comms.write("\x03").then(rstHandler);
       } else {
         console.log(`<COMMS> reset: rebooted - sending commands to clear out any boot code`);
         // see https://github.com/espruino/BangleApps/issues/1759
-        Puck.write("\x10clearInterval();clearWatch();global.Bangle&&Bangle.removeAllListeners();E.removeAllListeners();global.NRF&&NRF.removeAllListeners();\n",function() {
+        return Comms.write("\x10clearInterval();clearWatch();global.Bangle&&Bangle.removeAllListeners();E.removeAllListeners();global.NRF&&NRF.removeAllListeners();\n").then(function() {
           console.log(`<COMMS> reset: complete.`);
-          setTimeout(resolve,250);
+          return new Promise(resolve => setTimeout(resolve, 250))
         });
       }
-    });
-  }),
+    }
+
+    return Comms.write(`\x03\x10reset(${opt=="wipe"?"1":""});\n`).then(rstHandler);
+  },
   // Upload a list of newline-separated commands that start with \x10
   // You should call Comms.write("\x10"+Comms.getProgressCmd()+"\n")) first
   uploadCommandList : (cmds, currentBytes, maxBytes) => {
@@ -103,13 +218,12 @@ const Comms = {
             ignore = true;
           }
           if (ignore) {
-            /* Here we have to poke around inside the Puck.js library internals. Basically
+            /* Here we have to poke around inside the Comms library internals. Basically
             it just gave us the first line in the input buffer, but there may have been more.
             We take the next line (or undefined) and call ourselves again to handle that.
             Just in case, delay a little to give our previous command time to finish.*/
-
             setTimeout(function() {
-              let connection = Puck.getConnection();
+              let connection = Comms.getConnection();
               let newLineIdx = connection.received.indexOf("\n");
               let l = undefined;
               if (newLineIdx>=0) {
@@ -126,7 +240,7 @@ const Comms = {
         }
         // Actually write the command with a 'print OK' at the end, and use responseHandler
         // to deal with the response. If OK we call uploadCmd to upload the next block
-        Puck.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}${Const.CONNECTION_DEVICE}.println("OK")\n`,responseHandler, true /* wait for a newline*/);
+        return Comms.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}${Const.CONNECTION_DEVICE}.println("OK")\n`,{waitNewLine:true}).then(responseHandler);
       }
 
       uploadCmd()
@@ -201,33 +315,30 @@ const Comms = {
   // Get Device ID, version, storage stats, and a JSON list of installed apps
   getDeviceInfo : (noReset) => {
     Progress.show({title:`Getting device info...`,sticky:true});
-    return new Promise((resolve,reject) => {
-      Puck.write("\x03",(result) => {
-        if (result===null) {
-          Progress.hide({sticky:true});
-          return reject("");
-        }
+    return Comms.write("\x03").then(result => {
+      if (result===null) {
+        Progress.hide({sticky:true});
+        return Promise.reject("No response");
+      }
 
-        let interrupts = 0;
-        const checkCtrlC = result => {
-          if (result.endsWith("debug>")) {
-            if (interrupts > 3) {
-              console.log("<COMMS> can't interrupt watch out of debug mode, giving up.", result);
-              reject("");
-              return;
-            }
-            console.log("<COMMS> watch was in debug mode, interrupting.", result);
-            // we got a debug prompt - we interrupted the watch while JS was executing
-            // so we're in debug mode, issue another ctrl-c to bump the watch out of it
-            Puck.write("\x03", checkCtrlC);
-            interrupts++;
-          } else {
-            resolve(result);
+      let interrupts = 0;
+      const checkCtrlC = result => {
+        if (result.endsWith("debug>")) {
+          if (interrupts > 3) {
+            console.log("<COMMS> can't interrupt watch out of debug mode, giving up.", result);
+            return Promise.reject("Stuck in debug mode");
           }
-        };
+          console.log("<COMMS> watch was in debug mode, interrupting.", result);
+          // we got a debug prompt - we interrupted the watch while JS was executing
+          // so we're in debug mode, issue another ctrl-c to bump the watch out of it
+          return Comms.write("\x03").then(checkCtrlC);
+          interrupts++;
+        } else {
+          return result;
+        }
+      };
 
-        checkCtrlC(result);
-      });
+      return checkCtrlC(result);
     }).
       then((result) => new Promise((resolve, reject) => {
         console.log("<COMMS> Ctrl-C gave",JSON.stringify(result));
@@ -250,10 +361,10 @@ const Comms = {
           cmd = `\x10${device}.print("[");if (!require("fs").statSync("APPINFO"))require("fs").mkdir("APPINFO");require("fs").readdirSync("APPINFO").forEach(f=>{var j=JSON.parse(require("fs").readFileSync("APPINFO/"+f))||"{}";${device}.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")});${device}.println(${finalJS})\n`;
         else // the default, files in Storage
           cmd = `\x10${device}.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};${device}.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")});${device}.println(${finalJS})\n`;
-        Puck.write(cmd, (appListStr,err) => {
+        Comms.write(cmd, {waitNewLine:true}).then(appListStr => {
           Progress.hide({sticky:true});
           if (!appListStr) appListStr="";
-          var connection = Puck.getConnection();
+          var connection = Comms.getConnection();
           if (connection) {
             appListStr = appListStr+"\n"+connection.received; // add *any* information we have received so far, including what was returned
             connection.received = ""; // clear received data just in case
@@ -378,7 +489,7 @@ const Comms = {
         if (result=="" && (timeout--)) {
           console.log("<COMMS> removeAllApps: no result - waiting some more ("+timeout+").");
           // send space and delete - so it's something, but it should just cancel out
-          Puck.write(" \u0008", handleResult, true /* wait for newline */);
+          Comms.write(" \u0008", {waitNewLine:true}).then(handleResult);
         } else {
           Progress.hide({sticky:true});
           if (!result || result.trim()!="OK") {
@@ -390,7 +501,7 @@ const Comms = {
       }
       // Use write with newline here so we wait for it to finish
       let cmd = `\x10E.showMessage("Erasing...");require("Storage").eraseAll();${Const.CONNECTION_DEVICE}.println("OK");reset()\n`;
-      Puck.write(cmd, handleResult, true /* wait for newline */);
+      Comms.write(cmd,{waitNewLine:true}).then(handleResult);
     }).then(() => new Promise(resolve => {
       console.log("<COMMS> removeAllApps: Erase complete, waiting 500ms for 'reset()'");
       setTimeout(resolve, 500);
@@ -416,25 +527,20 @@ const Comms = {
     let cmd = "load();\n";
     return Comms.write(cmd);
   },
-  // Check if we're connected
-  isConnected: () => {
-    return !!Puck.getConnection();
-  },
   // Force a disconnect from the device
   disconnectDevice: () => {
-    let connection = Puck.getConnection();
+    let connection = Comms.getConnection();
     if (!connection) return;
     connection.close();
   },
   // call back when the connection state changes
   watchConnectionChange : cb => {
-    let connected = Puck.isConnected();
+    let connected = Comms.isConnected();
 
     //TODO Switch to an event listener when Puck will support it
     let interval = setInterval(() => {
-      if (connected === Puck.isConnected()) return;
-
-      connected = Puck.isConnected();
+      if (connected === Comms.isConnected()) return;
+      connected = Comms.isConnected();
       cb(connected);
     }, 1000);
 
@@ -446,18 +552,16 @@ const Comms = {
   // List all files on the device.
   // options can be undefined, or {sf:true} for only storage files, or  {sf:false} for only normal files
   listFiles : (options) => {
-    return new Promise((resolve,reject) => {
-      Puck.write("\x03",(result) => {
-        if (result===null) return reject("");
-        let args = "";
-        if (options && options.sf!==undefined) args=`undefined,{sf:${options.sf}}`;
-        //use encodeURIComponent to serialize octal sequence of append files
-        Puck.eval(`require("Storage").list(${args}).map(encodeURIComponent)`, (files,err) => {
-          if (files===null) return reject(err || "");
-          files = files.map(decodeURIComponent);
-          console.log("<COMMS> listFiles", files);
-          resolve(files);
-        });
+    return Comms.write(" \x03").then(result => {
+      if (result===null) return Promise.reject("Ctrl-C failed");
+      let args = "";
+      if (options && options.sf!==undefined) args=`undefined,{sf:${options.sf}}`;
+      //use encodeURIComponent to serialize octal sequence of append files
+      return Comms.eval(`require("Storage").list(${args}).map(encodeURIComponent)`, (files,err) => {
+        if (files===null) return Promise.reject(err || "");
+        files = files.map(decodeURIComponent);
+        console.log("<COMMS> listFiles", files);
+        return files;
       });
     });
   },
@@ -467,7 +571,7 @@ const Comms = {
       // Use "\xFF" to signal end of file (can't occur in StorageFiles anyway)
       let fileContent = "";
       let fileSize = undefined;
-      let connection = Puck.getConnection();
+      let connection = Comms.getConnection();
       connection.received = "";
       connection.cb = function(d) {
         let finished = false;
@@ -535,33 +639,4 @@ ${Const.CONNECTION_DEVICE}.print("\\xFF");
       Comms.uploadCommandList(cmds, 0, cmds.length)
     );
   },
-  // Faking EventEmitter
-  handlers : {},
-  on : function(id, callback) { // calling with callback=undefined will disable
-    if (id!="data") throw new Error("Only data callback is supported");
-    var connection = Puck.getConnection();
-    if (!connection) throw new Error("No active connection");
-    /* This is a bit of a mess - the Puck.js lib only supports one callback with `.on`. If you
-    do Puck.getConnection().on('data') then it blows away the default one which is used for
-    .write/.eval and you can't get it back unless you reconnect. So rather than trying to fix the
-    Puck lib we just copy in the default handler here. */
-    if (callback===undefined) {
-      connection.on("data", function(d) { // the default handler
-        if (!Puck.RECEIVED_NOT_IN_DATA_HANDLER) {
-          connection.received += d;
-          connection.hadData = true;
-        }
-        if (connection.cb)  connection.cb(d);
-      });
-    } else {
-      connection.on("data", function(d) {
-        if (!Puck.RECEIVED_NOT_IN_DATA_HANDLER) {
-          connection.received += d;
-          connection.hadData = true;
-        }
-        if (connection.cb)  connection.cb(d);
-        callback(d);
-      });
-    }
-  }
 };
