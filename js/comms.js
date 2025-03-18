@@ -25,7 +25,7 @@ Puck = {
 
 /// Add progress handler so we get nice upload progress shown
 {
-  let COMMS = (typeof UART !== undefined)?UART:Puck;
+  let COMMS = (typeof UART != "undefined")?UART:Puck;
   COMMS.writeProgress = function(charsSent, charsTotal) {
     if (charsSent===undefined || charsTotal<10) {
       Progress.hide();
@@ -41,7 +41,7 @@ const Comms = {
 //                                                                 Low Level Comms
   /// enable debug print statements
   debug : () => {
-    if (typeof UART !== undefined)
+    if (typeof UART !== "undefined")
       UART.debug = 3;
     else
       Puck.debug = 3;
@@ -55,7 +55,7 @@ const Comms = {
   write : (data, options) => {
     if (data===undefined) throw new Error("Comms.write(undefined) called!")
     options = options||{};
-    if (typeof UART !== undefined) { // New method
+    if (typeof UART !== "undefined") { // New method
       return UART.write(data, undefined, !!options.waitNewLine);
     } else { // Old method
       return new Promise((resolve,reject) =>
@@ -69,7 +69,7 @@ const Comms = {
   /// Evaluate the given expression, return the result as a promise
   eval : (expr) => {
     if (expr===undefined) throw new Error("Comms.eval(undefined) called!")
-    if (typeof UART === undefined) { // New method
+    if (typeof UART === "undefined") { // New method
       return UART.eval(expr);
     } else { // Old method
       return new Promise((resolve,reject) =>
@@ -82,7 +82,7 @@ const Comms = {
   },
   /// Return true if we're connected, false if not
   isConnected : () => {
-    if (typeof UART !== undefined) { // New method
+    if (typeof UART !== "undefined") { // New method
       return UART.isConnected();
     } else { // Old method
       return Puck.isConnected();
@@ -90,7 +90,7 @@ const Comms = {
   },
   /// Get the currently active connection object
   getConnection : () => {
-    if (typeof UART !== undefined) { // New method
+    if (typeof UART !== "undefined") { // New method
       return UART.getConnection();
     } else { // Old method
       return Puck.getConnection();
@@ -331,8 +331,8 @@ const Comms = {
           console.log("<COMMS> watch was in debug mode, interrupting.", result);
           // we got a debug prompt - we interrupted the watch while JS was executing
           // so we're in debug mode, issue another ctrl-c to bump the watch out of it
-          return Comms.write("\x03").then(checkCtrlC);
           interrupts++;
+          return Comms.write("\x03").then(checkCtrlC);
         } else {
           return result;
         }
@@ -378,7 +378,7 @@ const Comms = {
             return reject("No response from device. Is 'Programmable' set to 'Off'?");
           }
           // now try and parse
-          let info = {};
+          let err, info = {};
           let appList;
           try {
             appList = JSON.parse(appListJSON);
@@ -446,21 +446,21 @@ const Comms = {
           app.files=app.id+".info";
         }
         if (Const.FILES_IN_FS)
-          cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("fs").unlinkSync(${toJSString(file)});\n`).join("");
+          cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("fs").unlinkSync(${Utils.toJSString(file)});\n`).join("");
         else
-          cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("Storage").erase(${toJSString(file)});\n`).join("");
+          cmds += app.files.split(',').filter(f=>f!="").map(file => `\x10require("Storage").erase(${Utils.toJSString(file)});\n`).join("");
         // remove app Data: (dataFiles and storageFiles)
         const data = AppInfo.parseDataString(app.data)
         const isGlob = f => /[?*]/.test(f)
         //   regular files, can use wildcards
         cmds += data.dataFiles.map(file => {
-          if (!isGlob(file)) return `\x10require("Storage").erase(${toJSString(file)});\n`;
+          if (!isGlob(file)) return `\x10require("Storage").erase(${Utils.toJSString(file)});\n`;
           const regex = new RegExp(globToRegex(file))
           return `\x10require("Storage").list(${regex}).forEach(f=>require("Storage").erase(f));\n`;
         }).join("");
         //   storageFiles, can use wildcards
         cmds += data.storageFiles.map(file => {
-          if (!isGlob(file)) return `\x10require("Storage").open(${toJSString(file)},'r').erase();\n`;
+          if (!isGlob(file)) return `\x10require("Storage").open(${Utils.toJSString(file)},'r').erase();\n`;
           // storageFiles have a chunk number appended to their real name
           const regex = globToRegex(file+'\u0001')
           // open() doesn't want the chunk number though

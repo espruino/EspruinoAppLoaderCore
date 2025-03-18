@@ -72,7 +72,7 @@ function translateJS(options, app, code) {
         // remap any chars that we don't think we can display in Espruino's
         // built in fonts.
         translation = Utils.convertStringToISO8859_1(translation);
-        tokenString = toJSString(translation);
+        tokenString = Utils.toJSString(translation);
       }
     } else if (tok.str.startsWith("`")) {
       // it's a tempated String! scan all clauses inside it and re-run on the JS in those
