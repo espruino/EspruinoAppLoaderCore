@@ -87,12 +87,32 @@ let DEVICEINFO = [
     name : "MDBT42Q",
     features : ["BLE","BLEHID"],
     img : "https://www.espruino.com/img/MDBT42Q_thumb.jpg"
-  }/*, {
-    id : "MICROBIT",
-    name : "micro:bit",
-    features : ["BLE","BLEHID"],
-    img : "https://www.espruino.com/img/MICROBIT_thumb.jpg"
-  }*/
+  }, {
+    id : "PICO_R1_3",
+    name : "Espruino Pico",
+    features : [],
+    img : "https://www.espruino.com/img/PICO_R1_3_thumb.jpg"
+  }, {
+    id : "ESPRUINOWIFI",
+    name : "Espruino Wifi",
+    features : ["WIFI"],
+    img : "https://www.espruino.com/img/ESPRUINOWIFI_thumb.jpg"
+  }, {
+    id : "ESPRUINOBOARD",
+    name : "Original Espruino",
+    features : ["RGBLED"],
+    img : "https://www.espruino.com/img/ESPRUINOBOARD_thumb.jpg"
+  }, {
+    id : "MICROBIT2",
+    name : "micro:bit 2",
+    features : ["BLE","BLEHID"], // accel/mag/etc don't use an API apps will know
+    img : "https://www.espruino.com/img/MICROBIT2_thumb.jpg"
+  }, {
+    id : "ESP32",
+    name : "ESP32",
+    features : ["WIFI","BLE"],
+    img : "https://www.espruino.com/img/ESP32_thumb.jpg"
+  }
 ];
 
 /* When a char is not in Espruino's iso8859-1 codepage, try and use
