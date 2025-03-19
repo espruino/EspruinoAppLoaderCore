@@ -23,8 +23,10 @@ const Const = {
   /* Message to display when an app has been loaded */
   MESSAGE_RELOAD : 'Hold BTN3\nto reload',
 
-  /* What device are we connecting to Espruino with? */
-  CONNECTION_DEVICE : 'Bluetooth',
+  /* What device are we connecting to Espruino with as far as Espruino is concerned?
+  Eg if CONNECTION_DEVICE="Bluetooth" will Bluetooth.println("Hi") send data back to us?
+  Leave this as undefined to try and work it out. */
+  CONNECTION_DEVICE : undefined,
 
   /* The code to upload to the device show a progress bar on the screen (should define a fn. called 'p') */
   CODE_PROGRESSBAR : "g.drawRect(10,g.getHeight()-16,g.getWidth()-10,g.getHeight()-8).flip();p=x=>g.fillRect(10,g.getHeight()-16,10+(g.getWidth()-20)*x/100,g.getHeight()-8).flip();",

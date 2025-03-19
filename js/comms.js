@@ -112,6 +112,9 @@ const Comms = {
       }
     }
   },
+  /* when connected, this is the name of the device we're connected to as far as Espruino is concerned
+  (eg Bluetooth/USB/Serial1.println("Foo") ) */
+  espruinoDevice : undefined,
 // ================================================================================
   // Show a message on the screen (if available)
   showMessage : (txt) => {
@@ -227,7 +230,7 @@ const Comms = {
         }
         // Actually write the command with a 'print OK' at the end, and use responseHandler
         // to deal with the response. If OK we call uploadCmd to upload the next block
-        return Comms.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}${Const.CONNECTION_DEVICE}.println("OK")\n`,{waitNewLine:true}).then(responseHandler);
+        return Comms.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}${Comms.espruinoDevice}.println("OK")\n`,{waitNewLine:true}).then(responseHandler);
       }
 
       uploadCmd()
@@ -352,8 +355,38 @@ const Comms = {
           return;
         }
 
+        /* We need to figure out the console device name according to Espruino. For some devices
+        it's easy (eg Bangle.js = Bluetooth) and we can hard code with Const.CONNECTION_DEVICE
+        but for others we must figure it out */
+        let connection = Comms.getConnection();
+        if (Comms.espruinoDevice === undefined) {
+          if (Const.CONNECTION_DEVICE)
+            Comms.espruinoDevice = Const.CONNECTION_DEVICE;
+          else {
+            Comms.eval("process.env.CONSOLE").then(device => {
+              if (("string"==typeof device) && device.length>0)
+                Comms.espruinoDevice = device;
+              else throw new Error("Unable to find Espruino console device");
+              console.log("<COMMS> Set console device to "+device);
+            }).then(()=>Comms.getDeviceInfo(true)).
+            then(resolve);
+            return;
+          }
+        }
+
+
+        if (Comms.getConnection().endpoint && Comms.getConnection().endpoint.name == "Web Serial" && Comms.espruinoDevice=="Bluetooth") {
+          console.log("<COMMS> Using Web Serial, forcing Comms.espruinoDevice='USB'", result);
+          // FIXME: won't work on ESP8266/ESP32!
+          Comms.espruinoDevice = "USB";
+        }
+        if (Comms.getConnection().endpoint && Comms.getConnection().endpoint.name == "Web Bluetooth" && Comms.espruinoDevice!="Bluetooth") {
+          console.log("<COMMS> Using Web Bluetooth, forcing Comms.espruinoDevice='Bluetooth'", result);
+          Comms.espruinoDevice = "Bluetooth";
+        }
+
         let cmd, finalJS = `JSON.stringify(require("Storage").getStats?require("Storage").getStats():{})+","+E.toJS([process.env.BOARD,process.env.VERSION,process.env.EXPTR,process.env.MODULES,0|getTime(),E.CRC32(getSerial()+(global.NRF?NRF.getAddress():0))]).substr(1)`;
-        let device = Const.CONNECTION_DEVICE;
+        let device = Comms.espruinoDevice;
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
           cmd = `\x10${device}.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
         else if (Const.FILES_IN_FS) // file in a FAT filesystem
@@ -408,8 +441,8 @@ const Comms = {
   // Get an app's info file from Bangle.js
   getAppInfo : app => {
     var cmd;
-    if (Const.FILES_IN_FS) cmd = `\x10${Const.CONNECTION_DEVICE}.println(require("fs").readFileSync(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
-    else cmd = `\x10${Const.CONNECTION_DEVICE}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
+    if (Const.FILES_IN_FS) cmd = `\x10${Comms.espruinoDevice}.println(require("fs").readFileSync(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
+    else cmd = `\x10${Comms.espruinoDevice}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
     return Comms.write(cmd).
       then(appJSON=>{
         let app;
@@ -499,7 +532,7 @@ const Comms = {
         }
       }
       // Use write with newline here so we wait for it to finish
-      let cmd = `\x10E.showMessage("Erasing...");require("Storage").eraseAll();${Const.CONNECTION_DEVICE}.println("OK");reset()\n`;
+      let cmd = `\x10E.showMessage("Erasing...");require("Storage").eraseAll();${Comms.espruinoDevice}.println("OK");reset()\n`;
       Comms.write(cmd,{waitNewLine:true}).then(handleResult);
     }).then(() => new Promise(resolve => {
       console.log("<COMMS> removeAllApps: Erase complete, waiting 500ms for 'reset()'");
@@ -538,8 +571,11 @@ const Comms = {
 
     //TODO Switch to an event listener when Puck will support it
     let interval = setInterval(() => {
-      if (connected === Comms.isConnected()) return;
-      connected = Comms.isConnected();
+      let newConnected = Comms.isConnected();
+      if (connected === newConnected) return;
+      connected = newConnected;
+      if (!connected)
+        Comms.espruinoDevice = undefined;
       cb(connected);
     }, 1000);
 
@@ -610,9 +646,9 @@ const Comms = {
     return Comms.readTextBlock(`\x03\x10(function() {
 var s = require("Storage").read(${JSON.stringify(filename)});
 if (s===undefined) s="";
-${Const.CONNECTION_DEVICE}.println(((s.length+2)/3)<<2);
-for (var i=0;i<s.length;i+=${CHUNKSIZE}) ${Const.CONNECTION_DEVICE}.print(btoa(s.substr(i,${CHUNKSIZE})));
-${Const.CONNECTION_DEVICE}.print("\\xFF");
+${Comms.espruinoDevice}.println(((s.length+2)/3)<<2);
+for (var i=0;i<s.length;i+=${CHUNKSIZE}) ${Comms.espruinoDevice}.print(btoa(s.substr(i,${CHUNKSIZE})));
+${Comms.espruinoDevice}.print("\\xFF");
 })()\n`).then(text => {
       return atobSafe(text);
     });
@@ -623,10 +659,10 @@ ${Const.CONNECTION_DEVICE}.print("\\xFF");
     console.log(`<COMMS> readStorageFile ${JSON.stringify(filename)}`);
     return Comms.readTextBlock(`\x03\x10(function() {
       var f = require("Storage").open(${JSON.stringify(filename)},"r");
-      ${Const.CONNECTION_DEVICE}.println(f.getLength());
+      ${Comms.espruinoDevice}.println(f.getLength());
       var l = f.readLine();
-      while (l!==undefined) { ${Const.CONNECTION_DEVICE}.print(l); l = f.readLine(); }
-      ${Const.CONNECTION_DEVICE}.print("\\xFF");
+      while (l!==undefined) { ${Comms.espruinoDevice}.print(l); l = f.readLine(); }
+      ${Comms.espruinoDevice}.print("\\xFF");
     })()\n`);
   },
   // Read a non-storagefile file
