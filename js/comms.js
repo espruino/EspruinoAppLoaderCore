@@ -270,8 +270,10 @@ const Comms = {
           console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content.length>50 ? f.content.substr(0,50)+"..." : f.content)} (${f.content.length}b${uploadPacket?", binary":""})`);
           if (uploadPacket) {
             Comms.getConnection().espruinoSendFile(f.name, f.content, {
-              fs:Const.FILES_IN_FS,
-              progress:(chunkNo,chunkCount)=>{Progress.show({percent: chunkNo*100/chunkCount});}
+              fs: Const.FILES_IN_FS,
+              chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
+              noACK: Const.PACKET_UPLOAD_NOACK,
+              progress: (chunkNo,chunkCount)=>{Progress.show({percent: chunkNo*100/chunkCount});}
             }).then(doUploadFiles); // progress?
           } else {
             Comms.uploadCommandList(f.cmd, currentBytes, maxBytes).then(doUploadFiles);

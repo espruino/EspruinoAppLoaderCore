@@ -38,6 +38,12 @@ const Const = {
   /* How many bytes of code to we attempt to upload in one go? */
   UPLOAD_CHUNKSIZE: 1024,
 
+  /* How many bytes of code to we attempt to upload when uploading via packets? */
+  PACKET_UPLOAD_CHUNKSIZE: 2048, // 1024 is the default for UART.js
+
+  /* when uploading by packets should we wait for an ack before sending the next packet? Only works if you're fully confident in flow control. */
+  PACKET_UPLOAD_NOACK: false,
+
   /* Don't try and reset the device when we're connecting/sending apps */
   NO_RESET : false,
 
