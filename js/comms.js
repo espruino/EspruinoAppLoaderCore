@@ -49,7 +49,7 @@ const Comms = {
   /// Evaluate the given expression, return the result as a promise
   eval : (expr) => {
     if (expr===undefined) throw new Error("Comms.eval(undefined) called!")
-    if (typeof UART === "undefined") { // New method
+    if (typeof UART !== "undefined") { // New method
       return UART.eval(expr);
     } else { // Old method
       return new Promise((resolve,reject) =>
@@ -76,29 +76,40 @@ const Comms = {
       return Puck.getConnection();
     }
   },
+  supportsPacketUpload : () => Comms.getConnection().espruinoSendFile && !Utils.versionLess(device.version,"2v25"),
   // Faking EventEmitter
   handlers : {},
   on : function(id, callback) { // calling with callback=undefined will disable
     if (id!="data") throw new Error("Only data callback is supported");
     var connection = Comms.getConnection();
     if (!connection) throw new Error("No active connection");
-    /* This is a bit of a mess - the Puck.js lib only supports one callback with `.on`. If you
-    do Puck.getConnection().on('data') then it blows away the default one which is used for
-    .write/.eval and you can't get it back unless you reconnect. So rather than trying to fix the
-    Puck lib we just copy in the default handler here. */
-    if (callback===undefined) {
-      connection.on("data", function(d) { // the default handler
-        connection.received += d;
-        connection.hadData = true;
-        if (connection.cb)  connection.cb(d);
-      });
-    } else {
-      connection.on("data", function(d) {
-        connection.received += d;
-        connection.hadData = true;
-        if (connection.cb)  connection.cb(d);
-        callback(d);
-      });
+    if ("undefined"!==typeof Puck) {
+      /* This is a bit of a mess - the Puck.js lib only supports one callback with `.on`. If you
+      do Puck.getConnection().on('data') then it blows away the default one which is used for
+      .write/.eval and you can't get it back unless you reconnect. So rather than trying to fix the
+      Puck lib we just copy in the default handler here. */
+      if (callback===undefined) {
+        connection.on("data", function(d) { // the default handler
+          connection.received += d;
+          connection.hadData = true;
+          if (connection.cb)  connection.cb(d);
+        });
+      } else {
+        connection.on("data", function(d) {
+          connection.received += d;
+          connection.hadData = true;
+          if (connection.cb)  connection.cb(d);
+          callback(d);
+        });
+      }
+    } else { // UART
+      if (callback===undefined) {
+        if (Comms.dataCallback) connection.removeListener("data",Comms.dataCallback);
+        delete Comms.dataCallback;
+      } else {
+        Comms.dataCallback = callback;
+        connection.on("data",Comms.dataCallback);
+      }
     }
   },
 // ================================================================================
@@ -265,16 +276,15 @@ const Comms = {
           }
           let f = fileContents.shift();
           // Only upload as a packet if it makes sense for the file, connection supports it, as does device firmware
-          let uploadPacket = (!!f.canUploadPacket) && Comms.getConnection().espruinoSendFile && !Utils.versionLess(device.version,"2v25");
+          let uploadPacket = (!!f.canUploadPacket) && Comms.supportsPacketUpload();
 
           console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content.length>50 ? f.content.substr(0,50)+"..." : f.content)} (${f.content.length}b${uploadPacket?", binary":""})`);
           if (uploadPacket) {
             Comms.getConnection().espruinoSendFile(f.name, f.content, {
               fs: Const.FILES_IN_FS,
               chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
-              noACK: Const.PACKET_UPLOAD_NOACK,
-              progress: (chunkNo,chunkCount)=>{Progress.show({percent: chunkNo*100/chunkCount});}
-            }).then(doUploadFiles); // progress?
+              noACK: Const.PACKET_UPLOAD_NOACK
+            }).then(doUploadFiles);
           } else {
             Comms.uploadCommandList(f.cmd, currentBytes, maxBytes).then(doUploadFiles);
           }
@@ -621,11 +631,18 @@ ${Const.CONNECTION_DEVICE}.print("\\xFF");
   },
   // Read a non-storagefile file
   writeFile : (filename, data) => {
-    console.log(`<COMMS> writeFile ${JSON.stringify(filename)}`);
-    var cmds = AppInfo.getFileUploadCommands(filename, data);
+    console.log(`<COMMS> writeFile ${JSON.stringify(filename)} (${data.length}b)`);
     Progress.show({title:`Writing ${JSON.stringify(filename)}`,percent:0});
-    return Comms.write("\x10"+Comms.getProgressCmd()+"\n").then(() =>
-      Comms.uploadCommandList(cmds, 0, cmds.length)
-    );
+    if (Comms.supportsPacketUpload()) {
+      return Comms.getConnection().espruinoSendFile(filename, data, {
+        chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
+        noACK: Const.PACKET_UPLOAD_NOACK
+      });
+    } else {
+      var cmds = AppInfo.getFileUploadCommands(filename, data);
+      return Comms.write("\x10"+Comms.getProgressCmd()+"\n").then(() =>
+        Comms.uploadCommandList(cmds, 0, cmds.length)
+      );
+    }
   },
 };

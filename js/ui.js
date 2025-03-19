@@ -25,31 +25,31 @@ const Progress = {
     let percent = options.percent;
     if (percent!==undefined)
       percent = Progress.min*100 + (Progress.max-Progress.min)*percent;
-    if (!Progress.domElement) {
-      if (Progress.interval) {
-        clearInterval(Progress.interval);
-        Progress.interval = undefined;
-      }
-      if (options.percent == "animate") {
-        Progress.interval = setInterval(function() {
-          Progress.percent += 2;
-          if (Progress.percent>100) Progress.percent=0;
-          Progress.show({percent:Progress.percent});
-        }, 100);
-        Progress.percent = percent = 0;
-      }
+    if (Progress.interval) {
+      clearInterval(Progress.interval);
+      Progress.interval = undefined;
+    }
+    if (options.percent == "animate") {
+      Progress.interval = setInterval(function() {
+        Progress.percent += 2;
+        if (Progress.percent>100) Progress.percent=0;
+        Progress.show({percent:Progress.percent});
+      }, 100);
+      Progress.percent = percent = 0;
+    }
 
+    if (!Progress.domElement) {
       let toastcontainer = document.getElementById("toastcontainer");
       Progress.domElement = htmlElement(`<div class="toast">
       ${text ? `<div>${text}</div>`:``}
       <div class="bar bar-sm">
-        <div class="bar-item" id="Progress.domElement" role="progressbar" style="width:${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"></div>
+        <div class="bar-item" id="Progress.domElement" role="progressbar" style="width:${percent}%;" aria-valuenow="${Math.round(percent)}" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
     </div>`);
       toastcontainer.append(Progress.domElement);
     } else {
       let pt=document.getElementById("Progress.domElement");
-      pt.setAttribute("aria-valuenow",percent);
+      pt.setAttribute("aria-valuenow",Math.round(percent));
       pt.style.width = percent+"%";
     }
   },

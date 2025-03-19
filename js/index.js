@@ -245,6 +245,9 @@ function iframeSetup(options) {
             data : result,
             id : msg.id
           });
+        }, function(err) {
+          showToast("Eval from app loader failed:\n"+err,"error");
+          console.warn(err);
         });
       } else if (msg.type=="write") {
         Comms.write(msg.data).then(function(result) {
@@ -253,6 +256,9 @@ function iframeSetup(options) {
             data : result,
             id : msg.id
           });
+        }, function(err) {
+          showToast("File Write from app loader failed:\n"+err,"error");
+          console.warn(err);
         });
       } else if (msg.type=="readstoragefile") {
         Comms.readStorageFile(msg.filename).then(function(result) {
@@ -261,6 +267,9 @@ function iframeSetup(options) {
             data : result,
             id : msg.id
           });
+        }, function(err) {
+          showToast("StorageFile Read from app loader failed:\n"+err,"error");
+          console.warn(err);
         });
       } else if (msg.type=="readstorage") {
         Comms.readFile(msg.filename).then(function(result) {
@@ -269,6 +278,9 @@ function iframeSetup(options) {
             data : result,
             id : msg.id
           });
+        }, function(err) {
+          showToast("File Read from app loader failed:\n"+err,"error");
+          console.warn(err);
         });
       } else if (msg.type=="readstoragejson") {
         Comms.readFile(msg.filename).then(function(result) {
@@ -277,6 +289,9 @@ function iframeSetup(options) {
             data : Utils.parseRJSON(result),
             id : msg.id
           });
+        }, function(err) {
+          showToast("JSON File Read from app loader failed:\n"+err,"error");
+          console.warn(err);
         });
       } else if (msg.type=="writestorage") {
         Progress.show({title:`Uploading ${JSON.stringify(msg.filename)}`,sticky:true});
@@ -286,6 +301,9 @@ function iframeSetup(options) {
             type : "writestoragersp",
             id : msg.id
           });
+        }, function(err) {
+          showToast("StorageFile Write from app loader failed:\n"+err,"error");
+          console.warn(err);
         });
       } else if (options.messageHandler) options.messageHandler(event);
     }, false);
