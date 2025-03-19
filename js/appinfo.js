@@ -269,12 +269,14 @@ var AppInfo = {
             storageFile.cmd = `\x10require('Storage').write(${JSON.stringify(storageFile.name)},${js});`;
           } else {
             storageFile.cmd = AppInfo.getFileUploadCommands(storageFile.name, storageFile.content);
+            storageFile.canUploadPacket = true; // it's just treated as a normal file - so we can upload as packets (faster)
           }
           // if we're not supposed to overwrite this file... this gets set
           // automatically for data files that are loaded
           if (storageFile.noOverwrite) {
             storageFile.cmd = `\x10var _e = require('Storage').read(${JSON.stringify(storageFile.name)})===undefined;\n` +
                               storageFile.cmd.replace(/\x10/g,"\x10if(_e)") + "delete _e;";
+            storageFile.canUploadPacket = false; // because we check, we can't do the fast upload
           }
         });
         resolve(fileContents);

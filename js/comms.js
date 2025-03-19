@@ -3,26 +3,6 @@ console.log("================================================")
 console.log("Type 'Comms.debug()' to enable Comms debug info")
 console.log("================================================")
 
-/*
-
-Puck = {
-  /// Are we writing debug information? 0 is no, 1 is some, 2 is more, 3 is all.
-  debug : UART.debug,
-  /// Used internally to write log information - you can replace this with your own function
-  log : function(level, s) { if (level <= this.debug) console.log("<UART> "+s)},
-  /// Called with the current send progress or undefined when done - you can replace this with your own function
-  writeProgress : function() {},
-  connect : UART.connect,
-  write : UART.write,
-  eval : UART.eval,
-  isConnected : () => UART.isConnected() && UART.getConnection().isOpen,
-  getConnection : UART.getConnection,
-  close : UART.close,
-  RECEIVED_NOT_IN_DATA_HANDLER : true, // hack for Comms.on
-};
-// FIXME: disconnected event?
-*/
-
 /// Add progress handler so we get nice upload progress shown
 {
   let COMMS = (typeof UART != "undefined")?UART:Puck;
@@ -100,7 +80,7 @@ const Comms = {
   handlers : {},
   on : function(id, callback) { // calling with callback=undefined will disable
     if (id!="data") throw new Error("Only data callback is supported");
-    var connection = Puck.getConnection();
+    var connection = Comms.getConnection();
     if (!connection) throw new Error("No active connection");
     /* This is a bit of a mess - the Puck.js lib only supports one callback with `.on`. If you
     do Puck.getConnection().on('data') then it blows away the default one which is used for
@@ -108,18 +88,14 @@ const Comms = {
     Puck lib we just copy in the default handler here. */
     if (callback===undefined) {
       connection.on("data", function(d) { // the default handler
-        if (!Puck.RECEIVED_NOT_IN_DATA_HANDLER) {
-          connection.received += d;
-          connection.hadData = true;
-        }
+        connection.received += d;
+        connection.hadData = true;
         if (connection.cb)  connection.cb(d);
       });
     } else {
       connection.on("data", function(d) {
-        if (!Puck.RECEIVED_NOT_IN_DATA_HANDLER) {
-          connection.received += d;
-          connection.hadData = true;
-        }
+        connection.received += d;
+        connection.hadData = true;
         if (connection.cb)  connection.cb(d);
         callback(d);
       });
@@ -277,7 +253,7 @@ const Comms = {
 
         // Upload each file one at a time
         function doUploadFiles() {
-        // No files left - print 'reboot' message
+          // No files left - print 'reboot' message
           if (fileContents.length==0) {
             (options.noFinish ? Promise.resolve() : Comms.showUploadFinished()).then(() => {
               Progress.hide({sticky:true});
@@ -288,10 +264,21 @@ const Comms = {
             return;
           }
           let f = fileContents.shift();
-          console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content)}`);
-          Comms.uploadCommandList(f.cmd, currentBytes, maxBytes).then(() => doUploadFiles());
+          // Only upload as a packet if it makes sense for the file, connection supports it, as does device firmware
+          let uploadPacket = (!!f.canUploadPacket) && Comms.getConnection().espruinoSendFile && !Utils.versionLess(device.version,"2v25");
+
+          console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content.length>50 ? f.content.substr(0,50)+"..." : f.content)} (${f.content.length}b${uploadPacket?", binary":""})`);
+          if (uploadPacket) {
+            Comms.getConnection().espruinoSendFile(f.name, f.content, {
+              fs:Const.FILES_IN_FS,
+              progress:(chunkNo,chunkCount)=>{Progress.show({percent: chunkNo*100/chunkCount});}
+            }).then(doUploadFiles); // progress?
+          } else {
+            Comms.uploadCommandList(f.cmd, currentBytes, maxBytes).then(doUploadFiles);
+          }
           currentBytes += f.cmd.length;
         }
+
         // Start the upload
         function doUpload() {
           Comms.showMessage(`Uploading\n${app.id}...`).
