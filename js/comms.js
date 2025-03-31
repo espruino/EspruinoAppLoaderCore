@@ -177,7 +177,8 @@ const Comms = {
     char we use to signify echo(0) for a line */
     cmds = cmds.split("\x10").filter(l=>l!="").map(l=>"\x10"+l.trim());
 
-    return new Promise( (resolve, reject) => {
+    return (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
+      .then(() => new Promise( (resolve, reject) => {
       // Function to upload a single line and wait for an 'OK' response
       function uploadCmd() {
         if (!cmds.length) return resolve();
@@ -234,7 +235,7 @@ const Comms = {
       }
 
       uploadCmd()
-    });
+    }));
   },
   /** Upload an app
      app : an apps.json structure (i.e. with `storage`)
@@ -373,8 +374,6 @@ const Comms = {
             return;
           }
         }
-
-
         if (Comms.getConnection().endpoint && Comms.getConnection().endpoint.name == "Web Serial" && Comms.espruinoDevice=="Bluetooth") {
           console.log("<COMMS> Using Web Serial, forcing Comms.espruinoDevice='USB'", result);
           // FIXME: won't work on ESP8266/ESP32!
@@ -441,20 +440,24 @@ const Comms = {
   // Get an app's info file from Bangle.js
   getAppInfo : app => {
     var cmd;
-    if (Const.FILES_IN_FS) cmd = `\x10${Comms.espruinoDevice}.println(require("fs").readFileSync(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
-    else cmd = `\x10${Comms.espruinoDevice}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
-    return Comms.write(cmd).
-      then(appJSON=>{
-        let app;
-        try {
-          app = JSON.parse(appJSON);
-        } catch (e) {
-          app = null;
-          console.log("<COMMS> ERROR Parsing JSON",e.toString());
-          console.log("<COMMS> Actual response: ",JSON.stringify(appJSON));
-          throw new Error("Invalid JSON");
-        }
-        return app;
+
+    (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
+    .then(() => {
+      if (Const.FILES_IN_FS) cmd = `\x10${Comms.espruinoDevice}.println(require("fs").readFileSync(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
+      else cmd = `\x10${Comms.espruinoDevice}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
+      return Comms.write(cmd).
+        then(appJSON=>{
+          let app;
+          try {
+            app = JSON.parse(appJSON);
+          } catch (e) {
+            app = null;
+            console.log("<COMMS> ERROR Parsing JSON",e.toString());
+            console.log("<COMMS> Actual response: ",JSON.stringify(appJSON));
+            throw new Error("Invalid JSON");
+          }
+          return app;
+        });
       });
   },
   /** Remove an app given an appinfo.id structure as JSON
@@ -514,7 +517,9 @@ const Comms = {
   removeAllApps : () => {
     console.log("<COMMS> removeAllApps start");
     Progress.show({title:"Removing all apps",percent:"animate",sticky:true});
-    return new Promise((resolve,reject) => {
+
+    return (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
+      .then(() => new Promise((resolve,reject) => {
       let timeout = 5;
       function handleResult(result,err) {
         console.log("<COMMS> removeAllApps: received "+JSON.stringify(result));
@@ -537,21 +542,21 @@ const Comms = {
     }).then(() => new Promise(resolve => {
       console.log("<COMMS> removeAllApps: Erase complete, waiting 500ms for 'reset()'");
       setTimeout(resolve, 500);
-    })); // now wait a second for the reset to complete
+    }))); // now wait a second for the reset to complete
   },
   // Set the time on the device
   setTime : () => {
     /* connect FIRST, then work out the time - otherwise
     we end up with a delay dependent on how long it took
     to open the device chooser. */
-    return Comms.write("\x03").then(() => {
+    return Comms.write(" \x08").then(() => { // send space+backspace (eg no-op)
       let d = new Date();
       let tz = d.getTimezoneOffset()/-60
       let cmd = '\x10setTime('+(d.getTime()/1000)+');';
       // in 1v93 we have timezones too
       cmd += 'E.setTimeZone('+tz+');';
       cmd += "(s=>s&&(s.timezone="+tz+",require('Storage').write('setting.json',s)))(require('Storage').readJSON('setting.json',1))\n";
-      Comms.write(cmd);
+      return Comms.write(cmd);
     });
   },
   // Reset the device
@@ -587,17 +592,14 @@ const Comms = {
   // List all files on the device.
   // options can be undefined, or {sf:true} for only storage files, or  {sf:false} for only normal files
   listFiles : (options) => {
-    return Comms.write(" \x03").then(result => {
-      if (result===null) return Promise.reject("Ctrl-C failed");
-      let args = "";
-      if (options && options.sf!==undefined) args=`undefined,{sf:${options.sf}}`;
-      //use encodeURIComponent to serialize octal sequence of append files
-      return Comms.eval(`require("Storage").list(${args}).map(encodeURIComponent)`, (files,err) => {
-        if (files===null) return Promise.reject(err || "");
-        files = files.map(decodeURIComponent);
-        console.log("<COMMS> listFiles", files);
-        return files;
-      });
+    let args = "";
+    if (options && options.sf!==undefined) args=`undefined,{sf:${options.sf}}`;
+    //use encodeURIComponent to serialize octal sequence of append files
+    return Comms.eval(`require("Storage").list(${args}).map(encodeURIComponent)`, (files,err) => {
+      if (files===null) return Promise.reject(err || "");
+      files = files.map(decodeURIComponent);
+      console.log("<COMMS> listFiles", files);
+      return files;
     });
   },
   // Execute some code, and read back the block of text it outputs (first line is the size in bytes for progress)
@@ -643,7 +645,8 @@ const Comms = {
     Progress.show({title:`Reading ${JSON.stringify(filename)}`,percent:0});
     console.log(`<COMMS> readFile ${JSON.stringify(filename)}`);
     const CHUNKSIZE = 384;
-    return Comms.readTextBlock(`\x03\x10(function() {
+    return (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
+      .then(() => Comms.readTextBlock(`\x10(function() {
 var s = require("Storage").read(${JSON.stringify(filename)});
 if (s===undefined) s="";
 ${Comms.espruinoDevice}.println(((s.length+2)/3)<<2);
@@ -651,19 +654,20 @@ for (var i=0;i<s.length;i+=${CHUNKSIZE}) ${Comms.espruinoDevice}.print(btoa(s.su
 ${Comms.espruinoDevice}.print("\\xFF");
 })()\n`).then(text => {
       return atobSafe(text);
-    });
+    }));
   },
   // Read a storagefile
   readStorageFile : (filename) => { // StorageFiles are different to normal storage entries
     Progress.show({title:`Reading ${JSON.stringify(filename)}`,percent:0});
     console.log(`<COMMS> readStorageFile ${JSON.stringify(filename)}`);
-    return Comms.readTextBlock(`\x03\x10(function() {
+    return (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
+      .then(() => Comms.readTextBlock(`\x10(function() {
       var f = require("Storage").open(${JSON.stringify(filename)},"r");
       ${Comms.espruinoDevice}.println(f.getLength());
       var l = f.readLine();
       while (l!==undefined) { ${Comms.espruinoDevice}.print(l); l = f.readLine(); }
       ${Comms.espruinoDevice}.print("\\xFF");
-    })()\n`);
+    })()\n`));
   },
   // Read a non-storagefile file
   writeFile : (filename, data) => {
