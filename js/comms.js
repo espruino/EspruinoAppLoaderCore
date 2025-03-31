@@ -441,7 +441,7 @@ const Comms = {
   getAppInfo : app => {
     var cmd;
 
-    (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
+    return (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
     .then(() => {
       if (Const.FILES_IN_FS) cmd = `\x10${Comms.espruinoDevice}.println(require("fs").readFileSync(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
       else cmd = `\x10${Comms.espruinoDevice}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
