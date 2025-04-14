@@ -282,16 +282,27 @@ const Comms = {
           // Only upload as a packet if it makes sense for the file, connection supports it, as does device firmware
           let uploadPacket = (!!f.canUploadPacket) && Comms.supportsPacketUpload();
 
-          console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content.length>50 ? f.content.substr(0,50)+"..." : f.content)} (${f.content.length}b${uploadPacket?", binary":""})`);
-          if (uploadPacket) {
-            Comms.getConnection().espruinoSendFile(f.name, f.content, {
-              fs: Const.FILES_IN_FS,
-              chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
-              noACK: Const.PACKET_UPLOAD_NOACK
-            }).then(doUploadFiles);
-          } else {
-            Comms.uploadCommandList(f.cmd, currentBytes, maxBytes).then(doUploadFiles);
+          function startUpload() {
+            console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content.length>50 ? f.content.substr(0,50)+"..." : f.content)} (${f.content.length}b${uploadPacket?", binary":""})`);
+            if (uploadPacket) {
+              return Comms.getConnection().espruinoSendFile(f.name, f.content, {
+                fs: Const.FILES_IN_FS,
+                chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
+                noACK: Const.PACKET_UPLOAD_NOACK
+              });
+            } else {
+              return Comms.uploadCommandList(f.cmd, currentBytes, maxBytes).then(doUploadFiles);
+            }
           }
+
+          startUpload().then(doUploadFiles, function(err) {
+            console.warn("First attempt failed:", err);
+            startUpload().then(doUploadFiles, function(err) {
+              console.warn("Second attempt failed - bailing.", err);
+              reject(err)
+            });
+          });
+
           currentBytes += f.cmd.length;
         }
 
@@ -421,6 +432,12 @@ const Comms = {
             info.version = appList.pop();
             info.id = appList.pop();
             info.storageStats = appList.pop(); // how much storage has been used
+            if (info.storageStats.totalBytes && (info.storageStats.freeBytes*10<info.storageStats.totalBytes)) {
+              var suggest = "";
+              if (info.id.startsWith("BANGLEJS") && info.storageStats.trashBytes*10>info.storageStats.totalBytes)
+                suggest = "Try running 'Compact Storage' from Bangle.js 'Settings' -> 'Utils'.";
+              showToast(`Low Disk Space: ${Math.round(info.storageStats.freeBytes/1000)}k of ${Math.round(info.storageStats.totalBytes/1000)}k remaining on this device.${suggest} See 'More...' -> 'Device Info' for more information.`,"warning");
+            }
             // if we just have 'null' then it means we have no apps
             if (appList.length==1 && appList[0]==null)
               appList = [];
