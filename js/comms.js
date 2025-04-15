@@ -297,6 +297,12 @@ const Comms = {
 
           startUpload().then(doUploadFiles, function(err) {
             console.warn("First attempt failed:", err);
+            if (Const.PACKET_UPLOAD_CHUNKSIZE > 128) {
+              // Espruino 2v25 has a 1 sec packet timeout (which isn't enough for 1kb packets if sending 20b at a time)
+              // https://github.com/espruino/BangleApps/issues/3792#issuecomment-2804668109
+              console.warn(`Using lower upload chunk size (${Const.PACKET_UPLOAD_CHUNKSIZE} ==> 128)`);
+              Const.PACKET_UPLOAD_CHUNKSIZE = 128;
+            }
             startUpload().then(doUploadFiles, function(err) {
               console.warn("Second attempt failed - bailing.", err);
               reject(err)
