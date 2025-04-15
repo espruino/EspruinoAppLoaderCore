@@ -291,7 +291,7 @@ const Comms = {
                 noACK: Const.PACKET_UPLOAD_NOACK
               });
             } else {
-              return Comms.uploadCommandList(f.cmd, currentBytes, maxBytes).then(doUploadFiles);
+              return Comms.uploadCommandList(f.cmd, currentBytes, maxBytes);
             }
           }
 
