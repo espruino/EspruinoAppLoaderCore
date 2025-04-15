@@ -76,7 +76,7 @@ const Comms = {
       return Puck.getConnection();
     }
   },
-  supportsPacketUpload : () => Comms.getConnection().espruinoSendFile && !Utils.versionLess(device.version,"2v25"),
+  supportsPacketUpload : () => (!SETTINGS.noPackets) && Comms.getConnection().espruinoSendFile && !Utils.versionLess(device.version,"2v25"),
   // Faking EventEmitter
   handlers : {},
   on : function(id, callback) { // calling with callback=undefined will disable

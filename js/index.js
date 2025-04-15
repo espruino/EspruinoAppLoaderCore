@@ -11,7 +11,8 @@ const DEFAULTSETTINGS = {
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
   sendUsageStats: true,  // send usage stats to banglejs.com
   alwaysAllowUpdate : false, //  Always show "reinstall app" buttonregardless of the version
-  autoReload: false //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
+  autoReload: false, //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
+  noPackets: false,  // Enable File Upload Compatibility mode (disables binary packet upload)
 };
 var SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
@@ -1270,6 +1271,7 @@ settingsCheckbox("settings-minify", "minify");
 settingsCheckbox("settings-settime", "settime");
 settingsCheckbox("settings-alwaysAllowUpdate", "alwaysAllowUpdate");
 settingsCheckbox("settings-autoReload", "autoReload");
+settingsCheckbox("settings-nopacket", "noPackets");
 loadSettings();
 
 let btn;
