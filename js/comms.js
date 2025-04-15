@@ -81,7 +81,7 @@ const Comms = {
   handlers : {},
   on : function(id, callback) { // calling with callback=undefined will disable
     if (id!="data") throw new Error("Only data callback is supported");
-    var connection = Comms.getConnection();
+    let connection = Comms.getConnection();
     if (!connection) throw new Error("No active connection");
     if ("undefined"!==typeof Puck) {
       /* This is a bit of a mess - the Puck.js lib only supports one callback with `.on`. If you
@@ -179,63 +179,63 @@ const Comms = {
 
     return (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
       .then(() => new Promise( (resolve, reject) => {
-      // Function to upload a single line and wait for an 'OK' response
-      function uploadCmd() {
-        if (!cmds.length) return resolve();
-        let cmd = cmds.shift();
-        Progress.show({
-          min:currentBytes / maxBytes,
-          max:(currentBytes+cmd.length) / maxBytes});
-        currentBytes += cmd.length;
-        function responseHandler(result) {
-          console.log("<COMMS> Response: ",JSON.stringify(result));
-          var ignore = false;
-          if (result!==undefined) {
-            result=result.trim();
-            if (result=="OK") {
-              uploadCmd(); // all as expected - send next
-              return;
-            }
-
-            if (result.startsWith("{") && result.endsWith("}")) {
-              console.log("<COMMS> JSON response received (Gadgetbridge?) - ignoring...");
-              ignore = true;
-            } else if (result=="") {
-              console.log("<COMMS> Blank line received - ignoring...");
-              ignore = true;
-            }
-          } else { // result===undefined
-            console.log("<COMMS> No response received - ignoring...");
-            ignore = true;
-          }
-          if (ignore) {
-            /* Here we have to poke around inside the Comms library internals. Basically
-            it just gave us the first line in the input buffer, but there may have been more.
-            We take the next line (or undefined) and call ourselves again to handle that.
-            Just in case, delay a little to give our previous command time to finish.*/
-            setTimeout(function() {
-              let connection = Comms.getConnection();
-              let newLineIdx = connection.received.indexOf("\n");
-              let l = undefined;
-              if (newLineIdx>=0) {
-                l = connection.received.substr(0,newLineIdx);
-                connection.received = connection.received.substr(newLineIdx+1);
+        // Function to upload a single line and wait for an 'OK' response
+        function uploadCmd() {
+          if (!cmds.length) return resolve();
+          let cmd = cmds.shift();
+          Progress.show({
+            min:currentBytes / maxBytes,
+            max:(currentBytes+cmd.length) / maxBytes});
+          currentBytes += cmd.length;
+          function responseHandler(result) {
+            console.log("<COMMS> Response: ",JSON.stringify(result));
+            let ignore = false;
+            if (result!==undefined) {
+              result=result.trim();
+              if (result=="OK") {
+                uploadCmd(); // all as expected - send next
+                return;
               }
-              responseHandler(l);
-            }, 500);
-          } else {
-            // Not a response we expected and we're not ignoring!
-            Progress.hide({sticky:true});
-            return reject("Unexpected response "+(result?JSON.stringify(result):"<empty>"));
-          }
-        }
-        // Actually write the command with a 'print OK' at the end, and use responseHandler
-        // to deal with the response. If OK we call uploadCmd to upload the next block
-        return Comms.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}${Comms.espruinoDevice}.println("OK")\n`,{waitNewLine:true}).then(responseHandler);
-      }
 
-      uploadCmd()
-    }));
+              if (result.startsWith("{") && result.endsWith("}")) {
+                console.log("<COMMS> JSON response received (Gadgetbridge?) - ignoring...");
+                ignore = true;
+              } else if (result=="") {
+                console.log("<COMMS> Blank line received - ignoring...");
+                ignore = true;
+              }
+            } else { // result===undefined
+              console.log("<COMMS> No response received - ignoring...");
+              ignore = true;
+            }
+            if (ignore) {
+              /* Here we have to poke around inside the Comms library internals. Basically
+              it just gave us the first line in the input buffer, but there may have been more.
+              We take the next line (or undefined) and call ourselves again to handle that.
+              Just in case, delay a little to give our previous command time to finish.*/
+              setTimeout(function() {
+                let connection = Comms.getConnection();
+                let newLineIdx = connection.received.indexOf("\n");
+                let l = undefined;
+                if (newLineIdx>=0) {
+                  l = connection.received.substr(0,newLineIdx);
+                  connection.received = connection.received.substr(newLineIdx+1);
+                }
+                responseHandler(l);
+              }, 500);
+            } else {
+              // Not a response we expected and we're not ignoring!
+              Progress.hide({sticky:true});
+              return reject("Unexpected response "+(result?JSON.stringify(result):"<empty>"));
+            }
+          }
+          // Actually write the command with a 'print OK' at the end, and use responseHandler
+          // to deal with the response. If OK we call uploadCmd to upload the next block
+          return Comms.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}${Comms.espruinoDevice}.println("OK")\n`,{waitNewLine:true}).then(responseHandler);
+        }
+
+        uploadCmd()
+      }));
   },
   /** Upload an app
      app : an apps.json structure (i.e. with `storage`)
@@ -380,8 +380,8 @@ const Comms = {
                 Comms.espruinoDevice = device;
               else throw new Error("Unable to find Espruino console device");
               console.log("<COMMS> Set console device to "+device);
-            }).then(()=>Comms.getDeviceInfo(true)).
-            then(resolve);
+            }).then(()=>Comms.getDeviceInfo(true))
+              .then(resolve);
             return;
           }
         }
@@ -406,14 +406,14 @@ const Comms = {
         Comms.write(cmd, {waitNewLine:true}).then(appListStr => {
           Progress.hide({sticky:true});
           if (!appListStr) appListStr="";
-          var connection = Comms.getConnection();
+          let connection = Comms.getConnection();
           if (connection) {
             appListStr = appListStr+"\n"+connection.received; // add *any* information we have received so far, including what was returned
             connection.received = ""; // clear received data just in case
           }
           // we may have received more than one line - we're looking for an array (starting with '[')
-          var lines = appListStr ? appListStr.split("\n").map(l=>l.trim()) : [];
-          var appListJSON = lines.find(l => l[0]=="[");
+          let lines = appListStr ? appListStr.split("\n").map(l=>l.trim()) : [];
+          let appListJSON = lines.find(l => l[0]=="[");
           // check to see if we got our data
           if (!appListJSON) {
             console.log("No JSON, just got: "+JSON.stringify(appListStr));
@@ -433,7 +433,7 @@ const Comms = {
             info.id = appList.pop();
             info.storageStats = appList.pop(); // how much storage has been used
             if (info.storageStats.totalBytes && (info.storageStats.freeBytes*10<info.storageStats.totalBytes)) {
-              var suggest = "";
+              let suggest = "";
               if (info.id.startsWith("BANGLEJS") && info.storageStats.trashBytes*10>info.storageStats.totalBytes)
                 suggest = "Try running 'Compact Storage' from Bangle.js 'Settings' -> 'Utils'.";
               showToast(`Low Disk Space: ${Math.round(info.storageStats.freeBytes/1000)}k of ${Math.round(info.storageStats.totalBytes/1000)}k remaining on this device.${suggest} See 'More...' -> 'Device Info' for more information.`,"warning");
@@ -456,25 +456,25 @@ const Comms = {
   },
   // Get an app's info file from Bangle.js
   getAppInfo : app => {
-    var cmd;
+    let cmd;
 
     return (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
-    .then(() => {
-      if (Const.FILES_IN_FS) cmd = `\x10${Comms.espruinoDevice}.println(require("fs").readFileSync(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
-      else cmd = `\x10${Comms.espruinoDevice}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
-      return Comms.write(cmd).
-        then(appJSON=>{
-          let app;
-          try {
-            app = JSON.parse(appJSON);
-          } catch (e) {
-            app = null;
-            console.log("<COMMS> ERROR Parsing JSON",e.toString());
-            console.log("<COMMS> Actual response: ",JSON.stringify(appJSON));
-            throw new Error("Invalid JSON");
-          }
-          return app;
-        });
+      .then(() => {
+        if (Const.FILES_IN_FS) cmd = `\x10${Comms.espruinoDevice}.println(require("fs").readFileSync(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
+        else cmd = `\x10${Comms.espruinoDevice}.println(require("Storage").read(${JSON.stringify(AppInfo.getAppInfoFilename(app))})||"null")\n`;
+        return Comms.write(cmd).
+          then(appJSON=>{
+            let app;
+            try {
+              app = JSON.parse(appJSON);
+            } catch (e) {
+              app = null;
+              console.log("<COMMS> ERROR Parsing JSON",e.toString());
+              console.log("<COMMS> Actual response: ",JSON.stringify(appJSON));
+              throw new Error("Invalid JSON");
+            }
+            return app;
+          });
       });
   },
   /** Remove an app given an appinfo.id structure as JSON
@@ -537,29 +537,29 @@ const Comms = {
 
     return (Comms.espruinoDevice?Promise.resolve():Comms.getDeviceInfo(true/*noreset*/)) // ensure Comms.espruinoDevice is set
       .then(() => new Promise((resolve,reject) => {
-      let timeout = 5;
-      function handleResult(result,err) {
-        console.log("<COMMS> removeAllApps: received "+JSON.stringify(result));
-        if (result=="" && (timeout--)) {
-          console.log("<COMMS> removeAllApps: no result - waiting some more ("+timeout+").");
-          // send space and delete - so it's something, but it should just cancel out
-          Comms.write(" \u0008", {waitNewLine:true}).then(handleResult);
-        } else {
-          Progress.hide({sticky:true});
-          if (!result || result.trim()!="OK") {
-            if (!result) result = "No response";
-            else result = "Got "+JSON.stringify(result.trim());
-            return reject(err || result);
-          } else resolve();
+        let timeout = 5;
+        function handleResult(result,err) {
+          console.log("<COMMS> removeAllApps: received "+JSON.stringify(result));
+          if (result=="" && (timeout--)) {
+            console.log("<COMMS> removeAllApps: no result - waiting some more ("+timeout+").");
+            // send space and delete - so it's something, but it should just cancel out
+            Comms.write(" \u0008", {waitNewLine:true}).then(handleResult);
+          } else {
+            Progress.hide({sticky:true});
+            if (!result || result.trim()!="OK") {
+              if (!result) result = "No response";
+              else result = "Got "+JSON.stringify(result.trim());
+              return reject(err || result);
+            } else resolve();
+          }
         }
-      }
-      // Use write with newline here so we wait for it to finish
-      let cmd = `\x10E.showMessage("Erasing...");require("Storage").eraseAll();${Comms.espruinoDevice}.println("OK");reset()\n`;
-      Comms.write(cmd,{waitNewLine:true}).then(handleResult);
-    }).then(() => new Promise(resolve => {
-      console.log("<COMMS> removeAllApps: Erase complete, waiting 500ms for 'reset()'");
-      setTimeout(resolve, 500);
-    }))); // now wait a second for the reset to complete
+        // Use write with newline here so we wait for it to finish
+        let cmd = `\x10E.showMessage("Erasing...");require("Storage").eraseAll();${Comms.espruinoDevice}.println("OK");reset()\n`;
+        Comms.write(cmd,{waitNewLine:true}).then(handleResult);
+      }).then(() => new Promise(resolve => {
+        console.log("<COMMS> removeAllApps: Erase complete, waiting 500ms for 'reset()'");
+        setTimeout(resolve, 500);
+      }))); // now wait a second for the reset to complete
   },
   // Set the time on the device
   setTime : () => {
@@ -670,8 +670,8 @@ ${Comms.espruinoDevice}.println(((s.length+2)/3)<<2);
 for (var i=0;i<s.length;i+=${CHUNKSIZE}) ${Comms.espruinoDevice}.print(btoa(s.substr(i,${CHUNKSIZE})));
 ${Comms.espruinoDevice}.print("\\xFF");
 })()\n`).then(text => {
-      return atobSafe(text);
-    }));
+        return Utils.atobSafe(text);
+      }));
   },
   // Read a storagefile
   readStorageFile : (filename) => { // StorageFiles are different to normal storage entries
@@ -696,7 +696,7 @@ ${Comms.espruinoDevice}.print("\\xFF");
         noACK: Const.PACKET_UPLOAD_NOACK
       });
     } else {
-      var cmds = AppInfo.getFileUploadCommands(filename, data);
+      let cmds = AppInfo.getFileUploadCommands(filename, data);
       return Comms.write("\x10"+Comms.getProgressCmd()+"\n").then(() =>
         Comms.uploadCommandList(cmds, 0, cmds.length)
       );
