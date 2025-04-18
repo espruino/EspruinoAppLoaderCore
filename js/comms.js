@@ -406,7 +406,7 @@ const Comms = {
         if (Const.SINGLE_APP_ONLY) // only one app on device, info file is in app.info
           cmd = `\x10${device}.println("["+(require("Storage").read("app.info")||"null")+","+${finalJS})\n`;
         else if (Const.FILES_IN_FS) // file in a FAT filesystem
-          cmd = `\x10${device}.print("[");if (!require("fs").statSync("APPINFO"))require("fs").mkdir("APPINFO");require("fs").readdirSync("APPINFO").forEach(f=>{var j=JSON.parse(require("fs").readFileSync("APPINFO/"+f))||"{}";${device}.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")});${device}.println(${finalJS})\n`;
+          cmd = `\x10${device}.print("[");let fs=require("fs");if (!fs.statSync("APPINFO"))fs.mkdir("APPINFO");fs.readdirSync("APPINFO").forEach(f=>{if (!fs.statSync("APPINFO/"+f).dir){var j=JSON.parse(fs.readFileSync("APPINFO/"+f))||"{}";${device}.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")}});${device}.println(${finalJS})\n`;
         else // the default, files in Storage
           cmd = `\x10${device}.print("[");require("Storage").list(/\\.info$/).forEach(f=>{var j=require("Storage").readJSON(f,1)||{};${device}.print(JSON.stringify({id:f.slice(0,-5),version:j.version,files:j.files,data:j.data,type:j.type})+",")});${device}.println(${finalJS})\n`;
         Comms.write(cmd, {waitNewLine:true}).then(appListStr => {
