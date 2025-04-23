@@ -127,7 +127,7 @@ const Comms = {
     if (SETTINGS.autoReload || Const.LOAD_APP_AFTER_UPLOAD || Const.SINGLE_APP_ONLY) return Comms.write("\x10load()\n");
     else return Comms.showMessage(Const.MESSAGE_RELOAD);
   },
-  // Gets a text command to append to what's being sent to show progress. If progress==undefined, it's the first command
+  // Gets a text command to append to what's being sent to show progress. If progress==undefined, it's the first command, otherwise it's 0..1
   getProgressCmd : (progress) => {
     console.log(`<COMMS> getProgressCmd ${progress!==undefined?`${Math.round(progress*100)}%`:"START"}`);
     if (!Const.HAS_E_SHOWMESSAGE) {
@@ -273,9 +273,7 @@ const Comms = {
             (options.noFinish ? Promise.resolve() : Comms.showUploadFinished()).then(() => {
               Progress.hide({sticky:true});
               resolve(appInfo);
-            }).catch(function() {
-              reject("");
-            });
+            }).catch(reject);
             return;
           }
           let f = fileContents.shift();
@@ -285,11 +283,16 @@ const Comms = {
           function startUpload() {
             console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content.length>50 ? f.content.substr(0,50)+"..." : f.content)} (${f.content.length}b${uploadPacket?", binary":""})`);
             if (uploadPacket) {
-              return Comms.getConnection().espruinoSendFile(f.name, f.content, {
-                fs: Const.FILES_IN_FS,
-                chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
-                noACK: Const.PACKET_UPLOAD_NOACK
-              });
+              Progress.show({ // Ensure that the correct progress is being shown in app loader
+                percent: 0,
+                min:currentBytes / maxBytes,
+                max:(currentBytes+f.content.length) / maxBytes});
+              return Comms.write(`\x10${Comms.getProgressCmd(currentBytes / maxBytes)}\n`).then(() => // update percent bar on Bangle.js screen
+                Comms.getConnection().espruinoSendFile(f.name, f.content, { // send the file
+                  fs: Const.FILES_IN_FS,
+                  chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
+                  noACK: Const.PACKET_UPLOAD_NOACK
+                }));
             } else {
               return Comms.uploadCommandList(f.cmd, currentBytes, maxBytes);
             }
@@ -330,6 +333,9 @@ const Comms = {
           Comms.reset().then(doUpload, reject)
         }
       });
+    }).catch(err => {
+      Progress.hide({sticky:true}); // ensure we hide our sticky progress message if there was an error
+      return Promise.reject(err); // pass the error on
     });
   },
   // Get Device ID, version, storage stats, and a JSON list of installed apps
