@@ -14,7 +14,7 @@ const DEFAULTSETTINGS = {
   autoReload: false, //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
   noPackets: false,  // Enable File Upload Compatibility mode (disables binary packet upload)
 };
-var SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
+let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
 let device = {
   id : undefined,     // The Espruino device ID of this device, eg. BANGLEJS
@@ -39,7 +39,7 @@ let device = {
     "Alarm" : "Alarm"
   }
 };*/
-var LANGUAGE = undefined;
+let LANGUAGE = undefined;
 
 function appJSONLoadedHandler() {
   appJSON.forEach(app => {
@@ -782,6 +782,7 @@ function showScreenshots(appId) {
 
 // =========================================== My Apps
 
+/** Upload the given app to the device - may prompt user for dependencies */
 function uploadApp(app, options) {
   options = options||{};
   if (app.type == "defaultconfig" && !options.force) {
@@ -823,22 +824,22 @@ function uploadApp(app, options) {
   });
 }
 
+/** Prompt user and then remove app from the device */
 function removeApp(app) {
-  return showPrompt("Delete","Really remove '"+app.name+"'?").then(() => {
-    return getInstalledApps().then(()=>{
-      // a = from appid.info, app = from apps.json
-      return Comms.removeApp(device.appsInstalled.find(a => a.id === app.id));
+  return showPrompt("Delete","Really remove '"+app.name+"'?")
+    .then(() => getInstalledApps())
+    .then(()=> Comms.removeApp(device.appsInstalled.find(a => a.id === app.id))) // a = from appid.info, app = from apps.json
+    .then(()=>{
+      device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
+      showToast(app.name+" removed successfully","success");
+      refreshMyApps();
+      refreshLibrary();
+    }, err=>{
+      showToast(app.name+" removal failed, "+err,"error");
     });
-  }).then(()=>{
-    device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
-    showToast(app.name+" removed successfully","success");
-    refreshMyApps();
-    refreshLibrary();
-  }, err=>{
-    showToast(app.name+" removal failed, "+err,"error");
-  });
 }
 
+/** Show window for a new app and finally upload it */
 function customApp(app) {
   return handleCustomApp(app).then((appJSON) => {
     if (appJSON) device.appsInstalled.push(appJSON);
@@ -852,7 +853,7 @@ function customApp(app) {
   });
 }
 
-/* check for dependencies the app needs and install them if required
+/** check for dependencies the app needs and install them if required
 uploadOptions is an object, see AppInfo.checkDependencies for what can be in it
 */
 function checkDependencies(app, uploadOptions) {
