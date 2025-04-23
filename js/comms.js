@@ -115,7 +115,7 @@ const Comms = {
   /* when connected, this is the name of the device we're connected to as far as Espruino is concerned
   (eg Bluetooth/USB/Serial1.println("Foo") ) */
   espruinoDevice : undefined,
-// ================================================================================
+  // ================================================================================
   // Show a message on the screen (if available)
   showMessage : (txt) => {
     console.log(`<COMMS> showMessage ${JSON.stringify(txt)}`);

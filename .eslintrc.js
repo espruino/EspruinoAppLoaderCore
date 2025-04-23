@@ -1,9 +1,12 @@
 module.exports = {
     "extends": "eslint:recommended",
     "globals": {
-      "Utils" : "writable",
+      "Utils" : "writable", // defined in utils.js
       "UART" : "readonly",
-      "Puck" : "readonly"
+      "Puck" : "readonly",
+      "device" : "writable", // defined in index.js
+      "appJSON" : "writable", // defined in index.js
+
     },
     "rules": {
         "indent": [

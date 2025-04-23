@@ -49,7 +49,7 @@ function appJSONLoadedHandler() {
       });
   });
   let promise = Promise.resolve();
-  if ("undefined" != typeof onAppJSONLoaded)
+  if ("undefined" != typeof onAppJSONLoaded) /*global onAppJSONLoaded*/
     promise = promise.then(onAppJSONLoaded);
   // finally update what we're showing
   promise.then(function() {
@@ -989,12 +989,12 @@ function getAppsToUpdate(options) {
 
 function refreshMyApps() {
   // if we've got a callback, call it first
-  if ("function"==typeof onRefreshMyApps)
+  if ("function"==typeof onRefreshMyApps) /*global onRefreshMyApps*/
     onRefreshMyApps();
   // Now update...
   let panelbody = document.querySelector("#myappscontainer .panel-body");
   let appsToUpdate = getAppsToUpdate(); // this writes canUpdate attributes to apps in device.appsInstalled
-  panelbody.innerHTML = device.appsInstalled.sort(appSorterUpdatesFirst).map(appInstalled => {
+  panelbody.innerHTML = device.appsInstalled.sort(Utils.appSorterUpdatesFirst).map(appInstalled => {
     let app = appNameToApp(appInstalled.id);
     return getAppHTML(app, appInstalled, "myapps");
   }).join("");

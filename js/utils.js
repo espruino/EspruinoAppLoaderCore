@@ -176,9 +176,9 @@ const CODEPAGE_CONVERSIONS = {
 /// Convert any character that cannot be displayed by Espruino's built in fonts
 /// originally https://github.com/espruino/EspruinoAppLoaderCore/pull/11/files
 function convertStringToISO8859_1(originalStr) {
-  var chars = originalStr.split('');
-  for (var i = 0; i < chars.length; i++) {
-    var ch = chars[i];
+  let chars = originalStr.split('');
+  for (let i = 0; i < chars.length; i++) {
+    let ch = chars[i];
     if (CODEPAGE_CONVERSIONS[ch])
       chars[i] = CODEPAGE_CONVERSIONS[ch];
     else if (chars[i].charCodeAt() > 255) {
@@ -186,7 +186,7 @@ function convertStringToISO8859_1(originalStr) {
       chars[i] = "?";
     }
   }
-  var translatedStr = chars.join('');
+  let translatedStr = chars.join('');
   if (translatedStr != originalStr)
     console.log("Remapped text: "+originalStr+" -> "+translatedStr);
   return translatedStr;
@@ -281,9 +281,9 @@ function toJSString(s) {
     else if (ch==92) json += "\\\\"; // slash
     else if (ch<32 || ch==127 || ch==173 ||
               ((ch>=0xC2) && (ch<=0xF4))) // unicode start char range
-        json += "\\x"+(ch&255).toString(16).padStart(2,0);
+      json += "\\x"+(ch&255).toString(16).padStart(2,0);
     else if (ch>255)
-        json += "\\u"+(ch&65535).toString(16).padStart(4,0);
+      json += "\\u"+(ch&65535).toString(16).padStart(4,0);
     else json += s[i];
   }
   return json + "\"";
@@ -335,17 +335,17 @@ function searchRelevance(value, searchString) {
       relevance += 5;
   }
   // compare string parts
-  var partRelevance = 0;
-  var valueParts = value.split(/[\s(),.-]/).filter(p=>p.length);
+  let partRelevance = 0;
+  let valueParts = value.split(/[\s(),.-]/).filter(p=>p.length);
   searchString.split(/[\s-(),.-]/).forEach(search=>{
     valueParts.forEach(v=>{
       if (v==search)
-      partRelevance += 20; // if a complete match, +20
+        partRelevance += 20; // if a complete match, +20
       else {
         if (v.includes(search)) // the less of the string matched, lower relevance
-        partRelevance += Math.max(0, 10 - (v.length - search.length));
+          partRelevance += Math.max(0, 10 - (v.length - search.length));
         if (v.startsWith(search))  // add a bit of the string starts with it
-        partRelevance += 10;
+          partRelevance += 10;
       }
     });
   });

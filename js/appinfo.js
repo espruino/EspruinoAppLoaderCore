@@ -76,10 +76,10 @@ function translateJS(options, app, code) {
       }
     } else if (tok.str.startsWith("`")) {
       // it's a tempated String! scan all clauses inside it and re-run on the JS in those
-      var re = /\$\{[^}]*\}/g;
+      let re = /\$\{[^}]*\}/g, match;
       while ((match = re.exec(tokenString)) != null) {
-        var orig = match[0];
-        var replacement = translateJS(options, app, orig.slice(2,-1));
+        let orig = match[0];
+        let replacement = translateJS(options, app, orig.slice(2,-1));
         tokenString = tokenString.substr(0,match.index+2) + replacement + tokenString.substr(match.index + orig.length-1);
       }
     }
