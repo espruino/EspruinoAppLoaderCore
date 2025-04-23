@@ -169,7 +169,7 @@ function parseJS(storageFile, options, app) {
     return Promise.resolve(storageFile);
 }
 
-var AppInfo = {
+let AppInfo = {
   /* Get a list of commands needed to upload the file */
   getFileUploadCommands : (filename, data) => {
     const CHUNKSIZE = Const.UPLOAD_CHUNKSIZE;
@@ -189,7 +189,6 @@ var AppInfo = {
   /* Get a list of commands needed to upload a storage file */
   getStorageFileUploadCommands : (filename, data) => {
     const CHUNKSIZE = Const.UPLOAD_CHUNKSIZE;
-    var cmd = "";
     // write code in chunks, in case it is too big to fit in RAM (fix #157)
     function getWriteData(offset) {
       return asJSExpr(data.substr(offset,CHUNKSIZE), {noHeatshrink:true});
@@ -198,7 +197,7 @@ var AppInfo = {
       // so we must ensure we always return a String
       // We could use E.toString but https://github.com/espruino/BangleApps/issues/2068#issuecomment-1211717749
     }
-    var cmd = `\x10f=require('Storage').open(${JSON.stringify(filename)},'w');f.write(${getWriteData(0)});`;
+    let cmd = `\x10f=require('Storage').open(${JSON.stringify(filename)},'w');f.write(${getWriteData(0)});`;
     for (let i=CHUNKSIZE;i<data.length;i+=CHUNKSIZE)
       cmd += `\n\x10f.write(${getWriteData(i)});`;
     return cmd;
@@ -436,7 +435,7 @@ var AppInfo = {
     // Check for apps which we may need to install
     if (app.dependencies) {
       Object.keys(app.dependencies).forEach(dependency=>{
-        var dependencyType = app.dependencies[dependency];
+        let dependencyType = app.dependencies[dependency];
         function handleDependency(dependencyChecker) {
           // now see if we can find one matching our dependency
           let found = appJSONInstalled.find(dependencyChecker);
@@ -455,11 +454,11 @@ var AppInfo = {
             promise = promise.then(()=>new Promise((resolve,reject)=>{
               console.log(`Install dependency '${dependency}':'${found.id}'`);
               return AppInfo.checkDependencies(found, device, uploadOptions)
-                     .then(() => uploadOptions.needsApp(found, uploadOptions))
-                     .then(appJSON => {
-                if (appJSON) device.appsInstalled.push(appJSON);
-                resolve();
-              });
+                .then(() => uploadOptions.needsApp(found, uploadOptions))
+                .then(appJSON => {
+                  if (appJSON) device.appsInstalled.push(appJSON);
+                  resolve();
+                }, reject);
             }));
           }
         }

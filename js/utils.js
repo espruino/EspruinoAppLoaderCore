@@ -514,7 +514,7 @@ function parseRJSON(str) {
   return json;
 }
 
-var Utils = {
+let Utils = {
   Const : Const,
   DEVICEINFO : DEVICEINFO,
   CODEPAGE_CONVERSIONS : CODEPAGE_CONVERSIONS,
