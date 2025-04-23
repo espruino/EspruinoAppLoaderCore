@@ -48,7 +48,7 @@ function appJSONLoadedHandler() {
         if (s.url) s.url = "apps/"+app.id+"/"+s.url;
       });
   });
-  var promise = Promise.resolve();
+  let promise = Promise.resolve();
   if ("undefined" != typeof onAppJSONLoaded)
     promise = promise.then(onAppJSONLoaded);
   // finally update what we're showing
@@ -58,7 +58,7 @@ function appJSONLoadedHandler() {
     if (window.location.search) {
       let searchParams = new URLSearchParams(window.location.search);
       if (searchParams.has("id") && searchParams.has("readme")) {
-        var id = searchParams.get("id").toLowerCase();
+        let id = searchParams.get("id").toLowerCase();
         showReadme(null, id);
       }
     }
@@ -87,14 +87,14 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
   let appsURL = baseurl+"apps/";
   httpGet(appsURL).then(htmlText=>{
     showToast(Const.APPS_JSON_FILE+" can't be read, scanning 'apps' folder for apps","warning");
-    var parser = new DOMParser();
-    var xmlDoc = parser.parseFromString(htmlText,"text/html");
+    let parser = new DOMParser();
+    let xmlDoc = parser.parseFromString(htmlText,"text/html");
     appJSON = [];
-    var promises = [];
+    let promises = [];
     htmlToArray(xmlDoc.querySelectorAll("a")).forEach(a=>{
-      var href = a.getAttribute("href");
+      let href = a.getAttribute("href");
       if (!href || href.startsWith("/") || href.startsWith("_") || !href.endsWith("/")) return;
-      var metadataURL = appsURL+"/"+href+"metadata.json";
+      let metadataURL = appsURL+"/"+href+"metadata.json";
       console.log(" - Loading "+metadataURL);
       promises.push(httpGet(metadataURL).then(metadataText=>{
         try {
@@ -139,7 +139,7 @@ if (Const.APP_DATES_CSV) httpGet(Const.APP_DATES_CSV).then(csv=>{
 });
 
 if (Const.APP_USAGE_JSON) httpGet(Const.APP_USAGE_JSON).then(jsonTxt=>{
-  var json;
+  let json;
   try {
     json = JSON.parse(jsonTxt);
   } catch (e) {
@@ -192,7 +192,7 @@ function showChangeLog(appid, installedVersion) {
     }
     showPrompt(app.name+" ChangeLog",contents,{ok:true}, shouldEscapeHtml).catch(()=>{});
     if (installedVersion) {
-      var elem = document.getElementById(installedVersion);
+      let elem = document.getElementById(installedVersion);
       if (elem) elem.scrollIntoView();
     }
   }
@@ -219,8 +219,8 @@ function getAppDescription(app) {
 
 /** Setup IFRAME callbacks for handleCustomApp and handleInterface */
 function iframeSetup(options) {
-  var iframe = options.iframe;
-  var modal = options.modal;
+  let iframe = options.iframe;
+  let modal = options.modal;
   document.body.append(modal);
   htmlToArray(modal.getElementsByTagName("a")).forEach(button => {
     button.addEventListener("click",event => {
@@ -315,8 +315,8 @@ function iframeSetup(options) {
       data: device
     },"*");
     // Push any data received back through to IFRAME
-    if (Comms.isConnected())
-    console.log("Adding Comms.on('data') handler for iframe");
+    if (Comms.isConnected()) {
+      console.log("Adding Comms.on('data') handler for iframe");
       Comms.on("data", data => {
         if (!iframe.contentWindow) {
           // if no frame, disable
@@ -328,8 +328,8 @@ function iframeSetup(options) {
           type : "recvdata",
           data : data
         });
-    });
-
+      });
+    }
   }, false);
 }
 
@@ -357,38 +357,40 @@ function handleCustomApp(appTemplate) {
       </div>
     </div>`);
     let iframe = modal.getElementsByTagName("iframe")[0];
-    iframeSetup({ iframe : iframe,
-                  modal : modal,
-                  jsFile : "customize.js",
-                  onClose: reject,
-                  messageHandler : function(event) {
-      let msg = event.data;
-      if (msg.type=="app") {
-        let appFiles = msg.data;
-        let app = JSON.parse(JSON.stringify(appTemplate)); // clone template
-        // copy extra keys from appFiles
-        Object.keys(appFiles).forEach(k => {
-          if (k!="storage") app[k] = appFiles[k]
-        });
-        appFiles.storage.forEach(f => {
-          app.storage = app.storage.filter(s=>s.name!=f.name); // remove existing item
-          app.storage.push(f); // add new
-        });
-        console.log("Received custom app", app);
-        modal.remove();
-
-        getInstalledApps()
-          .then(()=>checkDependencies(app))
-          .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE, noFinish: msg.options && msg.options.noFinish}))
-          .then(()=>{
-            Progress.hide({sticky:true});
-            resolve();
-          }).catch(err => {
-            Progress.hide({sticky:true});
-            reject('Upload failed, ' + err, 'error');
+    iframeSetup({
+      iframe : iframe,
+      modal : modal,
+      jsFile : "customize.js",
+      onClose: reject,
+      messageHandler : function(event) {
+        let msg = event.data;
+        if (msg.type=="app") {
+          let appFiles = msg.data;
+          let app = JSON.parse(JSON.stringify(appTemplate)); // clone template
+          // copy extra keys from appFiles
+          Object.keys(appFiles).forEach(k => {
+            if (k!="storage") app[k] = appFiles[k]
           });
+          appFiles.storage.forEach(f => {
+            app.storage = app.storage.filter(s=>s.name!=f.name); // remove existing item
+            app.storage.push(f); // add new
+          });
+          console.log("Received custom app", app);
+          modal.remove();
+
+          getInstalledApps()
+            .then(()=>checkDependencies(app))
+            .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE, noFinish: msg.options && msg.options.noFinish}))
+            .then(()=>{
+              Progress.hide({sticky:true});
+              resolve();
+            }).catch(err => {
+              Progress.hide({sticky:true});
+              reject('Upload failed, ' + err, 'error');
+            });
+        }
       }
-    }});
+    });
   });
 }
 
@@ -412,13 +414,15 @@ function handleAppInterface(app) {
       </div>
     </div>`);
     let iframe = modal.getElementsByTagName("iframe")[0];
-    iframeSetup({ iframe : iframe,
-                  modal : modal,
-                  jsFile : "interface.js",
-                  // onClose: reject, // we don't need to reject when the window is closed
-                  messageHandler : function(event) {
-      // nothing custom needed in here
-    }});
+    iframeSetup({
+      iframe : iframe,
+      modal : modal,
+      jsFile : "interface.js",
+      // onClose: reject, // we don't need to reject when the window is closed
+      messageHandler : function(event) {
+        // nothing custom needed in here
+      }
+    });
     iframe.src = `apps/${app.id}/${app.interface}`;
   });
 }
@@ -469,8 +473,8 @@ function getAppHTML(app, appInstalled, forInterface) {
   let versionTitle = '';
   let appFavourites;
   if (app.id in appSortInfo) {
-    var infoTxt = [];
-    var info = appSortInfo[app.id];
+    let infoTxt = [];
+    let info = appSortInfo[app.id];
     if ("object"==typeof info.modified)
       infoTxt.push(`Last update: ${(info.modified.toLocaleDateString())}`);
     if (info.installs)
@@ -490,7 +494,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
   let getAppFavouritesHTML = cnt => {
     if (!cnt) return "";
-    var txt = (cnt > 999) ? Math.round(cnt/1000)+"k" : cnt;
+    let txt = (cnt > 999) ? Math.round(cnt/1000)+"k" : cnt;
     return `<span>${txt}</span>`;
   };
 
@@ -520,7 +524,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>`;
   html += "</div>";
   if (forInterface=="library") {
-    var screenshots = (app.screenshots || []).filter(s=>s.url);
+    let screenshots = (app.screenshots || []).filter(s=>s.url);
     if (screenshots.length)
       html += `<img class="tile-screenshot" appid="${app.id}" src="${screenshots[0].url}" alt="Screenshot"/>`;
   }
@@ -630,10 +634,10 @@ function refreshLibrary(options) {
       searchResult = visibleApps.map(app => ({
         app : app,
         relevance :
-          searchRelevance(app.id, searchValue) +
-          searchRelevance(app.name, searchValue) +
+          Utils.searchRelevance(app.id, searchValue) +
+          Utils.searchRelevance(app.name, searchValue) +
           (app.tags && app.tags.includes(searchValue))
-        }));
+      }));
     } else if (searchType === "id") {
       searchResult = visibleApps.map(app => ({
         app:app,
@@ -644,12 +648,12 @@ function refreshLibrary(options) {
       searchResult = visibleApps.map(app => ({
         app:app,
         relevance:
-          searchRelevance(app.id, searchValue) +
-          searchRelevance(app.name, searchValue)*(app.shortName?1:2) +
-          (app.shortName?searchRelevance(app.shortName, searchValue):0) + // if we have shortname, match on that as well
-          searchRelevance(app.description, searchValue)/5 + // match on description, but pay less attention
+          Utils.searchRelevance(app.id, searchValue) +
+          Utils.searchRelevance(app.name, searchValue)*(app.shortName?1:2) +
+          (app.shortName?Utils.searchRelevance(app.shortName, searchValue):0) + // if we have shortname, match on that as well
+          Utils.searchRelevance(app.description, searchValue)/5 + // match on description, but pay less attention
           ((app.tags && app.tags.includes(searchValue))?10:0)
-        }));
+      }));
     }
     // Now finally, filter, sort based on relevance and set the search result
     visibleApps = searchResult.filter(a => a.relevance>0).sort((a,b) => (b.relevance-(0|b.sortorder)) - (a.relevance-(0|a.sortorder))).map(a => a.app);
@@ -661,12 +665,12 @@ function refreshLibrary(options) {
   if (activeSort) {
     if (["created","modified","installs","favourites"].includes(activeSort)) {
       visibleApps = visibleApps.sort((a,b) =>
-         ((appSortInfo[b.id]||{})[activeSort]||0) -
-         ((appSortInfo[a.id]||{})[activeSort]||0));
+        ((appSortInfo[b.id]||{})[activeSort]||0) -
+        ((appSortInfo[a.id]||{})[activeSort]||0));
     } else throw new Error("Unknown sort type "+activeSort);
   }
 
-  var viewMoreText = "";
+  let viewMoreText = "";
   if (!options.showAll && visibleApps.length > Const.MAX_APPS_SHOWN) {
     viewMoreText = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile" onclick="javascript:refreshLibrary({dontChangeSearchBox:true,showAll:true})" style="cursor: pointer;">
     <div class="tile-icon">
@@ -763,7 +767,7 @@ function refreshLibrary(options) {
 function showScreenshots(appId) {
   let app = appJSON.find(app=>app.id==appId);
   if (!app || !app.screenshots) return;
-  var screenshots = app.screenshots.filter(s=>s.url);
+  let screenshots = app.screenshots.filter(s=>s.url);
   showPrompt(app.name+" Screenshots",`<div class="columns">
     ${screenshots.map(s=>`
     <div class="column col-4">
@@ -782,14 +786,14 @@ function uploadApp(app, options) {
   options = options||{};
   if (app.type == "defaultconfig" && !options.force) {
     return showPrompt("Default Configuration Install","<b>This will remove all apps and data from your Bangle</b> and will install a new set of apps. Please ensure you have backed up your Bangle first. Continue?",{yes:1,no:1},false)
-    .then(() => showPrompt("Device Erasure","<b>Everything will be deleted from your Bangle.</b> Are you really sure?",{yes:1,no:1},false))
-    .then(() => Comms.removeAllApps())
-    .then(() => uploadApp(app, {force:true}))
-    .catch(err => {
-      showToast("Configuration install failed, "+err,"error");
-      refreshMyApps();
-      refreshLibrary();
-    });
+      .then(() => showPrompt("Device Erasure","<b>Everything will be deleted from your Bangle.</b> Are you really sure?",{yes:1,no:1},false))
+      .then(() => Comms.removeAllApps())
+      .then(() => uploadApp(app, {force:true}))
+      .catch(err => {
+        showToast("Configuration install failed, "+err,"error");
+        refreshMyApps();
+        refreshLibrary();
+      });
   }
 
   return getInstalledApps().then(()=>{
@@ -974,7 +978,7 @@ function getAppsToUpdate(options) {
   let appsToUpdate = [];
   device.appsInstalled.forEach(appInstalled => {
     let app = appNameToApp(appInstalled.id);
-    appInstalled.canUpdate = isAppUpdateable(appInstalled, app) && (!options.excludeCustomApps || app.custom === undefined);
+    appInstalled.canUpdate = Utils.isAppUpdateable(appInstalled, app) && (!options.excludeCustomApps || app.custom === undefined);
     if (appInstalled.canUpdate) {
       appsToUpdate.push(app);
     }
@@ -1005,8 +1009,8 @@ function refreshMyApps() {
       if (icon.classList.contains("icon-refresh")) updateApp(app);
       if (icon.classList.contains("icon-interface")) handleAppInterface(app);
       if (icon.classList.contains("icon-favourite")) {
-          let favourite = SETTINGS.favourites.find(e => e == app.id);
-          changeAppFavourite(!favourite, app);
+        let favourite = SETTINGS.favourites.find(e => e == app.id);
+        changeAppFavourite(!favourite, app);
       }
     });
   });
@@ -1214,8 +1218,7 @@ Comms.watchConnectionChange(handleConnectionChange);
 let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
 filtersContainer.addEventListener('click', ({ target }) => {
   if (target.classList.contains('active')) return;
-
-  var filterName = target.getAttribute('filterid') || '';
+  let filterName = target.getAttribute('filterid') || '';
   // Update window URL
   window.history.replaceState(null, null, "?c=" + filterName);
   refreshLibrary();
@@ -1317,14 +1320,14 @@ if (btn) btn.addEventListener("click",event=>{
 
 // Install all favourite apps in one go
 btn = document.getElementById("installfavourite");
-if (btn) btn.addEventListener("click",event=>{
-    let nonCustomFavourites = SETTINGS.favourites.filter(appId => appJSON.find(app => app.id === appId && !app.custom));
-    const mustHave = [ "boot","setting" ]; // apps that we absolutely need installed
-    mustHave.forEach(id => {
-      if (!nonCustomFavourites.includes(id))
-        nonCustomFavourites.unshift(id);
-    });
-    installMultipleApps(nonCustomFavourites, "favourite").catch(err=>{
+if (btn) btn.addEventListener("click",event => {
+  let nonCustomFavourites = SETTINGS.favourites.filter(appId => appJSON.find(app => app.id === appId && !app.custom));
+  const mustHave = [ "boot","setting" ]; // apps that we absolutely need installed
+  mustHave.forEach(id => {
+    if (!nonCustomFavourites.includes(id))
+      nonCustomFavourites.unshift(id);
+  });
+  installMultipleApps(nonCustomFavourites, "favourite").catch(err=>{
     Progress.hide({sticky:true});
     showToast("App Install failed, "+err,"error");
   });
@@ -1398,8 +1401,8 @@ if (Espruino.Core.Terminal)
   Espruino.Core.Terminal.OVERRIDE_CONTENTS = "Click here and type to communicate with Bangle.js";
 btn = document.getElementById("terminalEnable");
 if (btn) btn.addEventListener("click",event=>{
-    document.getElementById("terminalEnable").remove();
-    document.querySelector(".editor__canvas").style.display = "inherit";
-    Comms.on("data",x=>Espruino.Core.Terminal.outputDataHandler(x))
-    Espruino.Core.Terminal.setInputDataHandler(function(d) { Comms.write(d); })
-  });
+  document.getElementById("terminalEnable").remove();
+  document.querySelector(".editor__canvas").style.display = "inherit";
+  Comms.on("data",x=>Espruino.Core.Terminal.outputDataHandler(x))
+  Espruino.Core.Terminal.setInputDataHandler(function(d) { Comms.write(d); })
+});
