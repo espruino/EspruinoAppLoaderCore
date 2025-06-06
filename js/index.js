@@ -41,6 +41,40 @@ let device = {
 };*/
 let LANGUAGE = undefined;
 
+/** Ensure we run transfers one after the other rather that potentially having them overlap if the user clicks around
+https://github.com/espruino/EspruinoAppLoaderCore/issues/67 */
+let currentOperation = Promise.resolve();
+
+/// Start an operation - calls back
+function startOperation(options, callback) {
+  options = options||{};
+  if (!options.name) throw new Error("Expecting a name");
+  console.log(`=========== Queued Operation ${options.name}`);
+  return new Promise(resolve => {
+    currentOperation = currentOperation.then(() => {
+      console.log(`=========== Starting Operation ${options.name}`);
+      let promise = callback();
+      if (!(promise instanceof Promise))
+        throw new Error(`Operation ${options.name} didn't return a promise!`);
+      return promise;
+    }).then((result) => {
+      console.log(`=========== Operation ${options.name} Complete`);
+      Progress.hide({sticky:true});
+      refreshMyApps();
+      refreshLibrary();
+      resolve(result);
+    }, (err) => {
+      console.error(`=========== ERROR during Operation ${options.name}`);
+      showToast(`${options.name} failed, ${err}`,"error");
+      Progress.hide({sticky:true});
+      // remove loading indicator
+      refreshMyApps();
+      refreshLibrary();
+      resolve();
+    });
+  });
+}
+
 function appJSONLoadedHandler() {
   appJSON.forEach(app => {
     if (app.screenshots)
@@ -378,16 +412,10 @@ function handleCustomApp(appTemplate) {
           console.log("Received custom app", app);
           modal.remove();
 
-          getInstalledApps()
+          startOperation({name:"Custom App Upload"}, () => getInstalledApps()
             .then(()=>checkDependencies(app))
             .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE, noFinish: msg.options && msg.options.noFinish}))
-            .then(()=>{
-              Progress.hide({sticky:true});
-              resolve();
-            }).catch(err => {
-              Progress.hide({sticky:true});
-              reject('Upload failed, ' + err, 'error');
-            });
+            .then(resolve,reject));
         }
       }
     });
@@ -788,61 +816,43 @@ function uploadApp(app, options) {
   if (app.type == "defaultconfig" && !options.force) {
     return showPrompt("Default Configuration Install","<b>This will remove all apps and data from your Bangle</b> and will install a new set of apps. Please ensure you have backed up your Bangle first. Continue?",{yes:1,no:1},false)
       .then(() => showPrompt("Device Erasure","<b>Everything will be deleted from your Bangle.</b> Are you really sure?",{yes:1,no:1},false))
-      .then(() => Comms.removeAllApps())
-      .then(() => uploadApp(app, {force:true}))
-      .catch(err => {
-        showToast("Configuration install failed, "+err,"error");
-        refreshMyApps();
-        refreshLibrary();
-      });
+      .then(() => startOperation({name:"Remove All Apps"}, () => Comms.removeAllApps()))
+      .then(() => uploadApp(app, {force:true}));
   }
 
-  return getInstalledApps().then(()=>{
+  return startOperation({name:"App Upload"}, () => getInstalledApps().then(()=>{
     if (device.appsInstalled.some(i => i.id === app.id)) {
       return updateApp(app);
     }
     return checkDependencies(app)
       .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
       .then((appJSON) => {
-        Progress.hide({ sticky: true });
         if (appJSON) {
           device.appsInstalled.push(appJSON);
         }
         showToast(app.name + ' Uploaded!', 'success');
       }).catch(err => {
-        Progress.hide({ sticky: true });
         showToast('Upload failed, ' + err, 'error');
-      }).finally(()=>{
-        refreshMyApps();
-        refreshLibrary();
       });
-  }).catch(err => {
-    showToast("App Upload failed, "+err,"error");
-    // remove loading indicator
-    refreshMyApps();
-    refreshLibrary();
-  });
+  }));
 }
 
 /** Prompt user and then remove app from the device */
 function removeApp(app) {
   return showPrompt("Delete","Really remove '"+app.name+"'?")
-    .then(() => getInstalledApps())
-    .then(()=> Comms.removeApp(device.appsInstalled.find(a => a.id === app.id))) // a = from appid.info, app = from apps.json
-    .then(()=>{
-      device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
-      showToast(app.name+" removed successfully","success");
-      refreshMyApps();
-      refreshLibrary();
-    }, err=>{
-      showToast(app.name+" removal failed, "+err,"error");
-    });
+    .then(startOperation({name:"Remove App"}, () => () => getInstalledApps())
+      .then(()=> Comms.removeApp(device.appsInstalled.find(a => a.id === app.id))) // a = from appid.info, app = from apps.json
+      .then(()=>{
+        device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
+        showToast(app.name+" removed successfully","success");
+      }, err=>{
+        showToast(app.name+" removal failed, "+err,"error");
+      }));
 }
 
 /** Show window for a new app and finally upload it */
 function customApp(app) {
-  return handleCustomApp(app).then((appJSON) => {
-    if (appJSON) device.appsInstalled.push(appJSON);
+  return handleCustomApp(app).then(() => {
     showToast(app.name+" Uploaded!", "success");
     refreshMyApps();
     refreshLibrary();
@@ -913,7 +923,7 @@ if options.noFinish is true, showUploadFinished isn't called (displaying the reb
 function updateApp(app, options) {
   options = options||{};
   if (app.custom) return customApp(app);
-  return Comms.getAppInfo(app).then(remove => {
+  return startOperation({name:"Update App"}, () => Comms.getAppInfo(app).then(remove => {
     // remove = from appid.info, app = from apps.json
     if (remove.files===undefined) remove.files="";
     // no need to remove files which will be overwritten anyway
@@ -938,13 +948,7 @@ function updateApp(app, options) {
   ).then((appJSON) => {
     if (appJSON) device.appsInstalled.push(appJSON);
     showToast(app.name+" Updated!", "success");
-    refreshMyApps();
-    refreshLibrary();
-  }, err=>{
-    showToast(app.name+" update failed, "+err,"error");
-    refreshMyApps();
-    refreshLibrary();
-  });
+  }));
 }
 
 
@@ -1194,9 +1198,11 @@ function handleConnectionChange(connected) {
 }
 
 htmlToArray(document.querySelectorAll(".btn.refresh")).map(button => button.addEventListener("click", () => {
-  getInstalledApps(true).catch(err => {
-    showToast("Getting app list failed, "+err,"error");
-  });
+  startOperation({name:"Refresh Apps"}, () =>
+    getInstalledApps(true).catch(err => {
+      showToast("Getting app list failed, "+err,"error");
+    })
+  );
 }));
 htmlToArray(document.querySelectorAll(".btn.updateapps")).map(button => button.addEventListener("click", () => {
   updateAllApps();
@@ -1290,33 +1296,31 @@ if (btn) btn.addEventListener("click",event=>{
 
 btn = document.getElementById("resetwatch");
 if (btn) btn.addEventListener("click",event=>{
-  Comms.resetDevice().then(()=>{
-    showToast("Reset watch successfully","success");
-  }, err=>{
-    showToast("Error resetting watch: "+err,"error");
-  });
+  startOperation({name:"Reset Watch"}, () =>
+    Comms.resetDevice().then(()=>{
+      showToast("Reset watch successfully","success");
+    }, err=>{
+      showToast("Error resetting watch: "+err,"error");
+    }));
 });
 btn = document.getElementById("settime");
 if (btn) btn.addEventListener("click",event=>{
-  Comms.setTime().then(()=>{
-    showToast("Time set successfully","success");
-  }, err=>{
-    showToast("Error setting time, "+err,"error");
-  });
+  startOperation({name:"Set Time"}, () =>
+    Comms.setTime().then(()=>{
+      showToast("Time set successfully","success");
+    }, err=>{
+      showToast("Error setting time, "+err,"error");
+    }));
 });
 btn = document.getElementById("removeall");
 if (btn) btn.addEventListener("click",event=>{
-  showPrompt("Remove All","Really remove all apps?").then(() => {
-    return Comms.removeAllApps();
-  }).then(()=>{
-    Progress.hide({sticky:true});
-    device.appsInstalled = [];
-    showToast("All apps removed","success");
-    return getInstalledApps(true);
-  }).catch(err=>{
-    Progress.hide({sticky:true});
-    showToast("App removal failed, "+err,"error");
-  });
+  showPrompt("Remove All","Really remove all apps?").then(() =>
+    startOperation({name:"Remove All Apps"}, () => Comms.removeAllApps()
+      .then(()=>{
+        device.appsInstalled = [];
+        showToast("All apps removed","success");
+        return getInstalledApps(true);
+      })));
 });
 
 // Install all favourite apps in one go
@@ -1328,10 +1332,7 @@ if (btn) btn.addEventListener("click",event => {
     if (!nonCustomFavourites.includes(id))
       nonCustomFavourites.unshift(id);
   });
-  installMultipleApps(nonCustomFavourites, "favourite").catch(err=>{
-    Progress.hide({sticky:true});
-    showToast("App Install failed, "+err,"error");
-  });
+  startOperation({name:"Install Favourite Apps"}, () => installMultipleApps(nonCustomFavourites, "favourite"));
 });
 
 // Create a new issue on github
@@ -1349,52 +1350,52 @@ if (btn) btn.addEventListener("click", event => {
 // Screenshot button
 btn = document.getElementById("screenshot");
 if (btn) btn.addEventListener("click",event=>{
-  getInstalledApps(false).then(()=>{
-    if (device.id=="BANGLEJS"){
-      showPrompt("Screenshot","Screenshots are not supported on Bangle.js 1",{ok:1});
-    } else {
-      let url;
-      Progress.show({title:"Creating screenshot",interval:10,percent:"animate",sticky:true});
-      Comms.write("\x10g.dump();\n").then((s)=>{
-        let oImage = new Image();
-        oImage.onload = function(){
-          Progress.show({title:"Converting screenshot",percent:90,sticky:true});
-          let oCanvas = document.createElement('canvas');
-          oCanvas.width = oImage.width;
-          oCanvas.height = oImage.height;
-          let oCtx = oCanvas.getContext('2d');
-          oCtx.drawImage(oImage, 0, 0);
-          url = oCanvas.toDataURL();
+  startOperation({name:"Screenshot"}, () =>
+    getInstalledApps(false).then(()=>{
+      if (device.id=="BANGLEJS"){
+        showPrompt("Screenshot","Screenshots are not supported on Bangle.js 1",{ok:1});
+      } else {
+        let url;
+        Progress.show({title:"Creating screenshot",interval:10,percent:"animate",sticky:true});
+        return Comms.write("\x10g.dump();\n").then((s)=>{
+          let oImage = new Image();
+          oImage.onload = function(){
+            Progress.show({title:"Converting screenshot",percent:90,sticky:true});
+            let oCanvas = document.createElement('canvas');
+            oCanvas.width = oImage.width;
+            oCanvas.height = oImage.height;
+            let oCtx = oCanvas.getContext('2d');
+            oCtx.drawImage(oImage, 0, 0);
+            url = oCanvas.toDataURL();
 
-          let screenshotHtml = `
-            <div style="text-align: center;">
-              <img align="center" src="${url}"></img>
-            </div>
-          `
+            let screenshotHtml = `
+              <div style="text-align: center;">
+                <img align="center" src="${url}"></img>
+              </div>
+            `
 
-          showPrompt("Save Screenshot?",screenshotHtml, undefined, false).then((r)=>{
-            Progress.show({title:"Saving screenshot",percent:99,sticky:true});
-            let link = document.createElement("a");
-            link.download = "screenshot.png";
-            link.target = "_blank";
-            link.href = url;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }).catch(()=>{
-          }).finally(()=>{
-            Progress.hide({sticky:true});
-          });
-        }
-        oImage.src = s.split("\n")[0];
-        Progress.hide({sticky:true});
-        Progress.show({title:"Screenshot done",percent:85,sticky:true});
+            showPrompt("Save Screenshot?",screenshotHtml, undefined, false).then((r)=>{
+              Progress.show({title:"Saving screenshot",percent:99,sticky:true});
+              let link = document.createElement("a");
+              link.download = "screenshot.png";
+              link.target = "_blank";
+              link.href = url;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }).catch(() => {
+              Progress.hide({sticky:true}); // cancelled
+            });
+          }
+          oImage.src = s.split("\n")[0];
+          Progress.hide({sticky:true});
+          Progress.show({title:"Screenshot done",percent:85,sticky:true});
 
-      }, err=>{
-        showToast("Error creating screenshot: "+err,"error");
-      });
-    }
-  });
+        }, err=>{
+          showToast("Error creating screenshot: "+err,"error");
+        });
+      }
+  }));
 });
 
 // Open terminal button

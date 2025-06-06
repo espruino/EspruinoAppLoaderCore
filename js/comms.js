@@ -76,7 +76,7 @@ const Comms = {
       return Puck.getConnection();
     }
   },
-  supportsPacketUpload : () => (!SETTINGS.noPackets) && Comms.getConnection().espruinoSendFile && !Utils.versionLess(device.version,"2v25"),
+  supportsPacketUpload : () => (!SETTINGS.noPackets) && Comms.getConnection().espruinoSendFile && device.version && !Utils.versionLess(device.version,"2v25"),
   // Faking EventEmitter
   handlers : {},
   on : function(id, callback) { // calling with callback=undefined will disable
@@ -321,9 +321,9 @@ const Comms = {
             then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n")).
             then(() => {
               doUploadFiles();
-            }).catch(function() {
+            }).catch((err) => {
               Progress.hide({sticky:true});
-              return reject("");
+              return reject(err);
             });
         }
         if (options.noReset) {
@@ -552,6 +552,8 @@ const Comms = {
         let timeout = 5;
         function handleResult(result,err) {
           console.log("<COMMS> removeAllApps: received "+JSON.stringify(result));
+          if (!Comms.isConnected())
+            return reject("Disconnected");
           if (result=="" && (timeout--)) {
             console.log("<COMMS> removeAllApps: no result - waiting some more ("+timeout+").");
             // send space and delete - so it's something, but it should just cancel out
