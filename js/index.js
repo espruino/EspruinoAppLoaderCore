@@ -840,14 +840,14 @@ function uploadApp(app, options) {
 /** Prompt user and then remove app from the device */
 function removeApp(app) {
   return showPrompt("Delete","Really remove '"+app.name+"'?")
-    .then(startOperation({name:"Remove App"}, () => () => getInstalledApps())
+    .then(() => startOperation({ name: "Remove App" }, () => getInstalledApps()
       .then(()=> Comms.removeApp(device.appsInstalled.find(a => a.id === app.id))) // a = from appid.info, app = from apps.json
       .then(()=>{
         device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
         showToast(app.name+" removed successfully","success");
       }, err=>{
         showToast(app.name+" removal failed, "+err,"error");
-      }));
+      })));
 }
 
 /** Show window for a new app and finally upload it */
