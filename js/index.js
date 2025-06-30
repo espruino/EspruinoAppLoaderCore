@@ -682,6 +682,8 @@ function refreshLibrary(options) {
           Utils.searchRelevance(app.description, searchValue)/5 + // match on description, but pay less attention
           ((app.tags && app.tags.includes(searchValue))?10:0)
       }));
+    } else {
+      console.warn("Unknown search type "+searchType, searchValue);
     }
     // Now finally, filter, sort based on relevance and set the search result
     visibleApps = searchResult.filter(a => a.relevance>0).sort((a,b) => (b.relevance-(0|b.sortorder)) - (a.relevance-(0|a.sortorder))).map(a => a.app);
@@ -690,11 +692,12 @@ function refreshLibrary(options) {
   if (!sortedByRelevance)
     visibleApps.sort(appSorter);
 
-  if (activeSort) {
+  if (activeSort && !searchValue) { // only sort if not searching (searching already sorts)
     if (["created","modified","installs","favourites"].includes(activeSort)) {
-      visibleApps = visibleApps.sort((a,b) =>
+      visibleApps = visibleApps.sort((a,b) => {
         ((appSortInfo[b.id]||{})[activeSort]||0) -
         ((appSortInfo[a.id]||{})[activeSort]||0));
+      });
     } else throw new Error("Unknown sort type "+activeSort);
   }
 

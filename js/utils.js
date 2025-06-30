@@ -338,6 +338,7 @@ function searchRelevance(value, searchString) {
   let partRelevance = 0;
   let valueParts = value.split(/[\s(),.-]/).filter(p=>p.length);
   searchString.split(/[\s-(),.-]/).forEach(search=>{
+    if (search==="") return; // ignore empty search strings
     valueParts.forEach(v=>{
       if (v==search)
         partRelevance += 20; // if a complete match, +20
