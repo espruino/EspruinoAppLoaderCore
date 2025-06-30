@@ -686,13 +686,22 @@ function refreshLibrary(options) {
       console.warn("Unknown search type "+searchType, searchValue);
     }
     // Now finally, filter, sort based on relevance and set the search result
-    visibleApps = searchResult.filter(a => a.relevance>0).sort((a,b) => (b.relevance-(0|b.sortorder)) - (a.relevance-(0|a.sortorder))).map(a => a.app);
+    visibleApps = searchResult.filter(a => a.relevance>0).sort((a,b) => {
+      // sort by relevance and sort order
+      let sort = (b.relevance-(0|b.sortorder)) - (a.relevance-(0|a.sortorder));
+      if (sort) return sort;
+      // if relevance is the same, sort by extraSort (eg created, modified, installs, favourites)
+      if (["created","modified","installs","favourites"].includes(activeSort))
+        return ((appSortInfo[b.app.id]||{})[activeSort]||0) -
+               ((appSortInfo[a.app.id]||{})[activeSort]||0);
+      return 0;
+    }).map(a => a.app);
   }
   // if not otherwise sorted, use 'sort by' option
   if (!sortedByRelevance)
     visibleApps.sort(appSorter);
 
-  if (activeSort && !searchValue) { // only sort if not searching (searching already sorts)
+  if (activeSort && !sortedByRelevance) { // only sort if not searching (searching already sorts)
     if (["created","modified","installs","favourites"].includes(activeSort)) {
       visibleApps = visibleApps.sort((a,b) =>
         ((appSortInfo[b.id]||{})[activeSort]||0) -
