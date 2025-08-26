@@ -841,30 +841,38 @@ function uploadApp(app, options) {
         if (appJSON) {
           device.appsInstalled.push(appJSON);
         }
-        showToast(app.name +" ("+app.id+") "+ ' Uploaded!', 'success');
+        showToast(formatAppName(app)+ ' Uploaded!', 'success');
       }).catch(err => {
-        showToast("Upload of" +app.name +" ("+app.id+") "+" failed",  + err, 'error');
+        showToast("Upload of" +formatAppName(app)+" failed",  + err, 'error');
       });
   }));
 }
-
+/** Format app name into a string like App Name (AppID)*/
+function formatAppName(app){
+  //check if id is the same as the name, in which case we can just return the name...
+  if(app.name.trim().toLowerCase()===app.id.trim().toLowerCase()){
+    return app.name;
+  }else{
+    return formatAppName(app);
+  }
+}
 /** Prompt user and then remove app from the device */
 function removeApp(app) {
-  return showPrompt("Delete", "Are you sure you want to delete "+app.name +" ("+app.id+")?")
+  return showPrompt("Delete", "Are you sure you want to delete "+formatAppName(app)+"?")
     .then(() => startOperation({ name: "Remove App" }, () => getInstalledApps()
       .then(()=> Comms.removeApp(device.appsInstalled.find(a => a.id === app.id))) // a = from appid.info, app = from apps.json
       .then(()=>{
         device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
-        showToast(app.name +" ("+app.id+")"+" removed successfully","success");
+        showToast(formatAppName(app)+" removed successfully","success");
       }, err=>{
-        showToast("Removal of "+app.name +" ("+app.id+")"+" failed, "+err,"error");
+        showToast("Removal of "+formatAppName(app)+" failed, "+err,"error");
       })));
 }
 
 /** Show window for a new app and finally upload it */
 function customApp(app) {
   return handleCustomApp(app).then(() => {
-    showToast(app.name+" Uploaded!", "success");
+    showToast(formatAppName()+" Uploaded!", "success");
     refreshMyApps();
     refreshLibrary();
   }).catch(err => {
@@ -952,13 +960,13 @@ function updateApp(app, options) {
     remove.data = AppInfo.makeDataString(data)
     return Comms.removeApp(remove, {containsFileList:true, noReset:options.noReset, noFinish:options.noFinish});
   }).then(()=>{
-    showToast("Updating "+app.name +" ("+app.id+")...");
+    showToast("Updating "+formatAppName(app)+"...");
     device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
     return checkDependencies(app,{checkForClashes:false});
   }).then(()=>Comms.uploadApp(app,{device:device,language:LANGUAGE,noReset:options.noReset, noFinish:options.noFinish})
   ).then((appJSON) => {
     if (appJSON) device.appsInstalled.push(appJSON);
-    showToast(app.name +" ("+app.id+")"+" Updated!", "success");
+    showToast(formatAppName(app)+" Updated!", "success");
   }));
 }
 
