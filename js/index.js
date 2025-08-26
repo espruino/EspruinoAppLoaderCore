@@ -841,7 +841,7 @@ function uploadApp(app, options) {
         if (appJSON) {
           device.appsInstalled.push(appJSON);
         }
-        showToast(app.name + ' Uploaded!', 'success');
+        showToast(app.name +" ("+app.id+") "+ ' Uploaded!', 'success');
       }).catch(err => {
         showToast('Upload failed, ' + err, 'error');
       });
@@ -850,14 +850,14 @@ function uploadApp(app, options) {
 
 /** Prompt user and then remove app from the device */
 function removeApp(app) {
-  return showPrompt("Delete","Really remove '"+app.name+"'?")
+  return showPrompt("Delete", "Are you sure you want to delete "+app.name +" ("+app.id+")?")
     .then(() => startOperation({ name: "Remove App" }, () => getInstalledApps()
       .then(()=> Comms.removeApp(device.appsInstalled.find(a => a.id === app.id))) // a = from appid.info, app = from apps.json
       .then(()=>{
         device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
-        showToast(app.name+" removed successfully","success");
+        showToast(app.name +" ("+app.id+")"+" removed successfully","success");
       }, err=>{
-        showToast(app.name+" removal failed, "+err,"error");
+        showToast("Removal of "+app.name +" ("+app.id+")"+" failed, "+err,"error");
       })));
 }
 
@@ -952,13 +952,13 @@ function updateApp(app, options) {
     remove.data = AppInfo.makeDataString(data)
     return Comms.removeApp(remove, {containsFileList:true, noReset:options.noReset, noFinish:options.noFinish});
   }).then(()=>{
-    showToast(`Updating ${app.name}...`);
+    showToast("Updating "+app.name +" ("+app.id+")...");
     device.appsInstalled = device.appsInstalled.filter(a=>a.id!=app.id);
     return checkDependencies(app,{checkForClashes:false});
   }).then(()=>Comms.uploadApp(app,{device:device,language:LANGUAGE,noReset:options.noReset, noFinish:options.noFinish})
   ).then((appJSON) => {
     if (appJSON) device.appsInstalled.push(appJSON);
-    showToast(app.name+" Updated!", "success");
+    showToast(app.name +" ("+app.id+")"+" Updated!", "success");
   }));
 }
 
@@ -1162,7 +1162,7 @@ function installMultipleApps(appIds, promptName) {
   }).then(()=> Comms.setTime()
   ).then(()=> Comms.showUploadFinished()
   ).then(()=>{
-    showToast("Apps successfully installed!","success");
+    showToast(appCount+" apps successfully installed!","success");
     return getInstalledApps(true);
   });
 }
