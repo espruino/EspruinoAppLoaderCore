@@ -843,7 +843,7 @@ function uploadApp(app, options) {
         }
         showToast(app.name +" ("+app.id+") "+ ' Uploaded!', 'success');
       }).catch(err => {
-        showToast('Upload failed, ' + err, 'error');
+        showToast("Upload of" +app.name +" ("+app.id+") "+" failed",  + err, 'error');
       });
   }));
 }
