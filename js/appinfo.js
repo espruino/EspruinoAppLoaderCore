@@ -117,8 +117,12 @@ function parseJS(storageFile, options, app) {
       });
 
     // add any modules that were defined for this app (no need to search for them!)
-    builtinModules = builtinModules.concat(app.storage.map(f=>f.name).filter(name => name && !name.includes(".")));
-    // Check for modules in pre-installed apps?
+    builtinModules = builtinModules.concat(
+      app.storage.map(f=>f.name).filter(name => name && !name.includes(".")));
+    // If this app depends on any modules, add those to the list of built-ins
+    if (app.dependencies)
+      builtinModules = builtinModules.concat(Object.keys(app.dependencies).filter(d=>app.dependencies[d]=="module"))
+    // Check for modules in pre-installed apps
     if (options.device.appsInstalled)
       options.device.appsInstalled.forEach(app => {
         /* we can't use provides_modules here because these apps are loaded
