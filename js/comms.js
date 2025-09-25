@@ -30,13 +30,17 @@ const Comms = {
   /** Write the given data, returns a promise containing the data received immediately after sending the command
     options = {
       waitNewLine : bool // wait for a newline (rather than just 300ms of inactivity)
+      noWait : bool // don't wait for a response, complete as soon as it's seny
     }
   */
   write : (data, options) => {
     if (data===undefined) throw new Error("Comms.write(undefined) called!")
     options = options||{};
     if (typeof UART !== "undefined") { // New method
-      return UART.write(data, undefined, !!options.waitNewLine);
+      let o = {
+        waitNewline : !!options.waitNewLine,
+        noWait : !!options.noWait };
+      return UART.write(data, undefined, o);
     } else { // Old method
       return new Promise((resolve,reject) =>
         Puck.write(data, result => {
@@ -120,7 +124,7 @@ const Comms = {
   showMessage : (txt) => {
     console.log(`<COMMS> showMessage ${JSON.stringify(txt)}`);
     if (!Const.HAS_E_SHOWMESSAGE) return Promise.resolve();
-    return Comms.write(`\x10E.showMessage(${JSON.stringify(txt)})\n`);
+    return Comms.write(`\x10E.showMessage(${JSON.stringify(txt)})\n`, {noWait:true});
   },
   // When upload is finished, show a message (or reload)
   showUploadFinished : () => {
@@ -283,16 +287,17 @@ const Comms = {
           function startUpload() {
             console.log(`<COMMS> Upload ${f.name} => ${JSON.stringify(f.content.length>50 ? f.content.substr(0,50)+"..." : f.content)} (${f.content.length}b${uploadPacket?", binary":""})`);
             if (uploadPacket) {
-              Progress.show({ // Ensure that the correct progress is being shown in app loader
-                percent: 0,
-                min:currentBytes / maxBytes,
-                max:(currentBytes+f.content.length) / maxBytes});
-              return Comms.write(`\x10${Comms.getProgressCmd(currentBytes / maxBytes)}\n`).then(() => // update percent bar on Bangle.js screen
-                Comms.getConnection().espruinoSendFile(f.name, f.content, { // send the file
+              let progressMin = 0.1 + (0.9*currentBytes / maxBytes);
+              let progressMax = 0.1 + (0.9*(currentBytes+f.content.length) / maxBytes);
+              Progress.show({ percent: 0, min: progressMin,  max: progressMin }); // Don't show progress for sending the status update
+              return Comms.write(`\x10${Comms.getProgressCmd(currentBytes / maxBytes)}\n`, {noWait:true}).then(() => { // update percent bar on Bangle.js screen
+                Progress.show({ percent: 0, min: progressMin,  max: progressMax }); // Show progress for the actual packet upload
+                return Comms.getConnection().espruinoSendFile(f.name, f.content, { // send the file
                   fs: Const.FILES_IN_FS,
                   chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
                   noACK: Const.PACKET_UPLOAD_NOACK
-                }));
+                });
+              });
             } else {
               return Comms.uploadCommandList(f.cmd, currentBytes, maxBytes);
             }
@@ -317,8 +322,9 @@ const Comms = {
 
         // Start the upload
         function doUpload() {
+          Progress.show({min:0.05, max:0.10}); // 5-10% for progress writing
           Comms.showMessage(`Installing\n${app.id}...`).
-            then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n")).
+            then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n", {noWait:true})).
             then(() => {
               doUploadFiles();
             }).catch((err) => {
@@ -329,7 +335,8 @@ const Comms = {
         if (options.noReset) {
           doUpload();
         } else {
-        // reset to ensure we have enough memory to upload what we need to
+          // reset to ensure we have enough memory to upload what we need to
+          Progress.show({min:0, max:0.05}); // 0-5% for reset
           Comms.reset().then(doUpload, reject)
         }
       });

@@ -23,8 +23,11 @@ const Progress = {
     if (options.min!==undefined) Progress.min = options.min;
     if (options.max!==undefined) Progress.max = options.max;
     let percent = options.percent;
-    if (percent!==undefined)
+    if (percent!==undefined) {
+      if (percent<0) percent=0;
+      if (percent>100) percent=100;
       percent = Progress.min*100 + (Progress.max-Progress.min)*percent;
+    }
     if (Progress.interval) {
       clearInterval(Progress.interval);
       Progress.interval = undefined;
