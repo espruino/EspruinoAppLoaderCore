@@ -515,6 +515,17 @@ function parseRJSON(str) {
   return json;
 }
 
+/** Format app name into a string like "App Name (AppID)" */
+function formatAppName(app){
+  if (!app.name) return app.id; // just in case we don't have name (eg when removing)
+  // check if id is the same as the name, in which case we can just return the name...
+  if(app.name.trim().toLowerCase()===app.id.trim().toLowerCase()){
+    return app.name;
+  }else{
+    return `${app.name} (${app.id})`;
+  }
+}
+
 let Utils = {
   Const : Const,
   DEVICEINFO : DEVICEINFO,
@@ -534,7 +545,8 @@ let Utils = {
   versionLess : versionLess,
   debounce : debounce,
   atobSafe : atobSafe,    // version of 'window.atob' that doesn't fail on 'not correctly encoded' strings
-  parseRJSON : parseRJSON // parse relaxed JSON which Espruino's writeJSON uses for settings/etc (returns undefined on failure)
+  parseRJSON : parseRJSON, // parse relaxed JSON which Espruino's writeJSON uses for settings/etc (returns undefined on failure)
+  formatAppName : formatAppName // Format app name into a string like "App Name (AppID)"
 };
 
 if ("undefined"!=typeof module)

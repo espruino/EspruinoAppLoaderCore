@@ -246,7 +246,7 @@ const Comms = {
      } */
   uploadApp : (app,options) => {
     options = options||{};
-    Progress.show({title:`Uploading ${app.name}`,sticky:true});
+    Progress.show({title:`Uploading ${Utils.formatAppName(app)}`,sticky:true});
     return AppInfo.getFiles(app, {
       fileGetter : httpGet,
       settings : SETTINGS,
@@ -317,7 +317,7 @@ const Comms = {
 
         // Start the upload
         function doUpload() {
-          Comms.showMessage(`Uploading\n${app.id}...`).
+          Comms.showMessage(`Installing\n${app.id}...`).
             then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n")).
             then(() => {
               doUploadFiles();
@@ -496,7 +496,7 @@ const Comms = {
   if options.noFinish is true, showUploadFinished isn't called (displaying the reboot message)   */
   removeApp : (app, options) => {
     options = options||{};
-    Progress.show({title:`Removing ${app.id}`,sticky:true});
+    Progress.show({title:`Removing ${Utils.formatAppName(app)}`,sticky:true});
     /* App Info now doesn't contain .files, so to erase, we need to
     read the info file ourselves. */
     return (options.noReset ? Promise.resolve() : Comms.reset()).
