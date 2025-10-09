@@ -517,6 +517,7 @@ function parseRJSON(str) {
 
 /** Format app name into a string like "App Name (AppID)" */
 function formatAppName(app){
+  if (!app) return "";
   if (!app.name) return app.id; // just in case we don't have name (eg when removing)
   // check if id is the same as the name, in which case we can just return the name...
   if(app.name.trim().toLowerCase()===app.id.trim().toLowerCase()){

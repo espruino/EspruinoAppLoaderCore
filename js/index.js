@@ -864,7 +864,7 @@ function removeApp(app) {
 /** Show window for a new app and finally upload it */
 function customApp(app) {
   return handleCustomApp(app).then(() => {
-    showToast(`${Utils.formatAppName()} Uploaded!`, "success");
+    showToast(`${Utils.formatAppName(app)} Uploaded!`, "success");
     refreshMyApps();
     refreshLibrary();
   }).catch(err => {
