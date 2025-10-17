@@ -680,6 +680,7 @@ function refreshLibrary(options) {
           Utils.searchRelevance(app.name, searchValue)*(app.shortName?1:2) +
           (app.shortName?Utils.searchRelevance(app.shortName, searchValue):0) + // if we have shortname, match on that as well
           Utils.searchRelevance(app.description, searchValue)/5 + // match on description, but pay less attention
+          Utils.searchRelevance(app.author, searchValue)/3+ //match by author, but less attention as well
           ((app.tags && app.tags.includes(searchValue))?10:0)
       }));
     } else {
