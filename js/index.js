@@ -1431,7 +1431,7 @@ if (btn) btn.addEventListener("click",event=>{
           showToast("Error creating screenshot: "+err,"error");
         });
       }
-  }));
+    }));
 });
 
 // Open terminal button
