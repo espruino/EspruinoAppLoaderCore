@@ -851,7 +851,31 @@ function uploadApp(app, options) {
 
 /** Prompt user and then remove app from the device */
 function removeApp(app) {
-  return showPrompt("Delete", `Are you sure you want to delete ${Utils.formatAppName(app)}?`)
+  let appsUsing = [];
+  device.appsInstalled.forEach(ia => {
+    let installedApp =appJSON.find(a=>a.id==ia.id); // get the real app info with dependencies/etc
+    if (installedApp && installedApp.dependencies)
+      Object.keys(installedApp.dependencies).forEach(dep => {
+        let depType = installedApp.dependencies[dep];
+        switch (depType) {
+          case "type":
+            if (app.type==dep) appsUsing.push(installedApp);
+            break;
+          case "app":
+            if (app.id==dep) appsUsing.push(installedApp);
+            break;
+          case "module":
+            if (app.provides_modules && app.provides_modules.includes(dep))
+              appsUsing.push(installedApp);
+            break;
+          case "widget":
+            if (app.provides_widgets && app.provides_widgets.includes(dep))
+              appsUsing.push(installedApp);
+            break;
+        }
+      });
+  });
+  return showPrompt("Delete", `Are you sure you want to delete ${Utils.formatAppName(app)}?`+(appsUsing.length?`\n\nIt is currently used by ${appsUsing.length>1?"installed apps":"an installed app"}: ${appsUsing.map(a=>Utils.formatAppName(a)).join(", ")}`:""))
     .then(() => startOperation({ name: "Remove App" }, () => getInstalledApps()
       .then(()=> Comms.removeApp(device.appsInstalled.find(a => a.id === app.id))) // a = from appid.info, app = from apps.json
       .then(()=>{
