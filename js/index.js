@@ -507,7 +507,7 @@ function getAppHTML(app, appInstalled, forInterface) {
       infoTxt.push(`Last update: ${(info.modified.toLocaleDateString())}`);
     if (info.installs){
       let percent=(info.installs / appCounts.installs * 100).toFixed(0);
-      let percentText=percent<1?"Less than 1% of all users":percent+"% of all users";
+      let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
       infoTxt.push(`${info.installs} reported installs (${percentText})`);
      
     }
