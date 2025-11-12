@@ -505,10 +505,18 @@ function getAppHTML(app, appInstalled, forInterface) {
     let info = appSortInfo[app.id];
     if ("object"==typeof info.modified)
       infoTxt.push(`Last update: ${(info.modified.toLocaleDateString())}`);
-    if (info.installs)
-      infoTxt.push(`${info.installs} reported installs (${(info.installs / appCounts.installs * 100).toFixed(0)}%)`);
+    if (info.installs){
+      let percent=(info.installs / appCounts.installs * 100).toFixed(0);
+      if(percent!=0){
+        infoTxt.push(`${info.installs} reported installs (${percent}% of all users)`);
+      }else{
+        infoTxt.push(`${info.installs} reported installs`);
+      }
+    }
     if (info.favourites) {
-      infoTxt.push(`${info.favourites} users favourited (${(info.favourites / appCounts.favs * 100).toFixed(0)}%)`);
+      let percent=(info.favourites / info.installs * 100).toFixed(0);
+      let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
+      infoTxt.push(`${info.favourites} users favourited (${percentText})`);
       appFavourites = info.favourites;
     }
     if (infoTxt.length)
