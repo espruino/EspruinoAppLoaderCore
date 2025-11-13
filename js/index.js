@@ -509,10 +509,8 @@ function getAppHTML(app, appInstalled, forInterface) {
       let percent=(info.installs / appCounts.installs * 100).toFixed(0);
       let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
       infoTxt.push(`${info.installs} reported installs (${percentText})`);
-     
     }
     if (info.favourites) {
-      
       let percent=(info.favourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
       if(!info.installs||info.installs<1) {infoTxt.push(`${info.favourites} users favourited`)}
