@@ -99,6 +99,40 @@ function appJSONLoadedHandler() {
   });
 }
 
+/**
+ * Extract an app name from a /apps/appname path
+ *   - assumes app names cannot contain periods
+ *   - assumes apps cannot be named "apps"
+ *   - assumes we're in or including the "apps" folder in the href
+ * Returns the app name string or null if not an app folder.
+ */
+function extractAppNameFromHref(href) {
+  if (!href) return null;
+  
+  try {
+    const u = new URL(href, window.location.href);
+    href = u.pathname;
+  } catch (e) {
+    // ignore - just use href as-is
+  }
+  // very unlikely, but get rid of query/hash
+  href = href.split('?')[0].split('#')[0].trim();
+  // remove leading/trailing slashes
+  href = href.replace(/^\/+|\/+$/g, '');
+  if (!href) return null; // was just /, throw it out
+  
+  const parts = href.split('/').filter(Boolean);
+  if (parts.length === 0) return null;
+  // allow './apps/appname' or './appname' by dropping leading '.' segments
+  while (parts.length && parts[0] === '.') parts.shift();
+  if (parts.length === 0) return null; // skip if it was current dir only
+  if (parts[0] === '..') return null; // skip parent redirect
+  if (parts[0].toLowerCase() === 'apps') parts.shift(); // skip over apps folder
+  if (parts.length === 0) return null;
+  if (parts[0].includes('.')) return null;
+  return parts[0];
+}
+
 httpGet(Const.APPS_JSON_FILE).then(apps=>{
   if (apps.startsWith("---")) {
     showToast(Const.APPS_JSON_FILE+" still contains Jekyll markup","warning");
@@ -127,8 +161,12 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
     let promises = [];
     htmlToArray(xmlDoc.querySelectorAll("a")).forEach(a=>{
       let href = a.getAttribute("href");
-      if (!href || href.startsWith("/") || href.startsWith("_") || !href.endsWith("/")) return;
-      let metadataURL = appsURL+"/"+href+"metadata.json";
+      const appName = extractAppNameFromHref(href);
+      // Skip anything that doesn't look like an app or is an _example_app
+      if (!appName || appName.startsWith("_")) {
+        return;
+      }
+      let metadataURL = appsURL+appName+"/metadata.json";
       console.log(" - Loading "+metadataURL);
       promises.push(httpGet(metadataURL).then(metadataText=>{
         try {
