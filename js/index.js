@@ -110,7 +110,7 @@ function extractAppNameFromHref(href) {
   if (!href) return null;
   
   try {
-    const u = new URL(href, window.location.href);
+    const u = new URL(href);
     href = u.pathname;
   } catch (e) {
     // ignore - just use href as-is
@@ -123,14 +123,22 @@ function extractAppNameFromHref(href) {
   
   const parts = href.split('/').filter(Boolean);
   if (parts.length === 0) return null;
-  // allow './apps/appname' or './appname' by dropping leading '.' segments
+  // allow './' prefixes by dropping leading '.' segments
   while (parts.length && parts[0] === '.') parts.shift();
   if (parts.length === 0) return null; // skip if it was current dir only
-  if (parts[0] === '..') return null; // skip parent redirect
-  if (parts[0].toLowerCase() === 'apps') parts.shift(); // skip over apps folder
-  if (parts.length === 0) return null;
-  if (parts[0].includes('.')) return null;
-  return parts[0];
+  // reject any parent-directory references anywhere
+  if (parts.some(p => p === '..')) return null;
+  // prefer an 'apps' segment anywhere in the path; otherwise use first folder
+  const appsIdx = parts.findIndex(p => p.toLowerCase() === 'apps');
+  let candidate;
+  if (appsIdx >= 0 && appsIdx + 1 < parts.length) candidate = parts[appsIdx + 1];
+  else candidate = parts[0];
+  if (!candidate) return null;
+  // if the only thing we found is 'apps', ignore it
+  if (candidate.toLowerCase() === 'apps') return null;
+  // skip names with periods
+  if (candidate.includes('.')) return null;
+  return candidate;
 }
 
 httpGet(Const.APPS_JSON_FILE).then(apps=>{
