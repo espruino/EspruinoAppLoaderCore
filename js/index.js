@@ -583,7 +583,7 @@ let chips = Array.from(document.querySelectorAll('.filter-nav .chip')).map(chip 
 
 
 let activeSort = '';
-
+let libraryShowAll = false; // perist whether user chose to view all apps
 // Update the sort state to match the current sort value
 function refreshSort(){
   let sortContainer = document.querySelector("#librarycontainer .sort-nav");
@@ -596,6 +596,7 @@ function refreshLibrary(options) {
   options = options||{};
   // options.dontChangeSearchBox : bool  -> don't update the value in the search box
   // options.showAll : bool  -> don't restrict the numbers of apps that are shown
+  if (options.showAll) libraryShowAll = true; // remember expansion choice
   let panelbody = document.querySelector("#librarycontainer .panel-body");
   // Work out what we should be filtering, based on the URL
   let searchType = ""; // possible values: hash, chip, full, id
@@ -717,7 +718,7 @@ function refreshLibrary(options) {
   }
 
   let viewMoreText = "";
-  if (!options.showAll && visibleApps.length > Const.MAX_APPS_SHOWN) {
+  if (!libraryShowAll && visibleApps.length > Const.MAX_APPS_SHOWN) {
     viewMoreText = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile" onclick="javascript:refreshLibrary({dontChangeSearchBox:true,showAll:true})" style="cursor: pointer;">
     <div class="tile-icon">
       <figure class="avatar"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAACp0lEQVR4nO1Zu24TQRRd8Sig49Xw+AwQfAA/ABGg0CLSugNSk5A6CkaI8ANBoQBE6w4JaT2XGGfv7N67hU0oIA4tCc2g65CQrL141/sYW/hIR7J2R55z587jzlnHmWCCCTJjxZijdY+uKaRZpWkVkNeVph+g+ZdQfivNTXmnPHrkesFVY8wRxzY+E11SSAsKeQM0mzRUyF8A6claEFwsXbgKgnNK83OleSet8J5ANO8AUvWj550pRzyG00rTVlbhfdj5pOl2YcJd1z0OyC8KEG4Ok57VarVjOYv/ehKQ3hcvnv+sD3onfeY48uWJhwNB5JKJcqYN9ydSNaP48K418Xp/TdwaSrxsa4C8aT8A7rhan00dgOzzIyDe7K4HXkolXk7HPA6pHAPYBt+/kHz0kRZsi4ZezicSL0VWt06xL9hEsrAhRePAAKSqtC0W4uiHV5JMn1nrQnVMFnT4MEkAr20LhXi+GhyA5mbcH7jrvplbWjY37lfMzZmKmX+63H1WdDvYzwA1EgQQXypLB9en7x2iPCu6HewReTNJBmL3fxmpaIfyrOh2sJcB5O1MAUiaox1OzVQKbwfpAkg5haovC28HKafQPxexdCojN2hx5tkOUi7i1QTbmS2ujPVBBpofDAxATKcREGr6T6HwctJirm1bLPSQWondPHHM7AvmKOec/+ZCIxBHwLZw+MtFJy2azfZpQP4+AuI7Q/umdZ/v2A5AYTDlZIF4lWM1daKQe6iNS47S9DY3k1eMVvEqyxPPbz602yecPCGjUdLOtJi7vX4Q4lUWYTkqpG+ZF2yaLVbsvu4Bk1U80k8Z9UajdcopG3I6imM2XO1ELaX5cR3xvGMbUmSJ6SS+jVgfcvGQm52UI7ukLUBak3dSEktVORKfWSeYwBl//AaTJ2VUxIlIxgAAAABJRU5ErkJggg=="></figure>
