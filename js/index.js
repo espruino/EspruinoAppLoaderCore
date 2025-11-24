@@ -900,7 +900,8 @@ function customApp(app) {
     refreshMyApps();
     refreshLibrary();
   }).catch(err => {
-    showToast("Customise failed, "+err, "error");
+    if (err !== "Window closed")
+      showToast("Customise failed, "+err, "error");
     refreshMyApps();
     refreshLibrary();
   });
