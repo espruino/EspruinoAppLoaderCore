@@ -121,8 +121,7 @@ function extractAppNameFromHref(href) {
   href = href.replace(/^\/+|\/+$/g, '');
   if (!href) return null; // was just /, throw it out
   
-  const parts = href.split('/').filter(Boolean);
-  if (parts.length === 0) return null;
+  const parts = href.split('/').filter(p=>p!="");
   // allow './' prefixes by dropping leading '.' segments
   while (parts.length && parts[0] === '.') parts.shift();
   if (parts.length === 0) return null; // skip if it was current dir only
@@ -136,8 +135,6 @@ function extractAppNameFromHref(href) {
   if (!candidate) return null;
   // if the only thing we found is 'apps', ignore it
   if (candidate.toLowerCase() === 'apps') return null;
-  // skip names with periods
-  if (candidate.includes('.')) return null;
   return candidate;
 }
 
@@ -167,13 +164,15 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
     let xmlDoc = parser.parseFromString(htmlText,"text/html");
     appJSON = [];
     let promises = [];
+    let appsLoaded = [];
     htmlToArray(xmlDoc.querySelectorAll("a")).forEach(a=>{
       let href = a.getAttribute("href");
       const appName = extractAppNameFromHref(href);
       // Skip anything that doesn't look like an app or is an _example_app
-      if (!appName || appName.startsWith("_")) {
+      if (!appName || appName.startsWith("_") || ["lint_exemptions.js","unknown.png"].includes(appName))
         return;
-      }
+      if (appsLoaded.includes(appName)) return; // avoid duplicates
+      appsLoaded.push(appName);
       let metadataURL = appsURL+appName+"/metadata.json";
       console.log(" - Loading "+metadataURL);
       promises.push(httpGet(metadataURL).then(metadataText=>{
