@@ -395,7 +395,7 @@ function handleCustomApp(appTemplate) {
       iframe : iframe,
       modal : modal,
       jsFile : "customize.js",
-      onClose: reject,
+      onClose: () => reject(""), // reject to ensure the promise isn't left dangling
       messageHandler : function(event) {
         let msg = event.data;
         if (msg.type=="app") {
@@ -446,7 +446,7 @@ function handleAppInterface(app) {
       iframe : iframe,
       modal : modal,
       jsFile : "interface.js",
-      // onClose: reject, // we don't need to reject when the window is closed
+      onClose: () => reject(""), // reject to ensure the promise isn't left dangling
       messageHandler : function(event) {
         // nothing custom needed in here
       }
@@ -780,7 +780,9 @@ function refreshLibrary(options) {
         icon.classList.add("loading");
         updateApp(app);
       } else if (icon.classList.contains("icon-interface")) {
-        handleAppInterface(app);
+        handleAppInterface(app).catch( err => {
+          if (err != "") showToast("Failed, "+err, "error");
+        });
       } else if ( button.classList.contains("btn-favourite")) {
         let favourite = SETTINGS.favourites.find(e => e == app.id);
         changeAppFavourite(!favourite, app);
@@ -900,7 +902,7 @@ function customApp(app) {
     refreshMyApps();
     refreshLibrary();
   }).catch(err => {
-    if (err !== "Window closed")
+    if (err != "")
       showToast("Customise failed, "+err, "error");
     refreshMyApps();
     refreshLibrary();
@@ -1056,7 +1058,10 @@ function refreshMyApps() {
       // check icon to figure out what we should do
       if (icon.classList.contains("icon-delete")) removeApp(app);
       if (icon.classList.contains("icon-refresh")) updateApp(app);
-      if (icon.classList.contains("icon-interface")) handleAppInterface(app);
+      if (icon.classList.contains("icon-interface")) 
+        handleAppInterface(app).catch( err => {
+          if (err != "") showToast("Failed, "+err, "error");
+        });
       if (icon.classList.contains("icon-favourite")) {
         let favourite = SETTINGS.favourites.find(e => e == app.id);
         changeAppFavourite(!favourite, app);
