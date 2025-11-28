@@ -2,7 +2,7 @@ let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
 let files = []; // list of files on the Espruimo Device
-let appsFavoritedInSession = []; // list of app IDs favourited during this session
+let appsFavoritedInSession = []; // list of app IDs favourited during this web session
 const DEFAULTSETTINGS = {
   pretokenise : true,
   minify : false,  // disabled by default due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
@@ -100,6 +100,45 @@ function appJSONLoadedHandler() {
   });
 }
 
+/**
+ * Extract an app name from a /apps/appname path
+ *   - assumes app names cannot contain periods
+ *   - assumes apps cannot be named "apps"
+ *   - assumes we're in or including the "apps" folder in the href
+ * Returns the app name string or null if not an app folder.
+ */
+function extractAppNameFromHref(href) {
+  if (!href) return null;
+  
+  try {
+    const u = new URL(href);
+    href = u.pathname;
+  } catch (e) {
+    // ignore - just use href as-is
+  }
+  // very unlikely, but get rid of query/hash
+  href = href.split('?')[0].split('#')[0].trim();
+  // remove leading/trailing slashes
+  href = href.replace(/^\/+|\/+$/g, '');
+  if (!href) return null; // was just /, throw it out
+  
+  const parts = href.split('/').filter(p=>p!="");
+  // allow './' prefixes by dropping leading '.' segments
+  while (parts.length && parts[0] === '.') parts.shift();
+  if (parts.length === 0) return null; // skip if it was current dir only
+  // reject any parent-directory references anywhere
+  if (parts.some(p => p === '..')) return null;
+  // prefer an 'apps' segment anywhere in the path; otherwise use first folder
+  const appsIdx = parts.findIndex(p => p.toLowerCase() === 'apps');
+  let candidate;
+  if (appsIdx >= 0 && appsIdx + 1 < parts.length) candidate = parts[appsIdx + 1];
+  else candidate = parts[0];
+  if (!candidate) return null;
+  // if the only thing we found is 'apps', ignore it
+  if (candidate.toLowerCase() === 'apps') return null;
+  return candidate;
+}
+
 httpGet(Const.APPS_JSON_FILE).then(apps=>{
   if (apps.startsWith("---")) {
     showToast(Const.APPS_JSON_FILE+" still contains Jekyll markup","warning");
@@ -126,10 +165,16 @@ httpGet(Const.APPS_JSON_FILE).then(apps=>{
     let xmlDoc = parser.parseFromString(htmlText,"text/html");
     appJSON = [];
     let promises = [];
+    let appsLoaded = [];
     htmlToArray(xmlDoc.querySelectorAll("a")).forEach(a=>{
       let href = a.getAttribute("href");
-      if (!href || href.startsWith("/") || href.startsWith("_") || !href.endsWith("/")) return;
-      let metadataURL = appsURL+"/"+href+"metadata.json";
+      const appName = extractAppNameFromHref(href);
+      // Skip anything that doesn't look like an app or is an _example_app
+      if (!appName || appName.startsWith("_") || ["lint_exemptions.js","unknown.png"].includes(appName))
+        return;
+      if (appsLoaded.includes(appName)) return; // avoid duplicates
+      appsLoaded.push(appName);
+      let metadataURL = appsURL+appName+"/metadata.json";
       console.log(" - Loading "+metadataURL);
       promises.push(httpGet(metadataURL).then(metadataText=>{
         try {
@@ -396,7 +441,7 @@ function handleCustomApp(appTemplate) {
       iframe : iframe,
       modal : modal,
       jsFile : "customize.js",
-      onClose: reject,
+      onClose: () => reject(""), // reject to ensure the promise isn't left dangling
       messageHandler : function(event) {
         let msg = event.data;
         if (msg.type=="app") {
@@ -447,7 +492,7 @@ function handleAppInterface(app) {
       iframe : iframe,
       modal : modal,
       jsFile : "interface.js",
-      // onClose: reject, // we don't need to reject when the window is closed
+      onClose: () => reject(""), // reject to ensure the promise isn't left dangling
       messageHandler : function(event) {
         // nothing custom needed in here
       }
@@ -459,16 +504,10 @@ function handleAppInterface(app) {
 function changeAppFavourite(favourite, app) {
   if (favourite) {
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
-    if( appsFavoritedInSession.indexOf(app.id)!=-1) {
-      // app was favourited earlier in this session 
-      
-    }
   } else {
     SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
   }
-
   saveSettings();
-  console.log(SETTINGS);
   refreshLibrary();
   refreshMyApps();
 }
@@ -516,18 +555,14 @@ function getAppHTML(app, appInstalled, forInterface) {
       let percent=(info.installs / appCounts.installs * 100).toFixed(0);
       let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
       infoTxt.push(`${info.installs} reported installs (${percentText})`);
-     
     }
     if (info.favourites) {
-      
       let percent=(info.favourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
       if(!info.installs||info.installs<1) {infoTxt.push(`${info.favourites} users favourited`)}
       else {infoTxt.push(`${info.favourites} users favourited (${percentText})`)}
-
       appFavourites = info.favourites;
       if(appsFavoritedInSession.includes(app.id)) appFavourites += 1; //add one to give the illusion of immediate database changes
-
 
     }
     if (infoTxt.length)
@@ -596,7 +631,7 @@ let chips = Array.from(document.querySelectorAll('.filter-nav .chip')).map(chip 
 
 
 let activeSort = '';
-
+let libraryShowAll = false; // perist whether user chose to view all apps
 // Update the sort state to match the current sort value
 function refreshSort(){
   let sortContainer = document.querySelector("#librarycontainer .sort-nav");
@@ -609,6 +644,7 @@ function refreshLibrary(options) {
   options = options||{};
   // options.dontChangeSearchBox : bool  -> don't update the value in the search box
   // options.showAll : bool  -> don't restrict the numbers of apps that are shown
+  if (options.showAll) libraryShowAll = true; // remember expansion choice
   let panelbody = document.querySelector("#librarycontainer .panel-body");
   // Work out what we should be filtering, based on the URL
   let searchType = ""; // possible values: hash, chip, full, id
@@ -730,7 +766,7 @@ function refreshLibrary(options) {
   }
 
   let viewMoreText = "";
-  if (!options.showAll && visibleApps.length > Const.MAX_APPS_SHOWN) {
+  if (!libraryShowAll && visibleApps.length > Const.MAX_APPS_SHOWN) {
     viewMoreText = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile" onclick="javascript:refreshLibrary({dontChangeSearchBox:true,showAll:true})" style="cursor: pointer;">
     <div class="tile-icon">
       <figure class="avatar"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAACp0lEQVR4nO1Zu24TQRRd8Sig49Xw+AwQfAA/ABGg0CLSugNSk5A6CkaI8ANBoQBE6w4JaT2XGGfv7N67hU0oIA4tCc2g65CQrL141/sYW/hIR7J2R55z587jzlnHmWCCCTJjxZijdY+uKaRZpWkVkNeVph+g+ZdQfivNTXmnPHrkesFVY8wRxzY+E11SSAsKeQM0mzRUyF8A6claEFwsXbgKgnNK83OleSet8J5ANO8AUvWj550pRzyG00rTVlbhfdj5pOl2YcJd1z0OyC8KEG4Ok57VarVjOYv/ehKQ3hcvnv+sD3onfeY48uWJhwNB5JKJcqYN9ydSNaP48K418Xp/TdwaSrxsa4C8aT8A7rhan00dgOzzIyDe7K4HXkolXk7HPA6pHAPYBt+/kHz0kRZsi4ZezicSL0VWt06xL9hEsrAhRePAAKSqtC0W4uiHV5JMn1nrQnVMFnT4MEkAr20LhXi+GhyA5mbcH7jrvplbWjY37lfMzZmKmX+63H1WdDvYzwA1EgQQXypLB9en7x2iPCu6HewReTNJBmL3fxmpaIfyrOh2sJcB5O1MAUiaox1OzVQKbwfpAkg5haovC28HKafQPxexdCojN2hx5tkOUi7i1QTbmS2ujPVBBpofDAxATKcREGr6T6HwctJirm1bLPSQWondPHHM7AvmKOec/+ZCIxBHwLZw+MtFJy2azfZpQP4+AuI7Q/umdZ/v2A5AYTDlZIF4lWM1daKQe6iNS47S9DY3k1eMVvEqyxPPbz602yecPCGjUdLOtJi7vX4Q4lUWYTkqpG+ZF2yaLVbsvu4Bk1U80k8Z9UajdcopG3I6imM2XO1ELaX5cR3xvGMbUmSJ6SS+jVgfcvGQm52UI7ukLUBak3dSEktVORKfWSeYwBl//AaTJ2VUxIlIxgAAAABJRU5ErkJggg=="></figure>
@@ -792,7 +828,9 @@ function refreshLibrary(options) {
         icon.classList.add("loading");
         updateApp(app);
       } else if (icon.classList.contains("icon-interface")) {
-        handleAppInterface(app);
+        handleAppInterface(app).catch( err => {
+          if (err != "") showToast("Failed, "+err, "error");
+        });
       } else if ( button.classList.contains("btn-favourite")) {
         //clicked
         let favourite = SETTINGS.favourites.find(e => e == app.id);
@@ -918,7 +956,8 @@ function customApp(app) {
     refreshMyApps();
     refreshLibrary();
   }).catch(err => {
-    showToast("Customise failed, "+err, "error");
+    if (err != "")
+      showToast("Customise failed, "+err, "error");
     refreshMyApps();
     refreshLibrary();
   });
@@ -1073,7 +1112,10 @@ function refreshMyApps() {
       // check icon to figure out what we should do
       if (icon.classList.contains("icon-delete")) removeApp(app);
       if (icon.classList.contains("icon-refresh")) updateApp(app);
-      if (icon.classList.contains("icon-interface")) handleAppInterface(app);
+      if (icon.classList.contains("icon-interface")) 
+        handleAppInterface(app).catch( err => {
+          if (err != "") showToast("Failed, "+err, "error");
+        });
       if (icon.classList.contains("icon-favourite")) {
         let favourite = SETTINGS.favourites.find(e => e == app.id);
         changeAppFavourite(!favourite, app);
