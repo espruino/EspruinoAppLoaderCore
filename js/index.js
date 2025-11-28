@@ -563,7 +563,6 @@ function getAppHTML(app, appInstalled, forInterface) {
       else {infoTxt.push(`${info.favourites} users favourited (${percentText})`)}
       appFavourites = info.favourites;
       if(appsFavoritedInSession.includes(app.id)) appFavourites += 1; //add one to give the illusion of immediate database changes
-
     }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
