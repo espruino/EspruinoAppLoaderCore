@@ -2,6 +2,7 @@ let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
 let files = []; // list of files on the Espruimo Device
+let appsFavoritedInSession = []; // list of app IDs favourited during this web session
 const DEFAULTSETTINGS = {
   pretokenise : true,
   minify : false,  // disabled by default due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
@@ -561,6 +562,7 @@ function getAppHTML(app, appInstalled, forInterface) {
       if(!info.installs||info.installs<1) {infoTxt.push(`${info.favourites} users favourited`)}
       else {infoTxt.push(`${info.favourites} users favourited (${percentText})`)}
       appFavourites = info.favourites;
+      if(appsFavoritedInSession.includes(app.id)) appFavourites += 1; //add one to give the illusion of immediate database changes
     }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
@@ -829,7 +831,13 @@ function refreshLibrary(options) {
           if (err != "") showToast("Failed, "+err, "error");
         });
       } else if ( button.classList.contains("btn-favourite")) {
+        //clicked
         let favourite = SETTINGS.favourites.find(e => e == app.id);
+        if(!favourite){
+          appsFavoritedInSession = appsFavoritedInSession.concat([app.id]);
+        }else{
+          appsFavoritedInSession = appsFavoritedInSession.filter(e => e != app.id);
+        }
         changeAppFavourite(!favourite, app);
       }
     });
