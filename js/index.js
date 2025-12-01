@@ -1,16 +1,17 @@
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
-let files = []; // list of files on the Espruimo Device
+let files = []; // list of files on the Espruino Device
 const DEFAULTSETTINGS = {
   pretokenise : true,
   minify : false,  // disabled by default due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
   settime : false, // Always update time when we connect
   favourites : ["launch"],
   language : "",
+  appsFavoritedThisSession : [], // list of apps favourited before database was updated
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
   sendUsageStats: true,  // send usage stats to banglejs.com
-  alwaysAllowUpdate : false, //  Always show "reinstall app" buttonregardless of the version
+  alwaysAllowUpdate : false, //  Always show "reinstall app" button regardless of the version
   autoReload: false, //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
   noPackets: false,  // Enable File Upload Compatibility mode (disables binary packet upload)
 };
@@ -502,8 +503,10 @@ function handleAppInterface(app) {
 
 function changeAppFavourite(favourite, app) {
   if (favourite) {
+    SETTINGS.appsFavoritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
   } else {
+    SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
     SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
   }
   saveSettings();
@@ -556,11 +559,21 @@ function getAppHTML(app, appInstalled, forInterface) {
       infoTxt.push(`${info.installs} reported installs (${percentText})`);
     }
     if (info.favourites) {
+      let favsThisSession = SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
       let percent=(info.favourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
       if(!info.installs||info.installs<1) {infoTxt.push(`${info.favourites} users favourited`)}
       else {infoTxt.push(`${info.favourites} users favourited (${percentText})`)}
       appFavourites = info.favourites;
+      if(favsThisSession){
+        if(info.favourites!=favsThisSession.favs){
+          //database has been updated, remove app from favsThisSession
+          SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
+        }
+        else{
+          appFavourites += 1; //add one to give the illusion of immediate database changes
+        }
+      }
     }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
@@ -1350,6 +1363,8 @@ function loadSettings() {
   } catch (e) {
     console.error("Invalid settings");
   }
+  // upgrade old settings
+  if(!SETTINGS.appsFavoritedThisSession) SETTINGS.appsFavoritedThisSession = [];
 }
 /// Save settings
 function saveSettings() {
