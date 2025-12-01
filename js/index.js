@@ -19,11 +19,11 @@ let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
 
 let device = {
- id : undefined,     // The Espruino device ID of this device, eg. BANGLEJS
- version : undefined,// The Espruino firmware version, eg 2v08
- info : undefined,   // An entry from DEVICEINFO with information about this device
- connected : false,   // are we connected via BLE right now?
- appsInstalled : []  // list of app {id,version} of installed apps
+  id : undefined,     // The Espruino device ID of this device, eg. BANGLEJS
+  version : undefined,// The Espruino firmware version, eg 2v08
+  info : undefined,   // An entry from DEVICEINFO with information about this device
+  connected : false,   // are we connected via BLE right now?
+  appsInstalled : []  // list of app {id,version} of installed apps
 };
 
 
