@@ -568,7 +568,7 @@ function getAppHTML(app, appInstalled, forInterface) {
       if(favsThisSession){
         if(info.favourites!=favsThisSession.favs){
           //database has been updated, remove app from favsThisSession
-          SETTINGS.appsFavoritedInSession = SETTINGS.appsFavoritedInSession.filter(obj => obj.id !== app.id);
+          SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
         }
         else{
           appFavourites += 1; //add one to give the illusion of immediate database changes
