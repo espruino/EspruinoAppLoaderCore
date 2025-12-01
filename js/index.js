@@ -3,17 +3,17 @@ let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, m
 let appCounts = {};
 let files = []; // list of files on the Espruimo Device
 const DEFAULTSETTINGS = {
- pretokenise : true,
- minify : false,  // disabled by default due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
- settime : false, // Always update time when we connect
- favourites : ["launch"],
- appsFavoritedInSession : [],
- language : "",
- bleCompat: false, // 20 byte MTU BLE Compatibility mode
- sendUsageStats: true,  // send usage stats to banglejs.com
- alwaysAllowUpdate : false, //  Always show "reinstall app" button regardless of the version
- autoReload: false, //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
- noPackets: false,  // Enable File Upload Compatibility mode (disables binary packet upload)
+  pretokenise : true,
+  minify : false,  // disabled by default due to https://github.com/espruino/BangleApps/pull/355#issuecomment-620124162
+  settime : false, // Always update time when we connect
+  favourites : ["launch"],
+  language : "",
+  appsFavoritedInSession : [], // List of apps favorited before database updates
+  bleCompat: false, // 20 byte MTU BLE Compatibility mode
+  sendUsageStats: true,  // send usage stats to banglejs.com
+  alwaysAllowUpdate : false, //  Always show "reinstall app" buttonregardless of the version
+  autoReload: false, //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
+  noPackets: false,  // Enable File Upload Compatibility mode (disables binary packet upload)
 };
 let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
