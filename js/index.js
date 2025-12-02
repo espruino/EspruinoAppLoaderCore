@@ -1,3 +1,4 @@
+//FAV WITH PILL AND ANIM
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
@@ -501,7 +502,7 @@ function handleAppInterface(app) {
   });
 }
 
-function changeAppFavourite(favourite, app) {
+function changeAppFavourite(favourite, app,refresh=true) {
   if (favourite) {
     SETTINGS.appsFavoritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
@@ -510,10 +511,11 @@ function changeAppFavourite(favourite, app) {
     SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
   }
   saveSettings();
-  refreshLibrary();
-  refreshMyApps();
+  if(refresh) {
+    refreshLibrary();
+    refreshMyApps();
+  }
 }
-
 // ===========================================  Top Navigation
 function showTab(tabname) {
   htmlToArray(document.querySelectorAll("#tab-navigate .tab-item")).forEach(tab => {
@@ -543,6 +545,29 @@ librarySearchInput.addEventListener('input', evt => {
 
 // =========================================== App Info
 
+
+
+
+function getAppFavorites(app){
+  let info = appSortInfo[app.id];
+  let appFavourites = 0;
+  if (info.favourites) {
+    let favsThisSession = SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
+    appFavourites = info.favourites;
+    if(favsThisSession){
+      if(info.favourites!=favsThisSession.favs){
+        //database has been updated, remove app from favsThisSession
+        SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
+      }
+      else{
+        appFavourites += 1; //add one to give the illusion of immediate database changes
+      }
+    }
+  }
+  return appFavourites;
+}
+
+
 function getAppHTML(app, appInstalled, forInterface) {
   let version = getVersionInfo(app, appInstalled);
   let versionInfo = version.text;
@@ -559,21 +584,11 @@ function getAppHTML(app, appInstalled, forInterface) {
       infoTxt.push(`${info.installs} reported installs (${percentText})`);
     }
     if (info.favourites) {
-      let favsThisSession = SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
-      let percent=(info.favourites / info.installs * 100).toFixed(0);
+      appFavourites = getAppFavorites(app);
+      let percent=(appFavourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-      if(!info.installs||info.installs<1) {infoTxt.push(`${info.favourites} users favourited`)}
-      else {infoTxt.push(`${info.favourites} users favourited (${percentText})`)}
-      appFavourites = info.favourites;
-      if(favsThisSession){
-        if(info.favourites!=favsThisSession.favs){
-          //database has been updated, remove app from favsThisSession
-          SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
-        }
-        else{
-          appFavourites += 1; //add one to give the illusion of immediate database changes
-        }
-      }
+      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`)}
+      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`)}
     }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
@@ -585,9 +600,10 @@ function getAppHTML(app, appInstalled, forInterface) {
   let githubLink = Const.APP_SOURCECODE_URL ?
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
   let getAppFavouritesHTML = cnt => {
-    if (!cnt) return "";
-    let txt = (cnt > 999) ? Math.round(cnt/1000)+"k" : cnt;
-    return `<span>${txt}</span>`;
+    // Always show a count (0 if none) and format large numbers with 'k'
+    let n = (cnt && typeof cnt === 'number') ? cnt : 0;
+    let txt = (n > 999) ? Math.round(n/1000)+"k" : n;
+    return `<span class="fav-count">${txt}</span>`;
   };
 
   let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile">
@@ -601,8 +617,9 @@ function getAppHTML(app, appInstalled, forInterface) {
     <a href="${appurl}" class="link-copy-url" appid="${app.id}" title="Copy link to app" style="position:absolute;top: 56px;left: -24px;"><img src="core/img/copy-icon.png" alt="Copy link to app"/></a>
   </div>
   <div class="tile-action">`;
+  html += `<div class="pill-container">`;
   if (forInterface=="library") html += `
-    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}">${getAppFavouritesHTML(appFavourites)}</i></button>
+  <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite">${getAppFavouritesHTML(appFavourites)}<i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(SETTINGS.alwaysAllowUpdate && appInstalled) || version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
@@ -610,11 +627,11 @@ function getAppHTML(app, appInstalled, forInterface) {
     <button class="btn btn-link btn-action btn-lg ${appInstalled?"":"d-hide"}" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.custom?"":"d-hide"}" appid="${app.id}" title="Customise and Upload App"><i class="icon icon-menu"></i></button>`;
   if (forInterface=="myapps") html += `
-    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}">${getAppFavouritesHTML(appFavourites)}</i></button>
+    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite">${getAppFavouritesHTML(appFavourites)}<i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(SETTINGS.alwaysAllowUpdate && appInstalled) || version.canUpdate?'':'d-hide'}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>`;
-  html += "</div>";
+  html += "</div></div>";
   if (forInterface=="library") {
     let screenshots = (app.screenshots || []).filter(s=>s.url);
     if (screenshots.length)
@@ -789,7 +806,6 @@ function refreshLibrary(options) {
     visibleApps = visibleApps.slice(0, Const.MAX_APPS_SHOWN-1);
   }
 
-
   panelbody.innerHTML = visibleApps.map((app,idx) => {
     let appInstalled = device.appsInstalled.find(a=>a.id==app.id);
     return getAppHTML(app, appInstalled, "library");
@@ -801,7 +817,7 @@ function refreshLibrary(options) {
   htmlToArray(panelbody.getElementsByTagName("button")).forEach(button => {
     button.addEventListener("click",event => {
       let button = event.currentTarget;
-      let icon = button.firstChild;
+      let icon = (button.querySelector && (button.querySelector('i.icon'))) || button.firstElementChild || button.firstChild;
       let appid = button.getAttribute("appid");
       let app = appNameToApp(appid);
       if (!app) throw new Error("App "+appid+" not found");
@@ -842,8 +858,21 @@ function refreshLibrary(options) {
           if (err != "") showToast("Failed, "+err, "error");
         });
       } else if ( button.classList.contains("btn-favourite")) {
+        // clicked: animate and toggle favourite state immediately for instant feedback
         let favourite = SETTINGS.favourites.find(e => e == app.id);
-        changeAppFavourite(!favourite, app);
+        changeAppFavourite(!favourite, app,false);
+        if (icon) icon.classList.toggle("icon-favourite-active", !favourite);
+        if (icon) icon.classList.add("favoriteAnim");
+        // update visible count optimistically
+        let cnt = getAppFavorites(app);
+        if (!cnt) return "";
+        let txt = (cnt > 999) ? Math.round(cnt/1000)+"k" : cnt; 
+        let countEl = button.querySelector('.fav-count');
+        countEl.textContent = String(txt);
+        const ANIM_MS = 500;
+        setTimeout(() => {
+          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) {}
+        }, ANIM_MS);
       }
     });
   });
@@ -1109,7 +1138,7 @@ function refreshMyApps() {
   htmlToArray(panelbody.getElementsByTagName("button")).forEach(button => {
     button.addEventListener("click",event => {
       let button = event.currentTarget;
-      let icon = button.firstChild;
+      let icon = (button.querySelector && (button.querySelector('i.icon'))) || button.firstElementChild || button.firstChild;
       let appid = button.getAttribute("appid");
       let app = appNameToApp(appid);
       if (!app) throw new Error("App "+appid+" not found");
@@ -1122,7 +1151,26 @@ function refreshMyApps() {
         });
       if (icon.classList.contains("icon-favourite")) {
         let favourite = SETTINGS.favourites.find(e => e == app.id);
-        changeAppFavourite(!favourite, app);
+        try {
+          if (icon) icon.classList.toggle("icon-favourite-active", !favourite);
+          if (icon) icon.classList.add("favoriteAnim");
+        } catch (e) {}
+        // update visible count optimistically
+        try {
+          let countEl = button.querySelector('.fav-count');
+          if (countEl) {
+            let txt = countEl.textContent.trim();
+            let val = 0;
+            if (txt.endsWith('k')) val = Math.round(parseFloat(txt) * 1000);
+            else val = parseInt(txt) || 0;
+            val = (!favourite) ? val + 1 : Math.max(0, val - 1);
+            countEl.textContent = (val > 999) ? Math.round(val/1000) + 'k' : String(val);
+          }
+        } catch (e) {}
+        const ANIM_MS = 500;
+        setTimeout(() => {
+          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) {}
+        }, ANIM_MS);
       }
     });
   });
