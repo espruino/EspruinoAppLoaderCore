@@ -1,3 +1,4 @@
+//FAV WITH PILL AND ANIM
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
@@ -548,19 +549,19 @@ librarySearchInput.addEventListener('input', evt => {
 
 
 function getAppFavorites(app){
-  let info = appSortInfo[app.id];
-  let appFavourites = 0;
-  if (info.favourites) {
-    let favsThisSession = SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
-    appFavourites = info.favourites;
-    if(favsThisSession){
-      if(info.favourites!=favsThisSession.favs){
-        //database has been updated, remove app from favsThisSession
-        SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
-      }
-      else{
-        appFavourites += 1; //add one to give the illusion of immediate database changes
-      }
+  let info = appSortInfo[app.id] || {};
+  // start with whatever number we have in the database (may be undefined -> treat as 0)
+  let appFavourites = (typeof info.favourites === 'number') ? info.favourites : 0;
+  let favsThisSession = SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
+  if (favsThisSession) {
+    // If the database count changed since we recorded the session-favourite, it means
+    // the server/db has been updated and our optimistic session entry is stale.
+    if (typeof info.favourites === 'number' && info.favourites !== favsThisSession.favs) {
+      // remove stale session entry
+      SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
+    } else {
+      // otherwise include our optimistic +1 so the UI updates immediately
+      appFavourites += 1;
     }
   }
   return appFavourites;
@@ -862,13 +863,13 @@ function refreshLibrary(options) {
         changeAppFavourite(!favourite, app,false);
         if (icon) icon.classList.toggle("icon-favourite-active", !favourite);
         if (icon) icon.classList.add("favoriteAnim");
-        // update visible count optimistically
+        // update visible count optimistically (always update, even if 0)
         let cnt = getAppFavorites(app);
-        if (!cnt) return "";
-        let txt = (cnt > 999) ? Math.round(cnt/1000)+"k" : cnt; 
+        let txt = (cnt > 999) ? Math.round(cnt/1000)+"k" : cnt;
         let countEl = button.querySelector('.fav-count');
-        countEl.textContent = String(txt);
+        if (countEl) countEl.textContent = String(txt);
         const ANIM_MS = 500;
+        // ensure animation class is removed after the duration so it can be re-triggered
         setTimeout(() => {
           try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) {}
         }, ANIM_MS);
