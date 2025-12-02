@@ -1,4 +1,3 @@
-//FAV WITH PILL AND ANIM
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
@@ -1149,29 +1148,6 @@ function refreshMyApps() {
         handleAppInterface(app).catch( err => {
           if (err != "") showToast("Failed, "+err, "error");
         });
-      if (icon.classList.contains("icon-favourite")) {
-        let favourite = SETTINGS.favourites.find(e => e == app.id);
-        try {
-          if (icon) icon.classList.toggle("icon-favourite-active", !favourite);
-          if (icon) icon.classList.add("favoriteAnim");
-        } catch (e) {}
-        // update visible count optimistically
-        try {
-          let countEl = button.querySelector('.fav-count');
-          if (countEl) {
-            let txt = countEl.textContent.trim();
-            let val = 0;
-            if (txt.endsWith('k')) val = Math.round(parseFloat(txt) * 1000);
-            else val = parseInt(txt) || 0;
-            val = (!favourite) ? val + 1 : Math.max(0, val - 1);
-            countEl.textContent = (val > 999) ? Math.round(val/1000) + 'k' : String(val);
-          }
-        } catch (e) {}
-        const ANIM_MS = 500;
-        setTimeout(() => {
-          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) {}
-        }, ANIM_MS);
-      }
     });
   });
   let nonCustomAppsToUpdate = getAppsToUpdate({excludeCustomApps:true});
