@@ -1,4 +1,3 @@
-//FAV WITH PILL AND ANIM
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
@@ -503,6 +502,8 @@ function handleAppInterface(app) {
 }
 
 function changeAppFavourite(favourite, app,refresh=true) {
+  let inDatabase=SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
+  
   if (favourite) {
     SETTINGS.appsFavoritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
@@ -510,6 +511,7 @@ function changeAppFavourite(favourite, app,refresh=true) {
     SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
     SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
   }
+  
   saveSettings();
   if(refresh) {
     refreshLibrary();
@@ -603,7 +605,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     // Always show a count (0 if none) and format large numbers with 'k'
     let n = (cnt && typeof cnt === 'number') ? cnt : 0;
     let txt = (n > 999) ? Math.round(n/1000)+"k" : n;
-    return `<span class="fav-count">${txt}</span>`;
+    return `<span class="fav-count" style="margin-left:-1em;margin-right:0.5em">${txt}</span>`;
   };
 
   let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile">
@@ -612,7 +614,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   </div>
   <div class="tile-content">
     <p class="tile-title text-bold"><a name="${appurl}"></a>${escapeHtml(app.name)} ${versionInfo}</p>
-    <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`<br/>${readme}`:""}</p>
+    <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`</br>${readme}`:""}</p>
     ${githubLink}
     <a href="${appurl}" class="link-copy-url" appid="${app.id}" title="Copy link to app" style="position:absolute;top: 56px;left: -24px;"><img src="core/img/copy-icon.png" alt="Copy link to app"/></a>
   </div>
