@@ -873,7 +873,7 @@ function refreshLibrary(options) {
         const ANIM_MS = 500;
         // ensure animation class is removed after the duration so it can be re-triggered
         setTimeout(() => {
-          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) {}
+          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) { console.error(e); }
         }, ANIM_MS);
       }
     });
