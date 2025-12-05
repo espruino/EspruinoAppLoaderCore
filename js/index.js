@@ -590,7 +590,7 @@ function getAppHTML(app, appInstalled, forInterface) {
       let percent=(appFavourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
       if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
-      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`)}
+      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`);}
     }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
