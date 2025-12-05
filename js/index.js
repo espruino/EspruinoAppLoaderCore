@@ -1,4 +1,4 @@
-//FAV WITH PILL AND ANIM
+
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
@@ -503,7 +503,7 @@ function handleAppInterface(app) {
 }
 
 function changeAppFavourite(favourite, app,refresh=true) {
-  let inDatabase=SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
+  
   
   if (favourite) {
     SETTINGS.appsFavoritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
@@ -590,8 +590,8 @@ function getAppHTML(app, appInstalled, forInterface) {
       appFavourites = getAppFavorites(app);
       let percent=(appFavourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`)}
-      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`)}
+      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
+      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`);}
     }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
@@ -874,7 +874,7 @@ function refreshLibrary(options) {
         const ANIM_MS = 500;
         // ensure animation class is removed after the duration so it can be re-triggered
         setTimeout(() => {
-          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) {}
+          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) { console.error(e); }
         }, ANIM_MS);
       }
     });
@@ -1561,4 +1561,4 @@ if (btn) btn.addEventListener("click",event=>{
   document.querySelector(".editor__canvas").style.display = "inherit";
   Comms.on("data",x=>Espruino.Core.Terminal.outputDataHandler(x))
   Espruino.Core.Terminal.setInputDataHandler(function(d) { Comms.write(d); })
-})
+});
