@@ -615,7 +615,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   </div>
   <div class="tile-content">
     <p class="tile-title text-bold"><a name="${appurl}"></a>${escapeHtml(app.name)} ${versionInfo}</p>
-    <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`</br>${readme}`:""}</p>
+    <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`<br/>${readme}`:""}</p>
     ${githubLink}
     <a href="${appurl}" class="link-copy-url" appid="${app.id}" title="Copy link to app" style="position:absolute;top: 56px;left: -24px;"><img src="core/img/copy-icon.png" alt="Copy link to app"/></a>
   </div>
