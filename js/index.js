@@ -1,3 +1,4 @@
+//FAV WITH PILL AND ANIM
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
@@ -502,7 +503,7 @@ function handleAppInterface(app) {
 }
 
 function changeAppFavourite(favourite, app,refresh=true) {
-  
+  let inDatabase=SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
   
   if (favourite) {
     SETTINGS.appsFavoritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
@@ -589,8 +590,8 @@ function getAppHTML(app, appInstalled, forInterface) {
       appFavourites = getAppFavorites(app);
       let percent=(appFavourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
-      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`);}
+      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`)}
+      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`)}
     }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
@@ -604,11 +605,11 @@ function getAppHTML(app, appInstalled, forInterface) {
   let getAppFavouritesHTML = cnt => {
     // Always show a count (0 if none) and format large numbers with 'k'
     let n = (cnt && typeof cnt === 'number') ? cnt : 0;
-    let txt = (n > 999) ? Math.round(n/1000)+"k" : n;
+    let txt = (n > 999) ? Math.round(n/100)/10+"k" : n;
     return `<span class="fav-count" style="margin-left:-1em;margin-right:0.5em">${txt}</span>`;
   };
 
-  let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile">
+  let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile ${version.canUpdate?'updateTile':''}">
   <div class="tile-icon">
     <figure class="avatar"><img src="apps/${app.icon?`${app.id}/${app.icon}`:"unknown.png"}" alt="${escapeHtml(app.name)}"></figure>
   </div>
@@ -867,13 +868,13 @@ function refreshLibrary(options) {
         if (icon) icon.classList.add("favoriteAnim");
         // update visible count optimistically (always update, even if 0)
         let cnt = getAppFavorites(app);
-        let txt = (cnt > 999) ? Math.round(cnt/1000)+"k" : cnt;
+        let txt = (cnt > 999) ? Math.round(cnt/100)/10+"k" : cnt;
         let countEl = button.querySelector('.fav-count');
         if (countEl) countEl.textContent = String(txt);
         const ANIM_MS = 500;
         // ensure animation class is removed after the duration so it can be re-triggered
         setTimeout(() => {
-          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) { console.error(e); }
+          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) {}
         }, ANIM_MS);
       }
     });
@@ -1151,13 +1152,30 @@ function refreshMyApps() {
         handleAppInterface(app).catch( err => {
           if (err != "") showToast("Failed, "+err, "error");
         });
+      // handle favourites on My Apps page (button has class btn-favourite)
+      if (button.classList && button.classList.contains("btn-favourite")) {
+        let favourite = SETTINGS.favourites.find(e => e == app.id);
+        changeAppFavourite(!favourite, app, false);
+        if (icon) icon.classList.toggle("icon-favourite-active", !favourite);
+        if (icon) icon.classList.add("favoriteAnim");
+        // update visible count optimistically (always update, even if 0)
+        let cnt = getAppFavorites(app);
+        let txt = (cnt > 999) ? Math.round(cnt/100)/10+"k" : cnt;
+        let countEl = button.querySelector('.fav-count');
+        if (countEl) countEl.textContent = String(txt);
+        const ANIM_MS = 500;
+        setTimeout(() => {
+          try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) {}
+        }, ANIM_MS);
+      }
     });
   });
   let nonCustomAppsToUpdate = getAppsToUpdate({excludeCustomApps:true});
   let tab = document.querySelector("#tab-myappscontainer a");
   let updateApps = document.querySelector("#myappscontainer .updateapps");
   if (nonCustomAppsToUpdate.length) {
-    updateApps.innerHTML = `Update ${nonCustomAppsToUpdate.length} apps`;
+  
+    updateApps.innerHTML = `Update ${nonCustomAppsToUpdate.length} ${nonCustomAppsToUpdate.length>1?"apps":"app"}`;
     updateApps.classList.remove("hidden");
     updateApps.classList.remove("disabled");
     tab.setAttribute("data-badge", `${device.appsInstalled.length} ⬆${nonCustomAppsToUpdate.length}`);
@@ -1543,4 +1561,4 @@ if (btn) btn.addEventListener("click",event=>{
   document.querySelector(".editor__canvas").style.display = "inherit";
   Comms.on("data",x=>Espruino.Core.Terminal.outputDataHandler(x))
   Espruino.Core.Terminal.setInputDataHandler(function(d) { Comms.write(d); })
-});
+})
