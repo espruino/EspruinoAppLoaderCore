@@ -502,7 +502,7 @@ function handleAppInterface(app) {
 }
 
 function changeAppFavourite(favourite, app,refresh=true) {
-  let inDatabase=SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
+  
   
   if (favourite) {
     SETTINGS.appsFavoritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
