@@ -1,4 +1,3 @@
-
 let appJSON = []; // List of apps and info from apps.json
 let appSortInfo = {}; // list of data to sort by, from appdates.csv { created, modified }
 let appCounts = {};
@@ -42,6 +41,7 @@ let device = {
   }
 };*/
 let LANGUAGE = undefined;
+const favAnimMS = 500;
 
 /** Ensure we run transfers one after the other rather that potentially having them overlap if the user clicks around
 https://github.com/espruino/EspruinoAppLoaderCore/issues/67 */
@@ -871,11 +871,10 @@ function refreshLibrary(options) {
         let txt = (cnt > 999) ? Math.round(cnt/100)/10+"k" : cnt;
         let countEl = button.querySelector('.fav-count');
         if (countEl) countEl.textContent = String(txt);
-        const ANIM_MS = 500;
         // ensure animation class is removed after the duration so it can be re-triggered
         setTimeout(() => {
           try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) { console.error(e); }
-        }, ANIM_MS);
+        }, favAnimMS);
       }
     });
   });
@@ -1163,10 +1162,9 @@ function refreshMyApps() {
         let txt = (cnt > 999) ? Math.round(cnt/100)/10+"k" : cnt;
         let countEl = button.querySelector('.fav-count');
         if (countEl) countEl.textContent = String(txt);
-        const ANIM_MS = 500;
         setTimeout(() => {
           try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) {}
-        }, ANIM_MS);
+        }, favAnimMS);
       }
     });
   });
