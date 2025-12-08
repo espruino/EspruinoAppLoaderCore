@@ -669,21 +669,21 @@ function refreshSort(){
   else sortContainer.querySelector('.chip[sortid]').classList.add('active');
 }
 function handlefavouriteClick(icon,app,button){
-    const favAnimMS = 500; // duration of favourite animation in ms
-    // clicked: animate and toggle favourite state immediately for instant feedback
-    let favourite = SETTINGS.favourites.find(e => e == app.id);
-    changeAppFavourite(!favourite, app,false);
-    if (icon) icon.classList.toggle("icon-favourite-active", !favourite);
-    if (icon) icon.classList.add("favoriteAnim");
-    // update visible count optimistically (always update, even if 0)
-    let cnt = getAppfavourites(app);
-    let txt = (cnt > 999) ? Math.round(cnt/100)/10+"k" : cnt;
-    let countEl = button.querySelector('.fav-count');
-    if (countEl) countEl.textContent = String(txt);
-    // ensure animation class is removed after the duration so it can be re-triggered
-    setTimeout(() => {
-      try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) { console.error(e); }
-    }, favAnimMS);
+  const favAnimMS = 500; // duration of favourite animation in ms
+  // clicked: animate and toggle favourite state immediately for instant feedback
+  let favourite = SETTINGS.favourites.find(e => e == app.id);
+  changeAppFavourite(!favourite, app,false);
+  if (icon) icon.classList.toggle("icon-favourite-active", !favourite);
+  if (icon) icon.classList.add("favoriteAnim");
+  // update visible count optimistically (always update, even if 0)
+  let cnt = getAppfavourites(app);
+  let txt = (cnt > 999) ? Math.round(cnt/100)/10+"k" : cnt;
+  let countEl = button.querySelector('.fav-count');
+  if (countEl) countEl.textContent = String(txt);
+  // ensure animation class is removed after the duration so it can be re-triggered
+  setTimeout(() => {
+    try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) { console.error(e); }
+  }, favAnimMS);
 }
 // Refill the library with apps
 function refreshLibrary(options) {
