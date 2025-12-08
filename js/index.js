@@ -8,7 +8,7 @@ const DEFAULTSETTINGS = {
   settime : false, // Always update time when we connect
   favourites : ["launch"],
   language : "",
-  appsFavoritedThisSession : [], // list of apps favourited before database was updated
+  appsfavouritedThisSession : [], // list of apps favourited before database was updated
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
   sendUsageStats: true,  // send usage stats to banglejs.com
   alwaysAllowUpdate : false, //  Always show "reinstall app" button regardless of the version
@@ -505,10 +505,10 @@ function changeAppFavourite(favourite, app,refresh=true) {
   
   
   if (favourite) {
-    SETTINGS.appsFavoritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
+    SETTINGS.appsfavouritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
   } else {
-    SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
+    SETTINGS.appsfavouritedThisSession = SETTINGS.appsfavouritedThisSession.filter(obj => obj.id !== app.id);
     SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
   }
   
@@ -550,17 +550,17 @@ librarySearchInput.addEventListener('input', evt => {
 
 
 
-function getAppFavorites(app){
+function getAppfavourites(app){
   let info = appSortInfo[app.id] || {};
   // start with whatever number we have in the database (may be undefined -> treat as 0)
   let appFavourites = (typeof info.favourites === 'number') ? info.favourites : 0;
-  let favsThisSession = SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
+  let favsThisSession = SETTINGS.appsfavouritedThisSession.find(obj => obj.id === app.id);
   if (favsThisSession) {
     // If the database count changed since we recorded the session-favourite, it means
     // the server/db has been updated and our optimistic session entry is stale.
     if (typeof info.favourites === 'number' && info.favourites !== favsThisSession.favs) {
       // remove stale session entry
-      SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
+      SETTINGS.appsfavouritedThisSession = SETTINGS.appsfavouritedThisSession.filter(obj => obj.id !== app.id);
     } else {
       // otherwise include our optimistic +1 so the UI updates immediately
       appFavourites += 1;
@@ -586,7 +586,7 @@ function getAppHTML(app, appInstalled, forInterface) {
       infoTxt.push(`${info.installs} reported installs (${percentText})`);
     }
     if (info.favourites) {
-      appFavourites = getAppFavorites(app);
+      appFavourites = getAppfavourites(app);
       let percent=(appFavourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
       if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
@@ -668,7 +668,7 @@ function refreshSort(){
   if(activeSort) sortContainer.querySelector('.chip[sortid="'+activeSort+'"]').classList.add('active');
   else sortContainer.querySelector('.chip[sortid]').classList.add('active');
 }
-function handleFavoriteClick(icon,app,button){
+function handlefavouriteClick(icon,app,button){
     const favAnimMS = 500; // duration of favourite animation in ms
     // clicked: animate and toggle favourite state immediately for instant feedback
     let favourite = SETTINGS.favourites.find(e => e == app.id);
@@ -676,7 +676,7 @@ function handleFavoriteClick(icon,app,button){
     if (icon) icon.classList.toggle("icon-favourite-active", !favourite);
     if (icon) icon.classList.add("favoriteAnim");
     // update visible count optimistically (always update, even if 0)
-    let cnt = getAppFavorites(app);
+    let cnt = getAppfavourites(app);
     let txt = (cnt > 999) ? Math.round(cnt/100)/10+"k" : cnt;
     let countEl = button.querySelector('.fav-count');
     if (countEl) countEl.textContent = String(txt);
@@ -877,7 +877,7 @@ function refreshLibrary(options) {
           if (err != "") showToast("Failed, "+err, "error");
         });
       } else if ( button.classList.contains("btn-favourite")) {
-        handleFavoriteClick(icon,app,button);
+        handlefavouriteClick(icon,app,button);
       }
     });
   });
@@ -1156,7 +1156,7 @@ function refreshMyApps() {
         });
       // handle favourites on My Apps page (button has class btn-favourite)
       if (button.classList && button.classList.contains("btn-favourite")) {
-        handleFavoriteClick(icon,app,button);
+        handlefavouriteClick(icon,app,button);
       }
     });
   });
@@ -1399,7 +1399,7 @@ function loadSettings() {
     console.error("Invalid settings");
   }
   // upgrade old settings
-  if(!SETTINGS.appsFavoritedThisSession) SETTINGS.appsFavoritedThisSession = [];
+  if(!SETTINGS.appsfavouritedThisSession) SETTINGS.appsfavouritedThisSession = [];
 }
 /// Save settings
 function saveSettings() {
