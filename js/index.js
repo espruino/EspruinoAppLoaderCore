@@ -8,7 +8,7 @@ const DEFAULTSETTINGS = {
   settime : false, // Always update time when we connect
   favourites : ["launch"],
   language : "",
-  appsFavoritedThisSession : [], // list of apps favourited before database was updated
+  appsfavouritedThisSession : [], // list of apps favourited before database was updated
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
   sendUsageStats: true,  // send usage stats to banglejs.com
   alwaysAllowUpdate : false, //  Always show "reinstall app" button regardless of the version
@@ -501,19 +501,23 @@ function handleAppInterface(app) {
   });
 }
 
-function changeAppFavourite(favourite, app) {
+function changeAppFavourite(favourite, app,refresh=true) {
+  
+  
   if (favourite) {
-    SETTINGS.appsFavoritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
+    SETTINGS.appsfavouritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
   } else {
-    SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
+    SETTINGS.appsfavouritedThisSession = SETTINGS.appsfavouritedThisSession.filter(obj => obj.id !== app.id);
     SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
   }
+  
   saveSettings();
-  refreshLibrary();
-  refreshMyApps();
+  if(refresh) {
+    refreshLibrary();
+    refreshMyApps();
+  }
 }
-
 // ===========================================  Top Navigation
 function showTab(tabname) {
   htmlToArray(document.querySelectorAll("#tab-navigate .tab-item")).forEach(tab => {
@@ -543,6 +547,29 @@ librarySearchInput.addEventListener('input', evt => {
 
 // =========================================== App Info
 
+
+
+
+function getAppfavourites(app){
+  let info = appSortInfo[app.id] || {};
+  // start with whatever number we have in the database (may be undefined -> treat as 0)
+  let appFavourites = (typeof info.favourites === 'number') ? info.favourites : 0;
+  let favsThisSession = SETTINGS.appsfavouritedThisSession.find(obj => obj.id === app.id);
+  if (favsThisSession) {
+    // If the database count changed since we recorded the session-favourite, it means
+    // the server/db has been updated and our optimistic session entry is stale.
+    if (typeof info.favourites === 'number' && info.favourites !== favsThisSession.favs) {
+      // remove stale session entry
+      SETTINGS.appsfavouritedThisSession = SETTINGS.appsfavouritedThisSession.filter(obj => obj.id !== app.id);
+    } else {
+      // otherwise include our optimistic +1 so the UI updates immediately
+      appFavourites += 1;
+    }
+  }
+  return appFavourites;
+}
+
+
 function getAppHTML(app, appInstalled, forInterface) {
   let version = getVersionInfo(app, appInstalled);
   let versionInfo = version.text;
@@ -559,21 +586,11 @@ function getAppHTML(app, appInstalled, forInterface) {
       infoTxt.push(`${info.installs} reported installs (${percentText})`);
     }
     if (info.favourites) {
-      let favsThisSession = SETTINGS.appsFavoritedThisSession.find(obj => obj.id === app.id);
-      let percent=(info.favourites / info.installs * 100).toFixed(0);
+      appFavourites = getAppfavourites(app);
+      let percent=(appFavourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-      if(!info.installs||info.installs<1) {infoTxt.push(`${info.favourites} users favourited`)}
-      else {infoTxt.push(`${info.favourites} users favourited (${percentText})`)}
-      appFavourites = info.favourites;
-      if(favsThisSession){
-        if(info.favourites!=favsThisSession.favs){
-          //database has been updated, remove app from favsThisSession
-          SETTINGS.appsFavoritedThisSession = SETTINGS.appsFavoritedThisSession.filter(obj => obj.id !== app.id);
-        }
-        else{
-          appFavourites += 1; //add one to give the illusion of immediate database changes
-        }
-      }
+      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
+      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`);}
     }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
@@ -585,12 +602,13 @@ function getAppHTML(app, appInstalled, forInterface) {
   let githubLink = Const.APP_SOURCECODE_URL ?
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
   let getAppFavouritesHTML = cnt => {
-    if (!cnt) return "";
-    let txt = (cnt > 999) ? Math.round(cnt/1000)+"k" : cnt;
-    return `<span>${txt}</span>`;
+    // Always show a count (0 if none) and format large numbers with 'k'
+    let n = (cnt && typeof cnt === 'number') ? cnt : 0;
+    let txt = (n > 999) ? Math.round(n/100)/10+"k" : n;
+    return `<span class="fav-count" style="margin-left:-1em;margin-right:0.5em">${txt}</span>`;
   };
 
-  let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile">
+  let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile ${version.canUpdate?'updateTile':''}">
   <div class="tile-icon">
     <figure class="avatar"><img src="apps/${app.icon?`${app.id}/${app.icon}`:"unknown.png"}" alt="${escapeHtml(app.name)}"></figure>
   </div>
@@ -601,8 +619,9 @@ function getAppHTML(app, appInstalled, forInterface) {
     <a href="${appurl}" class="link-copy-url" appid="${app.id}" title="Copy link to app" style="position:absolute;top: 56px;left: -24px;"><img src="core/img/copy-icon.png" alt="Copy link to app"/></a>
   </div>
   <div class="tile-action">`;
+  html += `<div class="pill-container">`;
   if (forInterface=="library") html += `
-    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}">${getAppFavouritesHTML(appFavourites)}</i></button>
+  <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite">${getAppFavouritesHTML(appFavourites)}<i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(SETTINGS.alwaysAllowUpdate && appInstalled) || version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
@@ -610,11 +629,11 @@ function getAppHTML(app, appInstalled, forInterface) {
     <button class="btn btn-link btn-action btn-lg ${appInstalled?"":"d-hide"}" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
     <button class="btn btn-link btn-action btn-lg ${app.custom?"":"d-hide"}" appid="${app.id}" title="Customise and Upload App"><i class="icon icon-menu"></i></button>`;
   if (forInterface=="myapps") html += `
-    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite"><i class="icon icon-favourite${favourite?" icon-favourite-active":""}">${getAppFavouritesHTML(appFavourites)}</i></button>
+    <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite">${getAppFavouritesHTML(appFavourites)}<i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(SETTINGS.alwaysAllowUpdate && appInstalled) || version.canUpdate?'':'d-hide'}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>`;
-  html += "</div>";
+  html += "</div></div>";
   if (forInterface=="library") {
     let screenshots = (app.screenshots || []).filter(s=>s.url);
     if (screenshots.length)
@@ -648,6 +667,23 @@ function refreshSort(){
   sortContainer.querySelector('.active').classList.remove('active');
   if(activeSort) sortContainer.querySelector('.chip[sortid="'+activeSort+'"]').classList.add('active');
   else sortContainer.querySelector('.chip[sortid]').classList.add('active');
+}
+function handlefavouriteClick(icon,app,button){
+  const favAnimMS = 500; // duration of favourite animation in ms
+  // clicked: animate and toggle favourite state immediately for instant feedback
+  let favourite = SETTINGS.favourites.find(e => e == app.id);
+  changeAppFavourite(!favourite, app,false);
+  if (icon) icon.classList.toggle("icon-favourite-active", !favourite);
+  if (icon) icon.classList.add("favoriteAnim");
+  // update visible count optimistically (always update, even if 0)
+  let cnt = getAppfavourites(app);
+  let txt = (cnt > 999) ? Math.round(cnt/100)/10+"k" : cnt;
+  let countEl = button.querySelector('.fav-count');
+  if (countEl) countEl.textContent = String(txt);
+  // ensure animation class is removed after the duration so it can be re-triggered
+  setTimeout(() => {
+    try { if (icon) icon.classList.remove("favoriteAnim"); } catch (e) { console.error(e); }
+  }, favAnimMS);
 }
 // Refill the library with apps
 function refreshLibrary(options) {
@@ -789,7 +825,6 @@ function refreshLibrary(options) {
     visibleApps = visibleApps.slice(0, Const.MAX_APPS_SHOWN-1);
   }
 
-
   panelbody.innerHTML = visibleApps.map((app,idx) => {
     let appInstalled = device.appsInstalled.find(a=>a.id==app.id);
     return getAppHTML(app, appInstalled, "library");
@@ -801,7 +836,7 @@ function refreshLibrary(options) {
   htmlToArray(panelbody.getElementsByTagName("button")).forEach(button => {
     button.addEventListener("click",event => {
       let button = event.currentTarget;
-      let icon = button.firstChild;
+      let icon = (button.querySelector && (button.querySelector('i.icon'))) || button.firstElementChild || button.firstChild;
       let appid = button.getAttribute("appid");
       let app = appNameToApp(appid);
       if (!app) throw new Error("App "+appid+" not found");
@@ -842,8 +877,7 @@ function refreshLibrary(options) {
           if (err != "") showToast("Failed, "+err, "error");
         });
       } else if ( button.classList.contains("btn-favourite")) {
-        let favourite = SETTINGS.favourites.find(e => e == app.id);
-        changeAppFavourite(!favourite, app);
+        handlefavouriteClick(icon,app,button);
       }
     });
   });
@@ -1109,7 +1143,7 @@ function refreshMyApps() {
   htmlToArray(panelbody.getElementsByTagName("button")).forEach(button => {
     button.addEventListener("click",event => {
       let button = event.currentTarget;
-      let icon = button.firstChild;
+      let icon = (button.querySelector && (button.querySelector('i.icon'))) || button.firstElementChild || button.firstChild;
       let appid = button.getAttribute("appid");
       let app = appNameToApp(appid);
       if (!app) throw new Error("App "+appid+" not found");
@@ -1120,9 +1154,9 @@ function refreshMyApps() {
         handleAppInterface(app).catch( err => {
           if (err != "") showToast("Failed, "+err, "error");
         });
-      if (icon.classList.contains("icon-favourite")) {
-        let favourite = SETTINGS.favourites.find(e => e == app.id);
-        changeAppFavourite(!favourite, app);
+      // handle favourites on My Apps page (button has class btn-favourite)
+      if (button.classList && button.classList.contains("btn-favourite")) {
+        handlefavouriteClick(icon,app,button);
       }
     });
   });
@@ -1130,7 +1164,8 @@ function refreshMyApps() {
   let tab = document.querySelector("#tab-myappscontainer a");
   let updateApps = document.querySelector("#myappscontainer .updateapps");
   if (nonCustomAppsToUpdate.length) {
-    updateApps.innerHTML = `Update ${nonCustomAppsToUpdate.length} apps`;
+  
+    updateApps.innerHTML = `Update ${nonCustomAppsToUpdate.length} ${nonCustomAppsToUpdate.length>1?"apps":"app"}`;
     updateApps.classList.remove("hidden");
     updateApps.classList.remove("disabled");
     tab.setAttribute("data-badge", `${device.appsInstalled.length} ⬆${nonCustomAppsToUpdate.length}`);
@@ -1364,7 +1399,7 @@ function loadSettings() {
     console.error("Invalid settings");
   }
   // upgrade old settings
-  if(!SETTINGS.appsFavoritedThisSession) SETTINGS.appsFavoritedThisSession = [];
+  if(!SETTINGS.appsfavouritedThisSession) SETTINGS.appsfavouritedThisSession = [];
 }
 /// Save settings
 function saveSettings() {
