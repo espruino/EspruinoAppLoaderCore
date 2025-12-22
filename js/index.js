@@ -14,6 +14,7 @@ const DEFAULTSETTINGS = {
   alwaysAllowUpdate : false, //  Always show "reinstall app" button regardless of the version
   autoReload: false, //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
   noPackets: false,  // Enable File Upload Compatibility mode (disables binary packet upload)
+  theme: "device" // App Loader theme: light, dark, device
 };
 let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
@@ -24,6 +25,10 @@ let device = {
   connected : false,   // are we connected via BLE right now?
   appsInstalled : []  // list of app {id,version} of installed apps
 };
+
+
+
+
 // FOR TESTING ONLY
 /*let LANGUAGE = {
   "//":"German language translations",
@@ -312,6 +317,15 @@ function iframeSetup(options) {
   // when iframe is loaded, call 'onInit' with info about the device
   iframe.addEventListener("load", function() {
     console.log("IFRAME loaded");
+    // Style custom apps for dark mode
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    if (iframeDoc && iframeDoc.body) {
+      const bgColor = window.matchMedia('(prefers-color-scheme: dark)').matches ? '#2c2c2c' : '#ffffff';
+      const textColor = window.matchMedia('(prefers-color-scheme: dark)').matches ? '#FFFFFF' : '#000000';
+      iframeDoc.body.style.backgroundColor = bgColor;
+      iframeDoc.body.style.color = textColor;
+    }
+    
     /* if we get a message from the iframe (eg asking to send data to Puck), handle it
     otherwise pass to messageHandler because handleCustomApp may want to handle it */
     iframe.contentWindow.addEventListener("message",function(event) {
@@ -431,7 +445,7 @@ function handleCustomApp(appTemplate) {
         </div>
         <div class="modal-body" style="height:100%">
           <div class="content" style="height:100%">
-            <iframe src="apps/${appTemplate.id}/${appTemplate.custom}" style="width:100%;height:100%;border:0px;">
+            <iframe class="modal-iframe" src="apps/${appTemplate.id}/${appTemplate.custom}" style="width:100%;height:100%;border:0px;">
           </div>
         </div>
       </div>
@@ -1399,7 +1413,8 @@ function loadSettings() {
     console.error("Invalid settings");
   }
   // upgrade old settings
-  if(!SETTINGS.appsfavouritedThisSession) SETTINGS.appsfavouritedThisSession = [];
+  if(!SETTINGS.appsfavouritedThisSession) SETTINGS.appsfavouritedThisSession = DEFAULTSETTINGS.appsfavouritedThisSession;
+  if(!SETTINGS.theme) SETTINGS.theme = SETTINGS.theme=DEFAULTSETTINGS.theme;
 }
 /// Save settings
 function saveSettings() {
@@ -1420,6 +1435,25 @@ function settingsCheckbox(id, name) {
     saveSettings();
   });
 }
+function applyTheme(theme){
+
+  if(theme=="dark") document.documentElement.style.colorScheme = 'dark';
+  else if(theme=="light") document.documentElement.style.colorScheme = 'light';
+  else{
+
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    console.log(prefersDark)
+    const theme = prefersDark ? 'dark' : 'light';
+    document.documentElement.style.colorScheme = theme;
+  }
+}
+function repaintSite(){
+  //tricks browser into repainting the site to apply theme changes
+  const body = document.body;
+  body.style.display = 'none';
+  body.offsetHeight; 
+  body.style.display = '';
+}
 settingsCheckbox("settings-pretokenise", "pretokenise");
 settingsCheckbox("settings-minify", "minify");
 settingsCheckbox("settings-settime", "settime");
@@ -1427,6 +1461,25 @@ settingsCheckbox("settings-alwaysAllowUpdate", "alwaysAllowUpdate");
 settingsCheckbox("settings-autoReload", "autoReload");
 settingsCheckbox("settings-nopacket", "noPackets");
 loadSettings();
+
+selectTheme = document.getElementById("settings-theme");
+// Update theme selector
+selectTheme.value = SETTINGS.theme;
+selectTheme.addEventListener("change",event=>{
+    SETTINGS.theme = event.target.value;
+    saveSettings();
+    applyTheme(event.target.value);
+});
+
+//apply theme on startup
+applyTheme(SETTINGS.theme);
+//in case system theme changes, add a listener to update site theme if in device mode
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  if(SETTINGS.theme=="device"){
+    const newTheme = e.matches ? 'dark' : 'light';
+    document.documentElement.style.colorScheme = newTheme;
+  }
+});
 
 let btn;
 
