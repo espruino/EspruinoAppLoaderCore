@@ -28,7 +28,6 @@ let device = {
 
 
 
-
 // FOR TESTING ONLY
 /*let LANGUAGE = {
   "//":"German language translations",
@@ -320,8 +319,12 @@ function iframeSetup(options) {
     // Style custom apps for dark mode
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     if (iframeDoc && iframeDoc.body) {
-      const bgColor = window.matchMedia('(prefers-color-scheme: dark)').matches ? '#2c2c2c' : '#ffffff';
-      const textColor = window.matchMedia('(prefers-color-scheme: dark)').matches ? '#FFFFFF' : '#000000';
+      var theme=SETTINGS.theme;
+      var prefersDark;
+      if(theme=="device") prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      else prefersDark = (theme=="dark");
+      var bgColor = prefersDark ? '#2c2c2c' : '#ffffff';
+      var textColor = prefersDark ? '#FFFFFF' : '#000000';
       iframeDoc.body.style.backgroundColor = bgColor;
       iframeDoc.body.style.color = textColor;
     }
@@ -445,7 +448,7 @@ function handleCustomApp(appTemplate) {
         </div>
         <div class="modal-body" style="height:100%">
           <div class="content" style="height:100%">
-            <iframe class="modal-iframe" src="apps/${appTemplate.id}/${appTemplate.custom}" style="width:100%;height:100%;border:0px;">
+            <iframe src="apps/${appTemplate.id}/${appTemplate.custom}" style="width:100%;height:100%;border:0px;">
           </div>
         </div>
       </div>
@@ -1414,7 +1417,7 @@ function loadSettings() {
   }
   // upgrade old settings
   if(!SETTINGS.appsfavouritedThisSession) SETTINGS.appsfavouritedThisSession = DEFAULTSETTINGS.appsfavouritedThisSession;
-  if(!SETTINGS.theme) SETTINGS.theme = SETTINGS.theme=DEFAULTSETTINGS.theme;
+  if(!SETTINGS.theme) SETTINGS.theme = DEFAULTSETTINGS.theme;
 }
 /// Save settings
 function saveSettings() {
@@ -1435,25 +1438,20 @@ function settingsCheckbox(id, name) {
     saveSettings();
   });
 }
+function changeThemeVars(theme){
+  document.documentElement.style.colorScheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+
+}
 function applyTheme(theme){
-
-  if(theme=="dark") document.documentElement.style.colorScheme = 'dark';
-  else if(theme=="light") document.documentElement.style.colorScheme = 'light';
+  if(theme=="light" || theme=="dark")changeThemeVars(theme);
   else{
-
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    console.log(prefersDark)
-    const theme = prefersDark ? 'dark' : 'light';
-    document.documentElement.style.colorScheme = theme;
+    const computedTheme = prefersDark ? 'dark' : 'light';
+    changeThemeVars(computedTheme);
   }
 }
-function repaintSite(){
-  //tricks browser into repainting the site to apply theme changes
-  const body = document.body;
-  body.style.display = 'none';
-  body.offsetHeight; 
-  body.style.display = '';
-}
+
 settingsCheckbox("settings-pretokenise", "pretokenise");
 settingsCheckbox("settings-minify", "minify");
 settingsCheckbox("settings-settime", "settime");
@@ -1462,7 +1460,7 @@ settingsCheckbox("settings-autoReload", "autoReload");
 settingsCheckbox("settings-nopacket", "noPackets");
 loadSettings();
 
-selectTheme = document.getElementById("settings-theme");
+const selectTheme = document.getElementById("settings-theme");
 // Update theme selector
 selectTheme.value = SETTINGS.theme;
 selectTheme.addEventListener("change",event=>{
@@ -1477,7 +1475,7 @@ applyTheme(SETTINGS.theme);
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
   if(SETTINGS.theme=="device"){
     const newTheme = e.matches ? 'dark' : 'light';
-    document.documentElement.style.colorScheme = newTheme;
+    changeThemeVars(newTheme);
   }
 });
 
