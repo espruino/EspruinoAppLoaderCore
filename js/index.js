@@ -1465,9 +1465,9 @@ const selectTheme = document.getElementById("settings-theme");
 if(selectTheme){
   selectTheme.value = SETTINGS.theme;
   selectTheme.addEventListener("change",event=>{
-      SETTINGS.theme = event.target.value;
-      saveSettings();
-      applyTheme(event.target.value);
+    SETTINGS.theme = event.target.value;
+    saveSettings();
+    applyTheme(event.target.value);
   });
 
   //apply theme on startup
