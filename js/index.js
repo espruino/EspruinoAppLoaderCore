@@ -319,12 +319,12 @@ function iframeSetup(options) {
     // Style custom apps for dark mode
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     if (iframeDoc && iframeDoc.body) {
-      var theme=SETTINGS.theme;
-      var prefersDark;
+      let theme=SETTINGS.theme;
+      let prefersDark;
       if(theme=="device") prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       else prefersDark = (theme=="dark");
-      var bgColor = prefersDark ? '#2c2c2c' : '#ffffff';
-      var textColor = prefersDark ? '#FFFFFF' : '#000000';
+      let bgColor = prefersDark ? '#2c2c2c' : '#ffffff';
+      let textColor = prefersDark ? '#FFFFFF' : '#000000';
       iframeDoc.body.style.backgroundColor = bgColor;
       iframeDoc.body.style.color = textColor;
     }
