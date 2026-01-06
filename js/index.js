@@ -1461,24 +1461,25 @@ settingsCheckbox("settings-nopacket", "noPackets");
 loadSettings();
 
 const selectTheme = document.getElementById("settings-theme");
-// Update theme selector
-selectTheme.value = SETTINGS.theme;
-selectTheme.addEventListener("change",event=>{
-    SETTINGS.theme = event.target.value;
-    saveSettings();
-    applyTheme(event.target.value);
-});
+// Update theme and selector only if site has the selector present
+if(selectTheme){
+  selectTheme.value = SETTINGS.theme;
+  selectTheme.addEventListener("change",event=>{
+      SETTINGS.theme = event.target.value;
+      saveSettings();
+      applyTheme(event.target.value);
+  });
 
-//apply theme on startup
-applyTheme(SETTINGS.theme);
-//in case system theme changes, add a listener to update site theme if in device mode
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-  if(SETTINGS.theme=="device"){
-    const newTheme = e.matches ? 'dark' : 'light';
-    changeThemeVars(newTheme);
-  }
-});
-
+  //apply theme on startup
+  applyTheme(SETTINGS.theme);
+  //in case system theme changes, add a listener to update site theme if in device mode
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if(SETTINGS.theme=="device"){
+      const newTheme = e.matches ? 'dark' : 'light';
+      changeThemeVars(newTheme);
+    }
+  });
+}
 let btn;
 
 btn = document.getElementById("defaultsettings");
