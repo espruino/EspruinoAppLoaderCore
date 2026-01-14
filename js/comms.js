@@ -323,7 +323,8 @@ const Comms = {
         // Start the upload
         function doUpload() {
           Progress.show({min:0.05, max:0.10}); // 5-10% for progress writing
-          Comms.showMessage(`Installing\n${app.id}...`).
+          var msg = app.id=="fwupdate"?`Updating Firmware...`:`Installing\n${app.name}...`
+          Comms.showMessage(msg).
             then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n", {noWait:true})).
             then(() => {
               doUploadFiles();
@@ -507,7 +508,7 @@ const Comms = {
     /* App Info now doesn't contain .files, so to erase, we need to
     read the info file ourselves. */
     return (options.noReset ? Promise.resolve() : Comms.reset()).
-      then(()=>Comms.showMessage(`Erasing\n${app.id}...`)).
+      then(()=>Comms.showMessage(`Uninstalling\n${app.name}...`)).
       then(()=>options.containsFileList ? app : Comms.getAppInfo(app)).
       then(app=>{
         let cmds = '';
