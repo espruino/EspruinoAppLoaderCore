@@ -509,8 +509,8 @@ const Comms = {
     /* App Info now doesn't contain .files, so to erase, we need to
     read the info file ourselves. */
     return (options.noReset ? Promise.resolve() : Comms.reset()).
-      then(()=>Comms.showMessage(`Uninstalling\n'${app.name}'...`)).
       then(()=>options.containsFileList ? app : Comms.getAppInfo(app)).
+      then(app=>Comms.showMessage(`Uninstalling\n'${app.name}'...`).then(()=>app)).
       then(app=>{
         let cmds = '';
         // remove App files: regular files, exact names only
