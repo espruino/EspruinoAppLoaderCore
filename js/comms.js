@@ -324,7 +324,7 @@ const Comms = {
         function doUpload() {
           Progress.show({min:0.05, max:0.10}); // 5-10% for progress writing
           console.log(JSON.stringify(app));
-          let msg = app.id=="fwupdate"?`Downloading firmware...`:`Installing\n'${app.name}'...`
+          let msg = app.id=="fwupdate"?`Downloading\nfirmware...`:`Installing\n'${app.name}'...`
           Comms.showMessage(msg).
             then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n", {noWait:true})).
             then(() => {
