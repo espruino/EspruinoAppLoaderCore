@@ -29,7 +29,7 @@ const Const = {
   CONNECTION_DEVICE : undefined,
 
   /* The code to upload to the device show a progress bar on the screen (should define a fn. called 'p') */
-  CODE_PROGRESSBAR : "g.drawRect(10,g.getHeight()-16,g.getWidth()-10,g.getHeight()-8).flip();p=x=>g.fillRect(10,g.getHeight()-16,10+(g.getWidth()-20)*x/100,g.getHeight()-8).flip();",
+  CODE_PROGRESSBAR : "g.setColor(g.theme.fg).fillRect({x:10,y:g.getHeight()-18,w:g.getWidth()-20,h:10,r:30}).setColor(g.theme.bg).fillRect({x:11,y:g.getHeight()-17,w:g.getWidth()-22,h:8,r:30}).flip();g.setColor(g.theme.fg);p=x=>g.fillRect({x:11,y:g.getHeight()-17,w:(g.getWidth()-22)*(x/100),h:8,r:30}).flip();",
 
   /* Maximum number of apps shown in the library, then a 'Show more...' entry is added.. */
   MAX_APPS_SHOWN : 30,
