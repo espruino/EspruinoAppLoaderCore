@@ -1083,11 +1083,12 @@ function checkDependencies(app, uploadOptions) {
 
 /* Update an app to latest version.
 if options.noReset is true, don't reset the device before
-if options.noFinish is true, showUploadFinished isn't called (displaying the reboot message) */
+if options.noFinish is true, showUploadFinished isn't called (displaying the reboot message)
+if options.noNewOperation we don't call startOperation as we're already in an op (eg 'Reinstall All Apps') */
 function updateApp(app, options) {
   options = options||{};
   if (app.custom) return customApp(app);
-  return startOperation({name:"Update App"}, () => Comms.getAppInfo(app).then(remove => {
+  let appUpdater = () => Comms.getAppInfo(app).then(remove => {
     // remove = from appid.info, app = from apps.json
     if (remove.files===undefined) remove.files="";
     // no need to remove files which will be overwritten anyway
@@ -1112,7 +1113,9 @@ function updateApp(app, options) {
   ).then((appJSON) => {
     if (appJSON) device.appsInstalled.push(appJSON);
     showToast(`${Utils.formatAppName(app)} Updated!`, "success");
-  }));
+  });
+  if (options.noNewOperation) return appUpdater();
+  else return startOperation({name:"Update App"}, appUpdater);
 }
 
 
