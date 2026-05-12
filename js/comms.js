@@ -120,27 +120,17 @@ const Comms = {
   (eg Bluetooth/USB/Serial1.println("Foo") ) */
   espruinoDevice : undefined,
   // ================================================================================
-  // Show a message on the screen (if available)
-  showMessage : (txt) => {
+  // Show a message on the screen (if available). options is passed to Espruino's E.showMessage
+  showMessage : (txt, options) => {
     console.log(`<COMMS> showMessage ${JSON.stringify(txt)}`);
     if (!Const.HAS_E_SHOWMESSAGE) return Promise.resolve();
-    return Comms.write(`\x10E.showMessage(${JSON.stringify(txt)})\n`, {noWait:true});
+    let opts = options!==undefined ? `,${JSON.stringify(options)}` : "";
+    return Comms.write(`\x10E.showMessage(${JSON.stringify(txt)}${opts})\n`, {noWait:true});
   },
   // When upload is finished, show a message (or reload)
   showUploadFinished : () => {
     if (SETTINGS.autoReload || Const.LOAD_APP_AFTER_UPLOAD || Const.SINGLE_APP_ONLY) return Comms.write("\x10load()\n");
     else return Comms.showMessage(Const.MESSAGE_RELOAD);
-  },
-  // Gets a text command to append to what's being sent to show progress. If progress==undefined, it's the first command, otherwise it's 0..1
-  getProgressCmd : (progress) => {
-    console.log(`<COMMS> getProgressCmd ${progress!==undefined?`${Math.round(progress*100)}%`:"START"}`);
-    if (!Const.HAS_E_SHOWMESSAGE) {
-      if (progress===undefined) return "p=x=>digitalPulse(LED1,1,10);";
-      return "p();";
-    } else {
-      if (progress===undefined) return Const.CODE_PROGRESSBAR;
-      return `p(${Math.round(progress*100)});`
-    }
   },
   // Reset the device, if opt=="wipe" erase any saved code
   reset : (opt) => {
@@ -170,7 +160,6 @@ const Comms = {
     return Comms.write(`\x03\x10reset(${opt=="wipe"?"1":""});\n`).then(rstHandler);
   },
   // Upload a list of newline-separated commands that start with \x10
-  // You should call Comms.write("\x10"+Comms.getProgressCmd()+"\n")) first
   uploadCommandList : (cmds, currentBytes, maxBytes) => {
     // Chould check CRC here if needed instead of returning 'OK'...
     // E.CRC32(require("Storage").read(${JSON.stringify(app.name)}))
@@ -235,7 +224,7 @@ const Comms = {
           }
           // Actually write the command with a 'print OK' at the end, and use responseHandler
           // to deal with the response. If OK we call uploadCmd to upload the next block
-          return Comms.write(`${cmd};${Comms.getProgressCmd(currentBytes / maxBytes)}${Comms.espruinoDevice}.println("OK")\n`,{waitNewLine:true}).then(responseHandler);
+          return Comms.write(`${cmd};${Comms.espruinoDevice}.println("OK")\n`,{waitNewLine:true}).then(responseHandler);
         }
 
         uploadCmd()
@@ -289,14 +278,11 @@ const Comms = {
             if (uploadPacket) {
               let progressMin = 0.1 + (0.9*currentBytes / maxBytes);
               let progressMax = 0.1 + (0.9*(currentBytes+f.content.length) / maxBytes);
-              Progress.show({ percent: 0, min: progressMin,  max: progressMin }); // Don't show progress for sending the status update
-              return Comms.write(`\x10${Comms.getProgressCmd(currentBytes / maxBytes)}\n`, {noWait:true}).then(() => { // update percent bar on Bangle.js screen
-                Progress.show({ percent: 0, min: progressMin,  max: progressMax }); // Show progress for the actual packet upload
-                return Comms.getConnection().espruinoSendFile(f.name, f.content, { // send the file
-                  fs: Const.FILES_IN_FS,
-                  chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
-                  noACK: Const.PACKET_UPLOAD_NOACK
-                });
+              Progress.show({ percent: 0, min: progressMin,  max: progressMax }); // Show progress for the actual packet upload
+              return Comms.getConnection().espruinoSendFile(f.name, f.content, { // send the file
+                fs: Const.FILES_IN_FS,
+                chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
+                noACK: Const.PACKET_UPLOAD_NOACK
               });
             } else {
               return Comms.uploadCommandList(f.cmd, currentBytes, maxBytes);
@@ -323,8 +309,8 @@ const Comms = {
         // Start the upload
         function doUpload() {
           Progress.show({min:0.05, max:0.10}); // 5-10% for progress writing
-          Comms.showMessage(`Installing\n${app.id}...`).
-            then(() => Comms.write("\x10"+Comms.getProgressCmd()+"\n", {noWait:true})).
+          let bytes = fileContents.reduce((b,f)=>b+f.content.length, 0);
+          Comms.showMessage(`Installing\n${app.id}...`,{title:"App Loader", uploadProgress:bytes}).
             then(() => {
               doUploadFiles();
             }).catch((err) => {
@@ -412,6 +398,10 @@ const Comms = {
         if (Comms.getConnection().endpoint && Comms.getConnection().endpoint.name == "Web Bluetooth" && Comms.espruinoDevice!="Bluetooth") {
           console.log("<COMMS> Using Web Bluetooth, forcing Comms.espruinoDevice='Bluetooth'", result);
           Comms.espruinoDevice = "Bluetooth";
+        }
+        if (Comms.getConnection().endpoint && Comms.getConnection().endpoint.name == "Emulator") {
+          console.log("<COMMS> Using Emulator, forcing Comms.espruinoDevice='USB'", result);
+          Comms.espruinoDevice = "USB";
         }
 
         let cmd, finalJS = `JSON.stringify(require("Storage").getStats?require("Storage").getStats():{})+","+E.toJS([process.env.BOARD,process.env.VERSION,process.env.EXPTR,process.env.MODULES,0|getTime(),E.CRC32(getSerial()+(global.NRF?NRF.getAddress():0))]).substr(1)`;
@@ -607,6 +597,7 @@ const Comms = {
     let connection = Comms.getConnection();
     if (!connection) return;
     connection.close();
+    return new Promise(resolve => setTimeout(resolve, 500));
   },
   // call back when the connection state changes
   watchConnectionChange : cb => {
@@ -718,9 +709,7 @@ ${Comms.espruinoDevice}.print("\\xFF");
       });
     } else {
       let cmds = AppInfo.getFileUploadCommands(filename, data);
-      return Comms.write("\x10"+Comms.getProgressCmd()+"\n").then(() =>
-        Comms.uploadCommandList(cmds, 0, cmds.length)
-      );
+      return Comms.uploadCommandList(cmds, 0, cmds.length);
     }
   },
 };
