@@ -46,7 +46,7 @@ let LANGUAGE = undefined;
 https://github.com/espruino/EspruinoAppLoaderCore/issues/67 */
 let currentOperation = Promise.resolve();
 
-/// Start an operation - calls back
+/// Start an operation - calls callback which should return a promise, and then returns promise for entire operation
 function startOperation(options, callback) {
   options = options||{};
   if (!options.name) throw new Error("Expecting a name");
@@ -109,7 +109,7 @@ function appJSONLoadedHandler() {
  */
 function extractAppNameFromHref(href) {
   if (!href) return null;
-  
+
   try {
     const u = new URL(href);
     href = u.pathname;
@@ -121,7 +121,7 @@ function extractAppNameFromHref(href) {
   // remove leading/trailing slashes
   href = href.replace(/^\/+|\/+$/g, '');
   if (!href) return null; // was just /, throw it out
-  
+
   const parts = href.split('/').filter(p=>p!="");
   // allow './' prefixes by dropping leading '.' segments
   while (parts.length && parts[0] === '.') parts.shift();
@@ -502,8 +502,8 @@ function handleAppInterface(app) {
 }
 
 function changeAppFavourite(favourite, app,refresh=true) {
-  
-  
+
+
   if (favourite) {
     SETTINGS.appsfavouritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
@@ -511,7 +511,7 @@ function changeAppFavourite(favourite, app,refresh=true) {
     SETTINGS.appsfavouritedThisSession = SETTINGS.appsfavouritedThisSession.filter(obj => obj.id !== app.id);
     SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
   }
-  
+
   saveSettings();
   if(refresh) {
     refreshLibrary();
@@ -848,10 +848,17 @@ function refreshLibrary(options) {
           console.error("No entrypoint found for "+appid);
           return;
         }
-        let baseurl = window.location.href.replace(/\/[^/]*$/,"/");
-        baseurl = baseurl.substr(0,baseurl.lastIndexOf("/"));
-        let url = baseurl+"/apps/"+app.id+"/"+file.url;
-        window.open(`https://espruino.com/ide/emulator.html?codeurl=${url}&upload`);
+        if (typeof startCleanEmulator == "function") { // if emulator.js is included
+          // start the emulator and upload the whole app (and dependencies)
+          startCleanEmulator()
+          .then(() => uploadApp(app))
+          .then(() => Comms.write(`load(${JSON.stringify(file.name)});\n`));
+        } else { // fallback - open the Web IDE
+          let baseurl = window.location.href.replace(/\/[^/]*$/,"/");
+          baseurl = baseurl.substr(0,baseurl.lastIndexOf("/"));
+          let url = baseurl+"/apps/"+app.id+"/"+file.url;
+          window.open(`https://espruino.com/ide/emulator.html?codeurl=${url}&upload`);
+        }
       } else if (icon.classList.contains("icon-upload")) {
         // upload
         icon.classList.remove("icon-upload");
@@ -923,7 +930,9 @@ function showScreenshots(appId) {
 
 // =========================================== My Apps
 
-/** Upload the given app to the device - may prompt user for dependencies */
+/** Upload the given app to the device - may prompt user for dependencies
+ * options = {force:bool} - if true, skip the confirmation prompts for defaultconfig apps
+ */
 function uploadApp(app, options) {
   options = options||{};
   if (app.type == "defaultconfig" && !options.force) {
@@ -1153,7 +1162,7 @@ function refreshMyApps() {
       // check icon to figure out what we should do
       if (icon.classList.contains("icon-delete")) removeApp(app);
       if (icon.classList.contains("icon-refresh")) updateApp(app);
-      if (icon.classList.contains("icon-interface")) 
+      if (icon.classList.contains("icon-interface"))
         handleAppInterface(app).catch( err => {
           if (err != "") showToast("Failed, "+err, "error");
         });
@@ -1167,7 +1176,7 @@ function refreshMyApps() {
   let tab = document.querySelector("#tab-myappscontainer a");
   let updateApps = document.querySelector("#myappscontainer .updateapps");
   if (nonCustomAppsToUpdate.length) {
-  
+
     updateApps.innerHTML = `Update ${nonCustomAppsToUpdate.length} ${nonCustomAppsToUpdate.length>1?"apps":"app"}`;
     updateApps.classList.remove("hidden");
     updateApps.classList.remove("disabled");
