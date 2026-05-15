@@ -944,7 +944,7 @@ function uploadApp(app, options) {
 
   return startOperation({name:"App Upload"}, () => getInstalledApps().then(()=>{
     if (device.appsInstalled.some(i => i.id === app.id)) {
-      return updateApp(app);
+      return updateApp(app, {noNewOperation:true /*in 'App Upload'*/});
     }
     return checkDependencies(app)
       .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
