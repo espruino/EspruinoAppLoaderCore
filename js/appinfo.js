@@ -311,6 +311,13 @@ let AppInfo = {
         json.src = app.id+".app.js";
       if (fileContents.find(f=>f.name==app.id+".img"))
         json.icon = app.id+".img";
+      if (Const.FILES_IN_FS) { // in FS, files are in subfolders
+        let f;
+        if ((f=fileContents.find(f=>f.name.toLowerCase().endsWith("app.js"))))
+          json.src = f.name;
+        if ((f=fileContents.find(f=>f.name.toLowerCase().endsWith(app.id+".img"))))
+          json.icon = f.name;
+      }
       if (app.sortorder) json.sortorder = app.sortorder;
       if (app.version) json.version = app.version;
       if (app.tags) json.tags = app.tags;
