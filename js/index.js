@@ -211,9 +211,8 @@ if (Const.APP_DATES_CSV) httpGet(Const.APP_DATES_CSV).then(csv=>{
     appSortInfo[key].created = parseDate(l[1]);
     appSortInfo[key].modified = parseDate(l[2]);
   });
-  document.querySelector(".sort-nav").classList.remove("hidden");
-  document.querySelector(".sort-nav label[sortid='created']").classList.remove("hidden");
-  document.querySelector(".sort-nav label[sortid='modified']").classList.remove("hidden");
+  document.querySelector(".sort-nav a[sortid='created']").parentElement.classList.remove("hidden");
+  document.querySelector(".sort-nav a[sortid='modified']").parentElement.classList.remove("hidden");
 }).catch(err=>{
   console.log("No recent.csv - app sort disabled");
 });
@@ -240,9 +239,8 @@ if (Const.APP_USAGE_JSON) httpGet(Const.APP_USAGE_JSON).then(jsonTxt=>{
     if (json.app[key] > appCounts.installs) appCounts.installs = json.app[key];
     appSortInfo[key].installs = json.app[key];
   });
-  document.querySelector(".sort-nav").classList.remove("hidden");
-  document.querySelector(".sort-nav label[sortid='installs']").classList.remove("hidden");
-  document.querySelector(".sort-nav label[sortid='favourites']").classList.remove("hidden");
+  document.querySelector(".sort-nav a[sortid='installs']").parentElement.classList.remove("hidden");
+  document.querySelector(".sort-nav a[sortid='favourites']").parentElement.classList.remove("hidden");
   // actually set to sort on favourites
   if (activeSort != "favourites") {
     activeSort = "favourites";
@@ -644,9 +642,6 @@ function getAppHTML(app, appInstalled, forInterface) {
 
 // =========================================== Library
 
-// Can't use chip.attributes.filterid.value here because Safari/Apple's WebView doesn't handle it
-let chips = Array.from(document.querySelectorAll('.filter-nav .chip')).map(chip => chip.getAttribute("filterid"));
-
 /*
  Filter types:
  .../BangleApps/#blue shows apps having "blue" in app.id or app.tag --> searchType:hash
@@ -664,9 +659,22 @@ let libraryShowAll = false; // perist whether user chose to view all apps
 // Update the sort state to match the current sort value
 function refreshSort(){
   let sortContainer = document.querySelector("#librarycontainer .sort-nav");
-  sortContainer.querySelector('.active').classList.remove('active');
-  if(activeSort) sortContainer.querySelector('.chip[sortid="'+activeSort+'"]').classList.add('active');
-  else sortContainer.querySelector('.chip[sortid]').classList.add('active');
+  let sortToggle = sortContainer.querySelector('.dropdown-toggle span');
+  let sortAnchors = sortContainer.querySelectorAll('.menu-item a');
+  
+  // Find the currently selected sort and update label
+  let activeAnchor = Array.from(sortAnchors).find(a => 
+    a.getAttribute('sortid') === (activeSort || '')
+  );
+  
+  if (activeAnchor && sortToggle) {
+    sortToggle.innerHTML = '<svg class="inline-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6"><path fill-rule="evenodd" d="M6.97 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.25 4.81V16.5a.75.75 0 0 1-1.5 0V4.81L3.53 8.03a.75.75 0 0 1-1.06-1.06l4.5-4.5Zm9.53 4.28a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V7.5a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" /></svg>';
+    if (activeSort === '') {
+      sortToggle.innerHTML += `None`;
+    } else {
+      sortToggle.innerHTML += activeAnchor.textContent;
+    }
+  }
 }
 function handlefavouriteClick(icon,app,button){
   const favAnimMS = 500; // duration of favourite animation in ms
@@ -715,18 +723,25 @@ function refreshLibrary(options) {
       searchChip = searchParams.get("c").toLowerCase();
     }
   }
-  if (searchType === "hash" && chips.indexOf(searchValue)>=0) {
+  if (searchType === "hash") {
+    // Treat URL hash as a chip/filter identifier
+    searchChip = searchValue;
     searchType = "";
     searchValue = "";
-    searchChip = searchValue;
   }
-  // Update the 'chips' to match the current window location
   let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
-  filtersContainer.querySelector('.active').classList.remove('active');
-  if(searchChip) {
-    let hashFilter = filtersContainer.querySelector('.chip[filterid="'+searchChip+'"]');
-    if (hashFilter) hashFilter.classList.add('active');
-  } else filtersContainer.querySelector('.chip[filterid]').classList.add('active');
+  let filterToggle = filtersContainer.querySelector('.dropdown-toggle span');
+  let filterAnchors = filtersContainer.querySelectorAll('.menu-item a');
+  
+  // Find the currently selected filter and update label
+  let activeFilterAnchor = Array.from(filterAnchors).find(a => 
+    a.getAttribute('dt') === (searchChip || '')
+  );
+  
+  if (activeFilterAnchor && filterToggle) {
+    filterToggle.innerHTML = '<svg class="inline-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6"><path fill-rule="evenodd" d="M3.792 2.938A49.069 49.069 0 0 1 12 2.25c2.797 0 5.54.236 8.209.688a1.857 1.857 0 0 1 1.541 1.836v1.044a3 3 0 0 1-.879 2.121l-6.182 6.182a1.5 1.5 0 0 0-.439 1.061v2.927a3 3 0 0 1-1.658 2.684l-1.757.878A.75.75 0 0 1 9.75 21v-5.818a1.5 1.5 0 0 0-.44-1.06L3.13 7.938a3 3 0 0 1-.879-2.121V4.774c0-.897.64-1.683 1.542-1.836Z" clip-rule="evenodd" /></svg>';
+    filterToggle.innerHTML += activeFilterAnchor.textContent;  
+  }
   // update the search box value
   if (!options.dontChangeSearchBox) {
     if (searchType === "full")
@@ -800,14 +815,25 @@ function refreshLibrary(options) {
     }).map(a => a.app);
   }
   // if not otherwise sorted, use 'sort by' option
-  if (!sortedByRelevance)
-    visibleApps.sort(appSorter);
+  if (!sortedByRelevance) {
+    if (activeSort === 'random') {
+      // Shuffle apps for "Explore" mode using Fisher-Yates
+      for (let i = visibleApps.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        let t = visibleApps[i]; visibleApps[i] = visibleApps[j]; visibleApps[j] = t;
+      }
+    } else {
+      visibleApps.sort(appSorter);
+    }
+  }
 
   if (activeSort && !sortedByRelevance) { // only sort if not searching (searching already sorts)
     if (["created","modified","installs","favourites"].includes(activeSort)) {
       visibleApps = visibleApps.sort((a,b) =>
         ((appSortInfo[b.id]||{})[activeSort]||0) -
         ((appSortInfo[a.id]||{})[activeSort]||0));
+    } else if (activeSort === 'random') {
+      // nothing to do - shuffled above
     } else throw new Error("Unknown sort type "+activeSort);
   }
 
@@ -1375,19 +1401,21 @@ connectMyDeviceBtn.addEventListener("click", () => {
 });
 Comms.watchConnectionChange(handleConnectionChange);
 
-// Handle the 'chips'
 let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
 filtersContainer.addEventListener('click', ({ target }) => {
-  if (target.classList.contains('active')) return;
-  let filterName = target.getAttribute('filterid') || '';
-  // Update window URL
+  // Only handle anchor clicks in menu items
+  if (target.tagName !== 'A' || !target.hasAttribute('dt')) return;
+  
+  let filterName = target.getAttribute('dt') || '';
   window.history.replaceState(null, null, "?c=" + filterName);
   refreshLibrary();
 });
 
 let sortContainer = document.querySelector("#librarycontainer .sort-nav");
 sortContainer.addEventListener('click', ({ target }) => {
-  if (target.classList.contains('active')) return;
+  // Only handle anchor clicks in menu items
+  if (target.tagName !== 'A' || !target.hasAttribute('sortid')) return;
+  
   activeSort = target.getAttribute('sortid') || '';
   refreshSort();
   refreshLibrary();
@@ -1439,6 +1467,51 @@ settingsCheckbox("settings-alwaysAllowUpdate", "alwaysAllowUpdate");
 settingsCheckbox("settings-autoReload", "autoReload");
 settingsCheckbox("settings-nopacket", "noPackets");
 loadSettings();
+
+
+function autoAlignMenu(dropdown) {
+  const menu = dropdown.querySelector('.menu');
+  if (!menu) return;
+
+  // Ensure we can measure even if hidden
+  const prevVis = menu.style.visibility;
+  const prevDisp = menu.style.display;
+  const cs = getComputedStyle(menu);
+  if (cs.display === 'none') {
+    menu.style.visibility = 'hidden';
+    menu.style.display = 'block';
+  }
+
+  // Reset to left before measuring
+  menu.classList.remove('align-right');
+
+  const rect = menu.getBoundingClientRect();
+  const overflowRight = rect.right > (window.innerWidth - 8); // 8px margin
+  if (overflowRight) menu.classList.add('align-right');
+
+  // Restore styles
+  menu.style.visibility = prevVis || '';
+  menu.style.display = prevDisp || '';
+}
+
+// Flip on open
+document.addEventListener('click', (e) => {
+  const toggle = e.target.closest('.dropdown-toggle');
+  if (!toggle) return;
+  const dropdown = toggle.closest('.dropdown');
+  if (!dropdown) return;
+
+  // Let the framework open the menu, then align
+  requestAnimationFrame(() => autoAlignMenu(dropdown));
+});
+
+// Keep alignment on resize
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.dropdown .menu').forEach(menu => {
+    const dropdown = menu.closest('.dropdown');
+    if (dropdown) autoAlignMenu(dropdown);
+  });
+});
 
 let btn;
 
