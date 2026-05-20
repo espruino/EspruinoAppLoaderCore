@@ -958,7 +958,7 @@ function uploadApp(app, options) {
         }
         showToast(`${Utils.formatAppName(app)} Uploaded!`, 'success');
       }).catch(err => {
-        showToast(`Upload of ${Utils.formatAppName(app)} failed`,  + err, 'error');
+        showToast(`Upload of ${Utils.formatAppName(app)} failed, `  + err, 'error');
       });
   }));
 }
