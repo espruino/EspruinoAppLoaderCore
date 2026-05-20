@@ -120,7 +120,7 @@ let DEVICEINFO = [
     img : "https://www.espruino.com/img/ESP32_thumb.jpg"
   }
 ];
-if (window.localStorage.getItem("BANGLEJS3")) {
+if ((typeof window !== "undefined") && window.localStorage.getItem("BANGLEJS3")) {
   // type window.localStorage.setItem("BANGLEJS3",true) to enable this for testing
   DEVICEINFO.push({
     id : "BANGLEJS3",
