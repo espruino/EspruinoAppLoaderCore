@@ -12,6 +12,7 @@ const DEFAULTSETTINGS = {
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
   sendUsageStats: true,  // send usage stats to banglejs.com
   alwaysAllowUpdate : false, //  Always show "reinstall app" button regardless of the version
+  alwaysAllowEmulator : false, //  Always show "emulator" button regardless of whether it's supported by the app
   autoReload: false, //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
   noPackets: false,  // Enable File Upload Compatibility mode (disables binary packet upload)
 };
@@ -623,7 +624,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   if (forInterface=="library") html += `
   <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite">${getAppFavouritesHTML(appFavourites)}<i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
-    <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${(SETTINGS.alwaysAllowEmulator || app.allow_emulator)?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(SETTINGS.alwaysAllowUpdate && appInstalled) || version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(!appInstalled && !app.custom)?"":"d-hide"}" appid="${app.id}" title="Upload App"><i class="icon icon-upload"></i></button>
     <button class="btn btn-link btn-action btn-lg ${appInstalled?"":"d-hide"}" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
@@ -1436,6 +1437,7 @@ settingsCheckbox("settings-pretokenise", "pretokenise");
 settingsCheckbox("settings-minify", "minify");
 settingsCheckbox("settings-settime", "settime");
 settingsCheckbox("settings-alwaysAllowUpdate", "alwaysAllowUpdate");
+settingsCheckbox("settings-alwaysAllowEmulator", "alwaysAllowEmulator");
 settingsCheckbox("settings-autoReload", "autoReload");
 settingsCheckbox("settings-nopacket", "noPackets");
 loadSettings();
