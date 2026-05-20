@@ -260,6 +260,11 @@ let AppInfo = {
         // Add app's info JSON
         return AppInfo.createAppJSON(app, fileContents);
       }).then(fileContents => {
+        // check for the need to add compatibility fixes, and add those if needed
+        if (device.id=="BANGLEJS3" && app.supports && app.supports.includes("BANGLEJS3_COMPAT")) {
+          let entrypoint = fileContents.find(f=>f.name==app.id+".app.js");
+          if (entrypoint) entrypoint.content = "Bangle.setLCDMode('176x176');\n" + entrypoint.content;
+        }
         // then map each file to a command to load into storage
         fileContents.forEach(storageFile => {
           // format ready for Espruino

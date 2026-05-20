@@ -59,13 +59,19 @@ let DEVICEINFO = [
     name : "Bangle.js 1",
     features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG"],
     g : { width : 240, height : 240, bpp : 16 },
-    img : "https://www.espruino.com/img/BANGLEJS_thumb.jpg"
+    img : "https://www.espruino.com/img/BANGLEJS_thumb.jpg",
+    link : "https://www.espruino.com/Bangle.js",
+    emulatorURL : "/emu/emu_banglejs1.html",
+    emulatorWin : "innerWidth=290,innerHeight=268,location=0"
   }, {
     id : "BANGLEJS2",
     name : "Bangle.js 2",
     features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG","PRESSURE","TOUCH"],
     g : { width : 176, height : 176, bpp : 3 },
-    img : "https://www.espruino.com/img/BANGLEJS2_thumb.jpg"
+    img : "https://www.espruino.com/img/BANGLEJS2_thumb.jpg",
+    link : "https://www.espruino.com/Bangle.js2",
+    emulatorURL : "/emu/emu_banglejs2.html",
+    emulatorWin : "innerWidth=290,innerHeight=268,location=0"
   }, {
     id : "PUCKJS",
     name : "Puck.js",
@@ -114,6 +120,19 @@ let DEVICEINFO = [
     img : "https://www.espruino.com/img/ESP32_thumb.jpg"
   }
 ];
+if (window.localStorage.getItem("BANGLEJS3")) {
+  // type window.localStorage.setItem("BANGLEJS3",true) to enable this for testing
+  DEVICEINFO.push({
+    id : "BANGLEJS3",
+    name : "Bangle.js 3",
+    features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG","PRESSURE","TOUCH"],
+    g : { width : 240, height : 240, bpp : 6 },
+    img : "https://www.espruino.com/img/BANGLEJS3_thumb.jpg",
+    link : "https://www.espruino.com/Bangle.js3",
+    emulatorURL : "/emu/emu_banglejs3.html",
+    emulatorWin : "innerWidth=290,innerHeight=268,location=0"
+  });
+}
 
 /* When a char is not in Espruino's iso8859-1 codepage, try and use
 these conversions */
