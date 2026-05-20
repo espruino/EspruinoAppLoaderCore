@@ -844,17 +844,20 @@ function refreshLibrary(options) {
       // check icon to figure out what we should do
       if (icon.classList.contains("icon-emulator")) {
         // emulator
-        let file = app.storage.find(f=>f.name.endsWith('.js'));
-        if (!file) {
-          console.error("No entrypoint found for "+appid);
-          return;
-        }
+        let file = app.storage.find(f=>f.name.endsWith('.app.js'));
         if (typeof startCleanEmulator == "function") { // if emulator.js is included
+          let entrypoint = "";
+          if (file) entrypoint = JSON.stringify(file.name);
+          else showToast("No entrypoint found for app. Loading default clock.","warning");
           // start the emulator and upload the whole app (and dependencies)
           startCleanEmulator()
           .then(() => uploadApp(app))
-          .then(() => Comms.write(`load(${JSON.stringify(file.name)});\n`));
+          .then(() => Comms.write(`load(${entrypoint});\n`));
         } else { // fallback - open the Web IDE
+          if (!file) {
+            console.error("No entrypoint found for "+appid);
+            return;
+          }
           let baseurl = window.location.href.replace(/\/[^/]*$/,"/");
           baseurl = baseurl.substr(0,baseurl.lastIndexOf("/"));
           let url = baseurl+"/apps/"+app.id+"/"+file.url;

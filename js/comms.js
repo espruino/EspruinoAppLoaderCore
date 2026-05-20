@@ -500,6 +500,10 @@ const Comms = {
       then(()=>Comms.showMessage(`Erasing\n${app.id}...`)).
       then(()=>options.containsFileList ? app : Comms.getAppInfo(app)).
       then(app=>{
+        if (app===null) {
+          console.warn("Comms.removeApp: App is null - can't remove files");
+          return; // error getting app info - ignore and leave files.
+        }
         let cmds = '';
         // remove App files: regular files, exact names only
         if ("string"!=typeof app.files) {
