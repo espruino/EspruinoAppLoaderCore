@@ -593,6 +593,16 @@ function getAppHTML(app, appInstalled, forInterface) {
       if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
       else {infoTxt.push(`${appFavourites} users favourited (${percentText})`);}
     }
+    if (app.supports) {
+      const devices = {
+        BANGLEJS:"Bangle.js 1",
+        BANGLEJS2:"Bangle.js 2",
+        BANGLEJS3:"Bangle.js 3",
+        BANGLEJS3_COMPAT:"Bangle.js 3 (compatibility mode)"
+      };
+      if (app.supports.every(s => s in devices))
+        infoTxt.push(`Supports ${app.supports.map(d => devices[d]).join(", ")}`);
+    }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
   }
