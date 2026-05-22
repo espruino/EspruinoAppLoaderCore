@@ -1577,5 +1577,5 @@ if (btn) btn.addEventListener("click",event=>{
   document.getElementById("terminalEnable").remove();
   document.querySelector(".editor__canvas").style.display = "inherit";
   Comms.on("data",x=>Espruino.Core.Terminal.outputDataHandler(x))
-  Espruino.Core.Terminal.setInputDataHandler(function(d) { Comms.write(d); })
+  Espruino.Core.Terminal.setInputDataHandler(function(d) { Comms.write(d,{noWait:true}); })
 });
