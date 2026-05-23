@@ -292,6 +292,14 @@ function showReadme(event, appid) {
   }
   httpGet(appPath+app.readme).then(show).catch(()=>show("Failed to load README."));
 }
+function showAppInfo(event, appid) {
+    if (event) event.preventDefault();
+    let app = appNameToApp(appid);
+    let appPath = `apps/${appid}/`;
+    let markedOptions = { baseUrl : appPath };
+    let infoTxt=getAppInfo(app,true);
+    showPrompt(app.name + " App Information", infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "No additional information available", {ok: true,}, false).catch(() => {});
+  }
 function getAppDescription(app) {
   let appPath = `apps/${app.id}/`;
   let markedOptions = { baseUrl : appPath };
@@ -569,56 +577,73 @@ function getAppfavourites(app){
   }
   return appFavourites;
 }
-
+function getAppInfo(app, expanded){
+    // expanded is for prompt, so it shows md formatting and author
+    let infoTxt = [];
+    function bold(txt){
+      if(expanded) return `**${txt}**`;
+      return txt;
+    }
+    if (app.id in appSortInfo) {
+      
+      let info = appSortInfo[app.id];
+      if ("object"==typeof info.modified)
+        infoTxt.push(`${bold("Last update:")} ${(info.modified.toLocaleDateString())}`);
+      if (info.installs){
+        let percent=(info.installs / appCounts.installs * 100).toFixed(0);
+        let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
+        infoTxt.push(`${bold(`${info.installs} reported installs`)} (${percentText})`);
+      }
+      if (info.favourites) {
+        appFavourites = getAppfavourites(app);
+        let percent=(appFavourites / info.installs * 100).toFixed(0);
+        let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
+        if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
+        else {infoTxt.push(`${bold(`${info.favourites} users favorited`)} (${percentText})`);}
+      }
+      if (app.supports) {
+        const devices = {
+          BANGLEJS:"Bangle.js 1",
+          BANGLEJS2:"Bangle.js 2",
+          BANGLEJS3:"Bangle.js 3",
+          BANGLEJS3_COMPAT:"Bangle.js 3 (compatibility mode)"
+        };
+        if (app.supports.every(s => s in devices))
+          infoTxt.push(`${bold("Supports:")} ${app.supports.map(d => devices[d]).join(", ")}`);
+      }
+      if(app.author&&expanded) infoTxt.push(`${bold("Author:")} ${app.author}`);
+      if (infoTxt.length)
+        versionTitle = `title="${infoTxt.join("\n")}"`;
+    }
+    return infoTxt;
+  }
 
 function getAppHTML(app, appInstalled, forInterface) {
   let version = getVersionInfo(app, appInstalled);
   let versionInfo = version.text;
   let versionTitle = '';
   let appFavourites;
-  if (app.id in appSortInfo) {
-    let infoTxt = [];
-    let info = appSortInfo[app.id];
-    if ("object"==typeof info.modified)
-      infoTxt.push(`Last update: ${(info.modified.toLocaleDateString())}`);
-    if (info.installs){
-      let percent=(info.installs / appCounts.installs * 100).toFixed(0);
-      let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
-      infoTxt.push(`${info.installs} reported installs (${percentText})`);
-    }
-    if (info.favourites) {
-      appFavourites = getAppfavourites(app);
-      let percent=(appFavourites / info.installs * 100).toFixed(0);
-      let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
-      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`);}
-    }
-    if (app.supports) {
-      const devices = {
-        BANGLEJS:"Bangle.js 1",
-        BANGLEJS2:"Bangle.js 2",
-        BANGLEJS3:"Bangle.js 3",
-        BANGLEJS3_COMPAT:"Bangle.js 3 (compatibility mode)"
-      };
-      if (app.supports.every(s => s in devices))
-        infoTxt.push(`Supports ${app.supports.map(d => devices[d]).join(", ")}`);
-    }
-    if (infoTxt.length)
-      versionTitle = `title="${infoTxt.join("\n")}"`;
-  }
+  appFavourites = getAppfavourites(app);
+  let infoTxt= getAppInfo(app,false)
+  if (infoTxt.length) versionTitle = `title="${infoTxt.join("\n")}"`;
+  
+  
+  
   if (versionInfo) versionInfo = ` <small ${versionTitle}>(${versionInfo})</small>`;
   let appurl = window.location.origin + window.location.pathname + "?id=" + encodeURIComponent(app.id);
   let readme = `<a class="c-hand" href="${appurl}&readme" onclick="showReadme(event,'${app.id}')">Read more...</a>`;
   let favourite = SETTINGS.favourites.find(e => e == app.id);
   let githubLink = Const.APP_SOURCECODE_URL ?
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
+  let infoLink = Const.APP_SOURCECODE_URL ?
+    `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/info-icon.png" alt="See the code on GitHub"/></a>` : "";
   let getAppFavouritesHTML = cnt => {
     // Always show a count (0 if none) and format large numbers with 'k'
     let n = (cnt && typeof cnt === 'number') ? cnt : 0;
     let txt = (n > 999) ? Math.round(n/100)/10+"k" : n;
     return `<span class="fav-count" style="margin-left:-1em;margin-right:0.5em">${txt}</span>`;
   };
-
+  
   let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile ${version.canUpdate?'updateTile':''}">
   <div class="tile-icon">
     <figure class="avatar"><img src="apps/${app.icon?`${app.id}/${app.icon}`:"unknown.png"}" alt="${escapeHtml(app.name)}"></figure>
@@ -628,6 +653,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     <p class="tile-subtitle">${getAppDescription(app)}${app.readme?`<br/>${readme}`:""}</p>
     ${githubLink}
     <a href="${appurl}" class="link-copy-url" appid="${app.id}" title="Copy link to app" style="position:absolute;top: 56px;left: -24px;"><img src="core/img/copy-icon.png" alt="Copy link to app"/></a>
+    <a class="btn-appinfo" onclick="showAppInfo(event,'${app.id}')" appid="${app.id}" title="Show app information" style="cursor:pointer;position:absolute;top: 76px;left: -25.5px;"><img src="core/img/info-icon.png" alt="Show app information"/></a>
   </div>
   <div class="tile-action">`;
   html += `<div class="pill-container">`;
