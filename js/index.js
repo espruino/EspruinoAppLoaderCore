@@ -295,8 +295,6 @@ function showReadme(event, appid) {
 function showAppInfo(event, appid) {
     if (event) event.preventDefault();
     let app = appNameToApp(appid);
-    let appPath = `apps/${appid}/`;
-    let markedOptions = { baseUrl : appPath };
     let infoTxt=getAppInfo(app,true);
     showPrompt(app.name + " App Information", infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "No additional information available", {ok: true,}, false).catch(() => {});
   }
@@ -578,45 +576,43 @@ function getAppfavourites(app){
   return appFavourites;
 }
 function getAppInfo(app, expanded){
-    // expanded is for prompt, so it shows md formatting and author
-    let infoTxt = [];
-    function bold(txt){
-      if(expanded) return `**${txt}**`;
-      return txt;
-    }
-    if (app.id in appSortInfo) {
-      
-      let info = appSortInfo[app.id];
-      if ("object"==typeof info.modified)
-        infoTxt.push(`${bold("Last update:")} ${(info.modified.toLocaleDateString())}`);
-      if (info.installs){
-        let percent=(info.installs / appCounts.installs * 100).toFixed(0);
-        let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
-        infoTxt.push(`${bold(`${info.installs} reported installs`)} (${percentText})`);
-      }
-      if (info.favourites) {
-        appFavourites = getAppfavourites(app);
-        let percent=(appFavourites / info.installs * 100).toFixed(0);
-        let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-        if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
-        else {infoTxt.push(`${bold(`${info.favourites} users favorited`)} (${percentText})`);}
-      }
-      if (app.supports) {
-        const devices = {
-          BANGLEJS:"Bangle.js 1",
-          BANGLEJS2:"Bangle.js 2",
-          BANGLEJS3:"Bangle.js 3",
-          BANGLEJS3_COMPAT:"Bangle.js 3 (compatibility mode)"
-        };
-        if (app.supports.every(s => s in devices))
-          infoTxt.push(`${bold("Supports:")} ${app.supports.map(d => devices[d]).join(", ")}`);
-      }
-      if(app.author&&expanded) infoTxt.push(`${bold("Author:")} ${app.author}`);
-      if (infoTxt.length)
-        versionTitle = `title="${infoTxt.join("\n")}"`;
-    }
-    return infoTxt;
+  // expanded is for prompt, so it shows md formatting and author
+  let infoTxt = [];
+  function bold(txt){
+    if(expanded) return `**${txt}**`;
+    return txt;
   }
+  if (app.id in appSortInfo) {
+    
+    let info = appSortInfo[app.id];
+    if ("object"==typeof info.modified)
+      infoTxt.push(`${bold("Last update:")} ${(info.modified.toLocaleDateString())}`);
+    if (info.installs){
+      let percent=(info.installs / appCounts.installs * 100).toFixed(0);
+      let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
+      infoTxt.push(`${bold(`${info.installs} reported installs`)} (${percentText})`);
+    }
+    if (info.favourites) {
+      let appFavourites = getAppfavourites(app);
+      let percent=(appFavourites / info.installs * 100).toFixed(0);
+      let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
+      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
+      else {infoTxt.push(`${bold(`${appFavourites} users favourited`)} (${percentText})`);}
+    }
+    if (app.supports) {
+      const devices = {
+        BANGLEJS:"Bangle.js 1",
+        BANGLEJS2:"Bangle.js 2",
+        BANGLEJS3:"Bangle.js 3",
+        BANGLEJS3_COMPAT:"Bangle.js 3 (compatibility mode)"
+      };
+      if (app.supports.every(s => s in devices))
+        infoTxt.push(`${bold("Supports:")} ${app.supports.map(d => devices[d]).join(", ")}`);
+    }
+    if(app.author&&expanded) infoTxt.push(`${bold("Author:")} ${app.author}`);
+  }
+  return infoTxt;
+}
 
 function getAppHTML(app, appInstalled, forInterface) {
   let version = getVersionInfo(app, appInstalled);
@@ -635,8 +631,6 @@ function getAppHTML(app, appInstalled, forInterface) {
   let favourite = SETTINGS.favourites.find(e => e == app.id);
   let githubLink = Const.APP_SOURCECODE_URL ?
     `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/github-icon-sml.png" alt="See the code on GitHub"/></a>` : "";
-  let infoLink = Const.APP_SOURCECODE_URL ?
-    `<a href="${Const.APP_SOURCECODE_URL}/${app.id}" target="_blank" class="link-github"><img src="core/img/info-icon.png" alt="See the code on GitHub"/></a>` : "";
   let getAppFavouritesHTML = cnt => {
     // Always show a count (0 if none) and format large numbers with 'k'
     let n = (cnt && typeof cnt === 'number') ? cnt : 0;
