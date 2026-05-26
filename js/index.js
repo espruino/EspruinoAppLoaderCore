@@ -1508,7 +1508,17 @@ function autoAlignMenu(dropdown) {
   menu.style.visibility = prevVis || '';
   menu.style.display = prevDisp || '';
 }
-
+// Make sure sort dropdown hides any with no data for.
+if (Const.APP_DATES_CSV) httpGet(Const.APP_DATES_CSV).then(csv=>{
+  // ...
+  csv.split("\n").forEach(line=>{
+    // parse lines, build appSortInfo
+  });
+  document.querySelector("#newSort").parentElement.classList.remove("hidden");
+  document.querySelector("#changedSort").parentElement.classList.remove("hidden");
+}).catch(err=>{
+  console.log("No recent.csv - app sort disabled");
+});
 // Flip on open
 document.addEventListener('click', (e) => {
   const toggle = e.target.closest('.dropdown-toggle');
