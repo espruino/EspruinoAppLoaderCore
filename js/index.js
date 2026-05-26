@@ -293,11 +293,11 @@ function showReadme(event, appid) {
   httpGet(appPath+app.readme).then(show).catch(()=>show("Failed to load README."));
 }
 function showAppInfo(event, appid) {
-  if (event) event.preventDefault();
-  let app = appNameToApp(appid);
-  let infoTxt=getAppInfo(app,true);
-  showPrompt(app.name + " App Information", infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "No additional information available", {ok: true,}, false).catch(() => {});
-}
+    if (event) event.preventDefault();
+    let app = appNameToApp(appid);
+    let infoTxt=getAppInfo(app,true);
+    showPrompt(app.name + " App Information", infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "No additional information available", {ok: true,}, false).catch(() => {});
+  }
 function getAppDescription(app) {
   let appPath = `apps/${app.id}/`;
   let markedOptions = { baseUrl : appPath };
@@ -583,8 +583,10 @@ function getAppInfo(app, expanded){
     return txt;
   }
   if (app.id in appSortInfo) {
-    
+  
     let info = appSortInfo[app.id];
+    if ("object"==typeof info.created && expanded)
+      infoTxt.push(`${bold("Created:")} ${(info.created.toLocaleDateString())}`);
     if ("object"==typeof info.modified)
       infoTxt.push(`${bold("Last update:")} ${(info.modified.toLocaleDateString())}`);
     if (info.installs){
@@ -596,9 +598,10 @@ function getAppInfo(app, expanded){
       let appFavourites = getAppfavourites(app);
       let percent=(appFavourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
+      if(!info.installs||info.installs<1) {infoTxt.push(bold(`${appFavourites} users favourited`));}
       else {infoTxt.push(`${bold(`${appFavourites} users favourited`)} (${percentText})`);}
     }
+    if(expanded)infoTxt.push(`${bold("App ID:")} ${app.id}`);
     if (app.supports) {
       const devices = {
         BANGLEJS:"Bangle.js 1",
