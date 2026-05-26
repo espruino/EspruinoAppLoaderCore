@@ -12,6 +12,7 @@ const DEFAULTSETTINGS = {
   bleCompat: false, // 20 byte MTU BLE Compatibility mode
   sendUsageStats: true,  // send usage stats to banglejs.com
   alwaysAllowUpdate : false, //  Always show "reinstall app" button regardless of the version
+  alwaysAllowEmulator : false, //  Always show "emulator" button regardless of whether it's supported by the app
   autoReload: false, //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
   noPackets: false,  // Enable File Upload Compatibility mode (disables binary packet upload)
 };
@@ -46,7 +47,7 @@ let LANGUAGE = undefined;
 https://github.com/espruino/EspruinoAppLoaderCore/issues/67 */
 let currentOperation = Promise.resolve();
 
-/// Start an operation - calls back
+/// Start an operation - calls callback which should return a promise, and then returns promise for entire operation
 function startOperation(options, callback) {
   options = options||{};
   if (!options.name) throw new Error("Expecting a name");
@@ -109,7 +110,7 @@ function appJSONLoadedHandler() {
  */
 function extractAppNameFromHref(href) {
   if (!href) return null;
-  
+
   try {
     const u = new URL(href);
     href = u.pathname;
@@ -121,7 +122,7 @@ function extractAppNameFromHref(href) {
   // remove leading/trailing slashes
   href = href.replace(/^\/+|\/+$/g, '');
   if (!href) return null; // was just /, throw it out
-  
+
   const parts = href.split('/').filter(p=>p!="");
   // allow './' prefixes by dropping leading '.' segments
   while (parts.length && parts[0] === '.') parts.shift();
@@ -500,8 +501,8 @@ function handleAppInterface(app) {
 }
 
 function changeAppFavourite(favourite, app,refresh=true) {
-  
-  
+
+
   if (favourite) {
     SETTINGS.appsfavouritedThisSession.push({"id":app.id,"favs":appSortInfo[app.id]&&appSortInfo[app.id].favourites?appSortInfo[app.id].favourites:0});
     SETTINGS.favourites = SETTINGS.favourites.concat([app.id]);
@@ -509,7 +510,7 @@ function changeAppFavourite(favourite, app,refresh=true) {
     SETTINGS.appsfavouritedThisSession = SETTINGS.appsfavouritedThisSession.filter(obj => obj.id !== app.id);
     SETTINGS.favourites = SETTINGS.favourites.filter(e => e != app.id);
   }
-  
+
   saveSettings();
   if(refresh) {
     refreshLibrary();
@@ -590,6 +591,16 @@ function getAppHTML(app, appInstalled, forInterface) {
       if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
       else {infoTxt.push(`${appFavourites} users favourited (${percentText})`);}
     }
+    if (app.supports) {
+      const devices = {
+        BANGLEJS:"Bangle.js 1",
+        BANGLEJS2:"Bangle.js 2",
+        BANGLEJS3:"Bangle.js 3",
+        BANGLEJS3_COMPAT:"Bangle.js 3 (compatibility mode)"
+      };
+      if (app.supports.every(s => s in devices))
+        infoTxt.push(`Supports ${app.supports.map(d => devices[d]).join(", ")}`);
+    }
     if (infoTxt.length)
       versionTitle = `title="${infoTxt.join("\n")}"`;
   }
@@ -621,7 +632,7 @@ function getAppHTML(app, appInstalled, forInterface) {
   if (forInterface=="library") html += `
   <button class="btn btn-link btn-action btn-lg btn-favourite" appid="${app.id}" title="Favourite">${getAppFavouritesHTML(appFavourites)}<i class="icon icon-favourite${favourite?" icon-favourite-active":""}"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(appInstalled&&app.interface)?"":"d-hide"}" appid="${app.id}" title="Download data from app"><i class="icon icon-interface"></i></button>
-    <button class="btn btn-link btn-action btn-lg ${app.allow_emulator?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
+    <button class="btn btn-link btn-action btn-lg ${(SETTINGS.alwaysAllowEmulator || app.allow_emulator)?"":"d-hide"}" appid="${app.id}" title="Try in Emulator"><i class="icon icon-emulator"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(SETTINGS.alwaysAllowUpdate && appInstalled) || version.canUpdate?"":"d-hide"}" appid="${app.id}" title="Update App"><i class="icon icon-refresh"></i></button>
     <button class="btn btn-link btn-action btn-lg ${(!appInstalled && !app.custom)?"":"d-hide"}" appid="${app.id}" title="Upload App"><i class="icon icon-upload"></i></button>
     <button class="btn btn-link btn-action btn-lg ${appInstalled?"":"d-hide"}" appid="${app.id}" title="Remove App"><i class="icon icon-delete"></i></button>
@@ -869,15 +880,25 @@ function refreshLibrary(options) {
       // check icon to figure out what we should do
       if (icon.classList.contains("icon-emulator")) {
         // emulator
-        let file = app.storage.find(f=>f.name.endsWith('.js'));
-        if (!file) {
-          console.error("No entrypoint found for "+appid);
-          return;
+        let file = app.storage.find(f=>f.name.endsWith('.app.js'));
+        if (typeof startCleanEmulator == "function") { // if emulator.js is included
+          let entrypoint = "";
+          if (file) entrypoint = JSON.stringify(file.name);
+          else showToast("No entrypoint found for app. Loading default clock.","warning");
+          // start the emulator and upload the whole app (and dependencies)
+          startCleanEmulator()
+          .then(() => uploadApp(app))
+          .then(() => Comms.write(`load(${entrypoint});\n`));
+        } else { // fallback - open the Web IDE
+          if (!file) {
+            console.error("No entrypoint found for "+appid);
+            return;
+          }
+          let baseurl = window.location.href.replace(/\/[^/]*$/,"/");
+          baseurl = baseurl.substr(0,baseurl.lastIndexOf("/"));
+          let url = baseurl+"/apps/"+app.id+"/"+file.url;
+          window.open(`https://espruino.com/ide/emulator.html?codeurl=${url}&upload`);
         }
-        let baseurl = window.location.href.replace(/\/[^/]*$/,"/");
-        baseurl = baseurl.substr(0,baseurl.lastIndexOf("/"));
-        let url = baseurl+"/apps/"+app.id+"/"+file.url;
-        window.open(`https://espruino.com/ide/emulator.html?codeurl=${url}&upload`);
       } else if (icon.classList.contains("icon-upload")) {
         // upload
         icon.classList.remove("icon-upload");
@@ -949,7 +970,9 @@ function showScreenshots(appId) {
 
 // =========================================== My Apps
 
-/** Upload the given app to the device - may prompt user for dependencies */
+/** Upload the given app to the device - may prompt user for dependencies
+ * options = {force:bool} - if true, skip the confirmation prompts for defaultconfig apps
+ */
 function uploadApp(app, options) {
   options = options||{};
   if (app.type == "defaultconfig" && !options.force) {
@@ -961,7 +984,7 @@ function uploadApp(app, options) {
 
   return startOperation({name:"App Upload"}, () => getInstalledApps().then(()=>{
     if (device.appsInstalled.some(i => i.id === app.id)) {
-      return updateApp(app);
+      return updateApp(app, {noNewOperation:true /*in 'App Upload'*/});
     }
     return checkDependencies(app)
       .then(()=>Comms.uploadApp(app,{device:device, language:LANGUAGE}))
@@ -971,7 +994,7 @@ function uploadApp(app, options) {
         }
         showToast(`${Utils.formatAppName(app)} Uploaded!`, 'success');
       }).catch(err => {
-        showToast(`Upload of ${Utils.formatAppName(app)} failed`,  + err, 'error');
+        showToast(`Upload of ${Utils.formatAppName(app)} failed, `  + err, 'error');
       });
   }));
 }
@@ -1179,7 +1202,7 @@ function refreshMyApps() {
       // check icon to figure out what we should do
       if (icon.classList.contains("icon-delete")) removeApp(app);
       if (icon.classList.contains("icon-refresh")) updateApp(app);
-      if (icon.classList.contains("icon-interface")) 
+      if (icon.classList.contains("icon-interface"))
         handleAppInterface(app).catch( err => {
           if (err != "") showToast("Failed, "+err, "error");
         });
@@ -1193,7 +1216,7 @@ function refreshMyApps() {
   let tab = document.querySelector("#tab-myappscontainer a");
   let updateApps = document.querySelector("#myappscontainer .updateapps");
   if (nonCustomAppsToUpdate.length) {
-  
+
     updateApps.innerHTML = `Update ${nonCustomAppsToUpdate.length} ${nonCustomAppsToUpdate.length>1?"apps":"app"}`;
     updateApps.classList.remove("hidden");
     updateApps.classList.remove("disabled");
@@ -1455,6 +1478,7 @@ settingsCheckbox("settings-pretokenise", "pretokenise");
 settingsCheckbox("settings-minify", "minify");
 settingsCheckbox("settings-settime", "settime");
 settingsCheckbox("settings-alwaysAllowUpdate", "alwaysAllowUpdate");
+settingsCheckbox("settings-alwaysAllowEmulator", "alwaysAllowEmulator");
 settingsCheckbox("settings-autoReload", "autoReload");
 settingsCheckbox("settings-nopacket", "noPackets");
 loadSettings();
@@ -1626,5 +1650,5 @@ if (btn) btn.addEventListener("click",event=>{
   document.getElementById("terminalEnable").remove();
   document.querySelector(".editor__canvas").style.display = "inherit";
   Comms.on("data",x=>Espruino.Core.Terminal.outputDataHandler(x))
-  Espruino.Core.Terminal.setInputDataHandler(function(d) { Comms.write(d); })
+  Espruino.Core.Terminal.setInputDataHandler(function(d) { Comms.write(d,{noWait:true}); })
 });
