@@ -293,11 +293,11 @@ function showReadme(event, appid) {
   httpGet(appPath+app.readme).then(show).catch(()=>show("Failed to load README."));
 }
 function showAppInfo(event, appid) {
-    if (event) event.preventDefault();
-    let app = appNameToApp(appid);
-    let infoTxt=getAppInfo(app,true);
-    showPrompt(app.name + " App Information", infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "No additional information available", {ok: true,}, false).catch(() => {});
-  }
+  if (event) event.preventDefault();
+  let app = appNameToApp(appid);
+  let infoTxt=getAppInfo(app,true);
+  showPrompt(app.name + " App Information", infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "No additional information available", {ok: true,}, false).catch(() => {});
+}
 function getAppDescription(app) {
   let appPath = `apps/${app.id}/`;
   let markedOptions = { baseUrl : appPath };
