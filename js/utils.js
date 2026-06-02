@@ -29,7 +29,7 @@ const Const = {
   CONNECTION_DEVICE : undefined,
 
   /* The code to upload to the device show a progress bar on the screen (should define a fn. called 'p') */
-  CODE_PROGRESSBAR : "g.setColor(g.theme.fg).fillRect({x:10,y:g.getHeight()-18,w:g.getWidth()-20,h:10,r:30}).setColor(g.theme.bg).fillRect({x:11,y:g.getHeight()-17,w:g.getWidth()-22,h:8,r:30}).flip();g.setColor(g.theme.fg);p=x=>g.fillRect({x:11,y:g.getHeight()-17,w:(g.getWidth()-22)*(x/100),h:8,r:30}).flip();",
+  CODE_PROGRESSBAR : "g.drawRect(10,g.getHeight()-16,g.getWidth()-10,g.getHeight()-8).flip();p=x=>g.fillRect(10,g.getHeight()-16,10+(g.getWidth()-20)*x/100,g.getHeight()-8).flip();",
 
   /* Maximum number of apps shown in the library, then a 'Show more...' entry is added.. */
   MAX_APPS_SHOWN : 30,
@@ -59,13 +59,19 @@ let DEVICEINFO = [
     name : "Bangle.js 1",
     features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG"],
     g : { width : 240, height : 240, bpp : 16 },
-    img : "https://www.espruino.com/img/BANGLEJS_thumb.jpg"
+    img : "https://www.espruino.com/img/BANGLEJS_thumb.jpg",
+    link : "https://www.espruino.com/Bangle.js",
+    emulatorURL : "/emu/emu_banglejs1.html",
+    emulatorWin : "innerWidth=290,innerHeight=268,location=0"
   }, {
     id : "BANGLEJS2",
     name : "Bangle.js 2",
     features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG","PRESSURE","TOUCH"],
     g : { width : 176, height : 176, bpp : 3 },
-    img : "https://www.espruino.com/img/BANGLEJS2_thumb.jpg"
+    img : "https://www.espruino.com/img/BANGLEJS2_thumb.jpg",
+    link : "https://www.espruino.com/Bangle.js2",
+    emulatorURL : "/emu/emu_banglejs2.html",
+    emulatorWin : "innerWidth=290,innerHeight=268,location=0"
   }, {
     id : "PUCKJS",
     name : "Puck.js",
@@ -114,6 +120,19 @@ let DEVICEINFO = [
     img : "https://www.espruino.com/img/ESP32_thumb.jpg"
   }
 ];
+if ((typeof window !== "undefined") && window.localStorage.getItem("BANGLEJS3")) {
+  // type window.localStorage.setItem("BANGLEJS3",true) to enable this for testing
+  DEVICEINFO.push({
+    id : "BANGLEJS3",
+    name : "Bangle.js 3",
+    features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG","PRESSURE","TOUCH"],
+    g : { width : 240, height : 240, bpp : 6 },
+    img : "https://www.espruino.com/img/BANGLEJS3_thumb.jpg",
+    link : "https://www.espruino.com/Bangle.js3",
+    emulatorURL : "/emu/emu_banglejs3.html",
+    emulatorWin : "innerWidth=290,innerHeight=268,location=0"
+  });
+}
 
 /* When a char is not in Espruino's iso8859-1 codepage, try and use
 these conversions */
@@ -360,8 +379,8 @@ function getVersionInfo(appListing, appInstalled) {
   let canUpdate = false;
   function clicky(v) {
     if (appInstalled)
-      return `<a class="c-hand" onclick="showChangeLog('${appListing.id}', '${appInstalled.version}')">${v}</a>`;
-    return `<a class="c-hand" onclick="showChangeLog('${appListing.id}')">${v}</a>`;
+      return `<a class="c-hand" onclick="showAppInfo('${appListing.id}', '${appInstalled.version}')">${v}</a>`;
+    return `<a class="c-hand" onclick="showAppInfo('${appListing.id}')">${v}</a>`;
   }
 
   if (!appInstalled) {
