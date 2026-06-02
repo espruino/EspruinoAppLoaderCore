@@ -255,31 +255,71 @@ if (Const.APP_USAGE_JSON) httpGet(Const.APP_USAGE_JSON).then(jsonTxt=>{
 });
 
 // ===========================================  Top Navigation
-function showChangeLog(appid, installedVersion) {
+
+function getChangeLogText(appid, installedVersion) {
   let app = appNameToApp(appid);
   function show(contents) {
     let shouldEscapeHtml = true;
-    if (contents && installedVersion) {
-      let lines = contents.split("\n");
-      for(let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-        if (line.startsWith(installedVersion)) {
-          line = '<a id="' + installedVersion + '"></a>' + line;
-          lines[i] = line;
+    if (contents) {
+      // keep multi-lined entries together before reversing
+      const rawLines = contents.split("\n");
+      const blocks = [];
+      let currentBlock = [];
+      const headerRegex = /^\s*([^:\s]+)\s*[:\-–—]\s*(.*)$/;
+      for (let i = 0; i < rawLines.length; i++) {
+        const line = rawLines[i].trimEnd();
+
+        if (headerRegex.test(line)) {
+          // If we see a header and we already have a block, push it and start a new one
+          if (currentBlock.length) {
+            blocks.push(currentBlock);
+          }
+          currentBlock = [line];
+        } else {
+          // continue line
+          currentBlock.push(line);
         }
       }
-      contents = lines.join("<br>");
+      if (currentBlock.length) blocks.push(currentBlock);
+
+      blocks.reverse();
+
+      
+      
+      const renderedBlocks = blocks.map(block => {
+        while (block.length && !block[0].trim()) block.shift();
+        while (block.length && !block[block.length - 1].trim()) block.pop();
+        if (!block.length) return "";
+        let header = block[0];
+        
+        const m = header.match(headerRegex);
+        if (m) {
+          const token = m[1];
+          let installedText=installedVersion && installedVersion+"" == token ? " (installed)" : "";
+          
+          const boldToken = /[0-9]/.test(token) ? ('<strong>' + token +installedText+ '</strong>') : token;
+          header = header.replace(headerRegex, (all, t, _rest) => {
+            return all.replace(t, boldToken);
+          });
+
+        }
+        const linesOut = [header].concat(block.slice(1));
+        return linesOut.join("<br/>");
+      });
+      
+      contents = renderedBlocks.join("<br/>");
       shouldEscapeHtml = false;
     }
-    showPrompt(app.name+" ChangeLog",contents,{ok:true}, shouldEscapeHtml).catch(()=>{});
     if (installedVersion) {
       let elem = document.getElementById(installedVersion);
       if (elem) elem.scrollIntoView();
     }
+    return contents;
   }
-  httpGet(`apps/${appid}/ChangeLog`).
+  return httpGet(`apps/${appid}/ChangeLog`).
     then(show).catch(()=>show("No Change Log available"));
 }
+
 function showReadme(event, appid) {
   if (event) event.preventDefault();
   let app = appNameToApp(appid);
@@ -292,6 +332,19 @@ function showReadme(event, appid) {
   }
   httpGet(appPath+app.readme).then(show).catch(()=>show("Failed to load README."));
 }
+function showAppInfo(appid, installedVersion) {
+    let app = appNameToApp(appid);
+    let infoTxt=getAppInfo(app,true);
+    let changelogText;
+      getChangeLogText(appid, installedVersion).then(contents => {
+        changelogText = contents;
+        const infoPart = infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "";
+        const changelogPart = changelogText ? changelogText.replace(/\n/g, "<br/>") : "";
+        const changeLogHeading = changelogPart ? "<hr><strong>ChangeLog:</strong><br>" : "";
+        showPrompt(app.name + " App Information", infoPart + changeLogHeading + changelogPart, {ok: true,}, false).catch(() => {});
+    });
+    
+  }
 function getAppDescription(app) {
   let appPath = `apps/${app.id}/`;
   let markedOptions = { baseUrl : appPath };
@@ -569,30 +622,33 @@ function getAppfavourites(app){
   }
   return appFavourites;
 }
-
-
-function getAppHTML(app, appInstalled, forInterface) {
-  let version = getVersionInfo(app, appInstalled);
-  let versionInfo = version.text;
-  let versionTitle = '';
-  let appFavourites;
+function getAppInfo(app, expanded){
+  // expanded is for prompt, so it shows md formatting and author
+  let infoTxt = [];
+  function bold(txt){
+    if(expanded) return `**${txt}**`;
+    return txt;
+  }
   if (app.id in appSortInfo) {
-    let infoTxt = [];
+  
     let info = appSortInfo[app.id];
+    if ("object"==typeof info.created && expanded)
+      infoTxt.push(`${bold("Created:")} ${(info.created.toLocaleDateString())}`);
     if ("object"==typeof info.modified)
-      infoTxt.push(`Last update: ${(info.modified.toLocaleDateString())}`);
+      infoTxt.push(`${bold("Last update:")} ${(info.modified.toLocaleDateString())}`);
     if (info.installs){
       let percent=(info.installs / appCounts.installs * 100).toFixed(0);
       let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
-      infoTxt.push(`${info.installs} reported installs (${percentText})`);
+      infoTxt.push(`${bold(`${info.installs} reported installs`)} (${percentText})`);
     }
     if (info.favourites) {
-      appFavourites = getAppfavourites(app);
+      let appFavourites = getAppfavourites(app);
       let percent=(appFavourites / info.installs * 100).toFixed(0);
       let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
-      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`);}
+      if(!info.installs||info.installs<1) {infoTxt.push(bold(`${appFavourites} users favourited`));}
+      else {infoTxt.push(`${bold(`${appFavourites} users favourited`)} (${percentText})`);}
     }
+    if(expanded)infoTxt.push(`${bold("App ID:")} ${app.id}`);
     if (app.supports) {
       const devices = {
         BANGLEJS:"Bangle.js 1",
@@ -601,11 +657,24 @@ function getAppHTML(app, appInstalled, forInterface) {
         BANGLEJS3_COMPAT:"Bangle.js 3 (compatibility mode)"
       };
       if (app.supports.every(s => s in devices))
-        infoTxt.push(`Supports ${app.supports.map(d => devices[d]).join(", ")}`);
+        infoTxt.push(`${bold("Supports:")} ${app.supports.map(d => devices[d]).join(", ")}`);
     }
-    if (infoTxt.length)
-      versionTitle = `title="${infoTxt.join("\n")}"`;
+    if(app.author&&expanded) infoTxt.push(`${bold("Author:")} ${app.author}`);
   }
+  return infoTxt;
+}
+
+function getAppHTML(app, appInstalled, forInterface) {
+  let version = getVersionInfo(app, appInstalled);
+  let versionInfo = version.text;
+  let versionTitle = '';
+  let appFavourites;
+  appFavourites = getAppfavourites(app);
+  let infoTxt= getAppInfo(app,false)
+  if (infoTxt.length) versionTitle = `title="${infoTxt.join("\n")}"`;
+  
+  
+  
   if (versionInfo) versionInfo = ` <small ${versionTitle}>(${versionInfo})</small>`;
   let appurl = window.location.origin + window.location.pathname + "?id=" + encodeURIComponent(app.id);
   let readme = `<a class="c-hand" href="${appurl}&readme" onclick="showReadme(event,'${app.id}')">Read more...</a>`;
@@ -618,7 +687,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     let txt = (n > 999) ? Math.round(n/100)/10+"k" : n;
     return `<span class="fav-count" style="margin-left:-1em;margin-right:0.5em">${txt}</span>`;
   };
-
+  
   let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile ${version.canUpdate?'updateTile':''}">
   <div class="tile-icon">
     <figure class="avatar"><img src="apps/${app.icon?`${app.id}/${app.icon}`:"unknown.png"}" alt="${escapeHtml(app.name)}"></figure>
