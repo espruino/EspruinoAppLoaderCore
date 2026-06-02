@@ -240,8 +240,8 @@ if (Const.APP_USAGE_JSON) httpGet(Const.APP_USAGE_JSON).then(jsonTxt=>{
     if (json.app[key] > appCounts.installs) appCounts.installs = json.app[key];
     appSortInfo[key].installs = json.app[key];
   });
-  document.querySelector(".sort-nav a[sortid='installs']").parentElement.classList.remove("hidden");
-  document.querySelector(".sort-nav a[sortid='favourites']").parentElement.classList.remove("hidden");
+  document.querySelector("#newSort").parentElement.classList.remove("hidden");
+  document.querySelector("#changedSort").parentElement.classList.remove("hidden");
   // actually set to sort on favourites
   if (activeSort != "favourites") {
     activeSort = "favourites";
@@ -1508,17 +1508,7 @@ function autoAlignMenu(dropdown) {
   menu.style.visibility = prevVis || '';
   menu.style.display = prevDisp || '';
 }
-// Make sure sort dropdown hides any with no data for.
-if (Const.APP_DATES_CSV) httpGet(Const.APP_DATES_CSV).then(csv=>{
-  // ...
-  csv.split("\n").forEach(line=>{
-    // parse lines, build appSortInfo
-  });
-  document.querySelector("#newSort").parentElement.classList.remove("hidden");
-  document.querySelector("#changedSort").parentElement.classList.remove("hidden");
-}).catch(err=>{
-  console.log("No recent.csv - app sort disabled");
-});
+
 // Flip on open
 document.addEventListener('click', (e) => {
   const toggle = e.target.closest('.dropdown-toggle');
@@ -1651,8 +1641,7 @@ if (btn) btn.addEventListener("click",event=>{
       }
     }));
 });
-if (document.querySelectorAll(".chip").length)
-  console.error("This EspruinoAppLoaderCore expects app types in a drop-down, not chips. See https://github.com/espruino/BangleApps/pull/4150/changes");
+
 // Open terminal button
 if (Espruino.Core.Terminal)
   Espruino.Core.Terminal.OVERRIDE_CONTENTS = "Click here and type to communicate with Bangle.js";
