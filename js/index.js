@@ -261,53 +261,43 @@ function getChangeLogText(appid, installedVersion) {
   function show(contents) {
     let shouldEscapeHtml = true;
     if (contents) {
-      // keep multi-lined entries together before reversing
-      const rawLines = contents.split("\n");
-      const blocks = [];
-      let currentBlock = [];
-      const headerRegex = /^\s*([^:\s]+)\s*[:\-–—]\s*(.*)$/;
-      for (let i = 0; i < rawLines.length; i++) {
-        const line = rawLines[i].trimEnd();
+      const lines = contents.split("\n");
+      const entries = [];
+      let entry = [];
 
-        if (headerRegex.test(line)) {
-          // If we see a header and we already have a block, push it and start a new one
-          if (currentBlock.length) {
-            blocks.push(currentBlock);
-          }
-          currentBlock = [line];
-        } else {
-          // continue line
-          currentBlock.push(line);
+      lines.forEach(line => {
+        let cleanLine = line.trimEnd();
+        let parts = cleanLine.split(":");
+        let token = parts[0].trim();
+        let isHeader = parts.length > 1 && /[0-9]/.test(token);
+
+        if (isHeader && entry.length) {
+          entries.push(entry);
+          entry = [];
         }
-      }
-      if (currentBlock.length) blocks.push(currentBlock);
-
-      blocks.reverse();
-
-      
-      
-      const renderedBlocks = blocks.map(block => {
-        while (block.length && !block[0].trim()) block.shift();
-        while (block.length && !block[block.length - 1].trim()) block.pop();
-        if (!block.length) return "";
-        let header = block[0];
-        
-        const m = header.match(headerRegex);
-        if (m) {
-          const token = m[1];
-          let installedText=installedVersion && installedVersion+"" == token ? " (installed)" : "";
-          
-          const boldToken = /[0-9]/.test(token) ? ('<strong>' + token +installedText+ '</strong>') : token;
-          header = header.replace(headerRegex, (all, t, _rest) => {
-            return all.replace(t, boldToken);
-          });
-
-        }
-        const linesOut = [header].concat(block.slice(1));
-        return linesOut.join("<br/>");
+        entry.push(cleanLine);
       });
-      
-      contents = renderedBlocks.join("<br/>");
+
+      if (entry.length) entries.push(entry);
+      entries.reverse();
+
+      contents = entries.map(entryLines => {
+        while (entryLines.length && !entryLines[0].trim()) entryLines.shift();
+        while (entryLines.length && !entryLines[entryLines.length - 1].trim()) entryLines.pop();
+        if (!entryLines.length) return "";
+
+        let header = entryLines[0];
+        let parts = header.split(":");
+        if (parts.length > 1) {
+          let token = parts[0].trim();
+          let body = ":" + parts.slice(1).join(":");
+          let installedText = installedVersion && installedVersion + "" == token ? " (installed)" : "";
+          if (/[0-9]/.test(token)) header = `<strong>${token}${installedText}</strong>${body}`;
+        }
+
+        entryLines[0] = header;
+        return entryLines.join("<br/>");
+      }).join("<br/>");
       shouldEscapeHtml = false;
     }
     if (installedVersion) {
