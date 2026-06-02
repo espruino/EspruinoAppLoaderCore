@@ -1651,7 +1651,8 @@ if (btn) btn.addEventListener("click",event=>{
       }
     }));
 });
-
+if (document.querySelectorAll(".chip").length)
+  console.error("This EspruinoAppLoaderCore expects app types in a drop-down, not chips. See https://github.com/espruino/BangleApps/pull/4150/changes");
 // Open terminal button
 if (Espruino.Core.Terminal)
   Espruino.Core.Terminal.OVERRIDE_CONTENTS = "Click here and type to communicate with Bangle.js";
