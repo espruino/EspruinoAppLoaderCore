@@ -323,18 +323,18 @@ function showReadme(event, appid) {
   httpGet(appPath+app.readme).then(show).catch(()=>show("Failed to load README."));
 }
 function showAppInfo(appid, installedVersion) {
-    let app = appNameToApp(appid);
-    let infoTxt=getAppInfo(app,true);
-    let changelogText;
-      getChangeLogText(appid, installedVersion).then(contents => {
-        changelogText = contents;
-        const infoPart = infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "";
-        const changelogPart = changelogText ? changelogText.replace(/\n/g, "<br/>") : "";
-        const changeLogHeading = changelogPart ? "<hr><strong>ChangeLog:</strong><br>" : "";
-        showPrompt(app.name + " App Information", infoPart + changeLogHeading + changelogPart, {ok: true,}, false).catch(() => {});
-    });
-    
-  }
+  let app = appNameToApp(appid);
+  let infoTxt=getAppInfo(app,true);
+  let changelogText;
+    getChangeLogText(appid, installedVersion).then(contents => {
+      changelogText = contents;
+      const infoPart = infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "";
+      const changelogPart = changelogText ? changelogText.replace(/\n/g, "<br/>") : "";
+      const changeLogHeading = changelogPart ? "<hr><strong>ChangeLog:</strong><br>" : "";
+      showPrompt(app.name + " App Information", infoPart + changeLogHeading + changelogPart, {ok: true,}, false).catch(() => {});
+  });
+  
+}
 function getAppDescription(app) {
   let appPath = `apps/${app.id}/`;
   let markedOptions = { baseUrl : appPath };
