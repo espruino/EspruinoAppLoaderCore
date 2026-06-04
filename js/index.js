@@ -621,10 +621,6 @@ function getAppInfo(app, expanded){
   if (app.id in appSortInfo) {
   
     let info = appSortInfo[app.id];
-    if ("object"==typeof info.created && expanded)
-      infoTxt.push(`${bold("Created:")} ${(info.created.toLocaleDateString())}`);
-    if ("object"==typeof info.modified)
-      infoTxt.push(`${bold("Last update:")} ${(info.modified.toLocaleDateString())}`);
     if (info.installs){
       let percent=(info.installs / appCounts.installs * 100).toFixed(0);
       let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
@@ -651,6 +647,10 @@ function getAppInfo(app, expanded){
       if (app.supports.every(s => s in devices))
         infoTxt.push(`${bold("Supports:")} ${app.supports.map(d => devices[d]).join(", ")}`);
     }
+    if ("object"==typeof info.created && expanded)
+      infoTxt.push(`${bold("Created:")} ${(info.created.toLocaleDateString())}`);
+    if ("object"==typeof info.modified)
+      infoTxt.push(`${bold("Last updated:")} ${(info.modified.toLocaleDateString())}`);
     if(app.author&&expanded) infoTxt.push(`${bold("Author:")} ${app.author}`);
   }
   return infoTxt;
