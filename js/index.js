@@ -333,7 +333,6 @@ function showAppInfo(appid, installedVersion) {
       const changeLogHeading = changelogPart ? "<hr><strong>ChangeLog:</strong><br>" : "";
       showPrompt(app.name + " App Information", infoPart + changeLogHeading + changelogPart, {ok: true,}, false).catch(() => {});
   });
-  
 }
 function getAppDescription(app) {
   let appPath = `apps/${app.id}/`;
@@ -633,10 +632,13 @@ function getAppInfo(app, expanded){
     }
     if (info.favourites) {
       let appFavourites = getAppfavourites(app);
-      let percent=(appFavourites / info.installs * 100).toFixed(0);
-      let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-      if(!info.installs||info.installs<1) {infoTxt.push(bold(`${appFavourites} users favourited`));}
-      else {infoTxt.push(`${bold(`${appFavourites} users favourited`)} (${percentText})`);}
+      if(info.installs&&info.installs>1){
+        let percent=(appFavourites / info.installs * 100).toFixed(0);
+        let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
+        infoTxt.push(`${bold(`${appFavourites} users favourited`)} (${percentText})`);
+      }else{
+        infoTxt.push(bold(`${appFavourites} users favourited`));
+      }
     }
     if(expanded)infoTxt.push(`${bold("App ID:")} ${app.id}`);
     if (app.supports) {
