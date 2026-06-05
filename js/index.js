@@ -846,8 +846,8 @@ function refreshLibrary(options) {
   }
   // Now do our search, put the values in searchResult
   if (searchValue) {
-    sortedByRelevance = true;
     if (searchType === "hash") {
+      sortedByRelevance = true;
       searchResult = visibleApps.map(app => ({
         app : app,
         relevance :
@@ -861,6 +861,7 @@ function refreshLibrary(options) {
         relevance: (app.id.toLowerCase() == searchValue) ? 1 : 0
       }));
     } else if (searchType === "full" && searchValue) {
+      sortedByRelevance = true;
       searchResult = visibleApps.map(app => ({
         app:app,
         relevance:
@@ -874,24 +875,17 @@ function refreshLibrary(options) {
     } else {
       console.warn("Unknown search type "+searchType, searchValue);
     }
-    // Now finally, filter and sort the search result.
-    let searchMatches = searchResult.filter(a => a.relevance>0);
-    if (activeSort && ["created","modified","installs","favourites"].includes(activeSort)) {
-      searchMatches.sort((a,b) => {
-        let sort = ((appSortInfo[b.app.id]||{})[activeSort]||0) -
-                   ((appSortInfo[a.app.id]||{})[activeSort]||0);
-        if (sort) return sort;
-        return (b.relevance-(0|b.sortorder)) - (a.relevance-(0|a.sortorder));
-      });
-    } else {
-      searchMatches.sort((a,b) => {
-        // sort by relevance and sort order
-        let sort = (b.relevance-(0|b.sortorder)) - (a.relevance-(0|a.sortorder));
-        if (sort) return sort;
-        return 0;
-      });
-    }
-    visibleApps = searchMatches.map(a => a.app);
+    // Now finally, filter, sort based on relevance and set the search result
+    visibleApps = searchResult.filter(a => a.relevance>0).sort((a,b) => {
+      // sort by relevance and sort order
+      let sort = (b.relevance-(0|b.sortorder)) - (a.relevance-(0|a.sortorder));
+      if (sort) return sort;
+      // if relevance is the same, sort by extraSort (eg created, modified, installs, favourites)
+      if (["created","modified","installs","favourites"].includes(activeSort))
+        return ((appSortInfo[b.app.id]||{})[activeSort]||0) -
+               ((appSortInfo[a.app.id]||{})[activeSort]||0);
+      return 0;
+    }).map(a => a.app);
   }
   // if not otherwise sorted, use 'sort by' option
   if (!sortedByRelevance) {
