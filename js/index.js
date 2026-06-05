@@ -727,7 +727,7 @@ function getAppHTML(app, appInstalled, forInterface) {
 */
 
 
-let activeSort = '';
+let activeSort = 'favourites';
 let libraryShowAll = false; // perist whether user chose to view all apps
 // Update the sort state to match the current sort value
 function refreshSort(){
