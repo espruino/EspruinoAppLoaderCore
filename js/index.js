@@ -240,8 +240,9 @@ if (Const.APP_USAGE_JSON) httpGet(Const.APP_USAGE_JSON).then(jsonTxt=>{
     if (json.app[key] > appCounts.installs) appCounts.installs = json.app[key];
     appSortInfo[key].installs = json.app[key];
   });
-  document.querySelector("#newSort").parentElement.classList.remove("hidden");
-  document.querySelector("#changedSort").parentElement.classList.remove("hidden");
+  document.querySelector(".sort-nav").classList.remove("hidden");
+  document.querySelector(".sort-nav label[sortid='installs']").classList.remove("hidden");
+  document.querySelector(".sort-nav label[sortid='favourites']").classList.remove("hidden");
   // actually set to sort on favourites
   if (activeSort != "favourites") {
     activeSort = "favourites";
@@ -253,31 +254,61 @@ if (Const.APP_USAGE_JSON) httpGet(Const.APP_USAGE_JSON).then(jsonTxt=>{
 });
 
 // ===========================================  Top Navigation
-function showChangeLog(appid, installedVersion) {
+
+function getChangeLogText(appid, installedVersion) {
   let app = appNameToApp(appid);
   function show(contents) {
     let shouldEscapeHtml = true;
-    if (contents && installedVersion) {
-      let lines = contents.split("\n");
-      for(let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-        if (line.startsWith(installedVersion)) {
-          line = '<a id="' + installedVersion + '"></a>' + line;
-          lines[i] = line;
+    if (contents) {
+      const lines = contents.split("\n");
+      const entries = [];
+      let entry = [];
+
+      lines.forEach(line => {
+        let cleanLine = line.trimEnd();
+        let parts = cleanLine.split(":");
+        let token = parts[0].trim();
+        let isHeader = parts.length > 1 && /[0-9]/.test(token);
+
+        if (isHeader && entry.length) {
+          entries.push(entry);
+          entry = [];
         }
-      }
-      contents = lines.join("<br>");
+        entry.push(cleanLine);
+      });
+
+      if (entry.length) entries.push(entry);
+      entries.reverse();
+
+      contents = entries.map(entryLines => {
+        while (entryLines.length && !entryLines[0].trim()) entryLines.shift();
+        while (entryLines.length && !entryLines[entryLines.length - 1].trim()) entryLines.pop();
+        if (!entryLines.length) return "";
+
+        let header = entryLines[0];
+        let parts = header.split(":");
+        if (parts.length > 1) {
+          let token = parts[0].trim();
+          let body = ":" + parts.slice(1).join(":");
+          let installedText = installedVersion && installedVersion + "" == token ? " (installed)" : "";
+          if (/[0-9]/.test(token)) header = `<strong>${token}${installedText}</strong>${body}`;
+        }
+
+        entryLines[0] = header;
+        return entryLines.join("<br/>");
+      }).join("<br/>");
       shouldEscapeHtml = false;
     }
-    showPrompt(app.name+" ChangeLog",contents,{ok:true}, shouldEscapeHtml).catch(()=>{});
     if (installedVersion) {
       let elem = document.getElementById(installedVersion);
       if (elem) elem.scrollIntoView();
     }
+    return contents;
   }
-  httpGet(`apps/${appid}/ChangeLog`).
+  return httpGet(`apps/${appid}/ChangeLog`).
     then(show).catch(()=>show("No Change Log available"));
 }
+
 function showReadme(event, appid) {
   if (event) event.preventDefault();
   let app = appNameToApp(appid);
@@ -289,6 +320,18 @@ function showReadme(event, appid) {
     showPrompt(app.name + " Documentation", marked(contents, markedOptions), {ok: true, footer: footerText}, false).catch(() => {});
   }
   httpGet(appPath+app.readme).then(show).catch(()=>show("Failed to load README."));
+}
+function showAppInfo(appid, installedVersion) {
+  let app = appNameToApp(appid);
+  let infoTxt=getAppInfo(app,true);
+  let changelogText;
+  getChangeLogText(appid, installedVersion).then(contents => {
+    changelogText = contents;
+    const infoPart = infoTxt.length>0 ? marked(infoTxt.join("<br>")) : "";
+    const changelogPart = changelogText ? changelogText.replace(/\n/g, "<br/>") : "";
+    const changeLogHeading = changelogPart ? "<hr><strong>ChangeLog:</strong><br>" : "";
+    showPrompt(app.name + " App Information", infoPart + changeLogHeading + changelogPart, {ok: true,}, false).catch(() => {});
+  });
 }
 function getAppDescription(app) {
   let appPath = `apps/${app.id}/`;
@@ -567,30 +610,32 @@ function getAppfavourites(app){
   }
   return appFavourites;
 }
-
-
-function getAppHTML(app, appInstalled, forInterface) {
-  let version = getVersionInfo(app, appInstalled);
-  let versionInfo = version.text;
-  let versionTitle = '';
-  let appFavourites;
+function getAppInfo(app, expanded){
+  // expanded is for prompt, so it shows md formatting and author
+  let infoTxt = [];
+  function bold(txt){
+    if(expanded) return `**${txt}**`;
+    return txt;
+  }
   if (app.id in appSortInfo) {
-    let infoTxt = [];
+  
     let info = appSortInfo[app.id];
-    if ("object"==typeof info.modified)
-      infoTxt.push(`Last update: ${(info.modified.toLocaleDateString())}`);
     if (info.installs){
       let percent=(info.installs / appCounts.installs * 100).toFixed(0);
       let percentText=percent<1?"Less than 1% of all users":percent+"% of all Bangle.js users";
-      infoTxt.push(`${info.installs} reported installs (${percentText})`);
+      infoTxt.push(`${bold(`${info.installs} reported installs`)} (${percentText})`);
     }
     if (info.favourites) {
-      appFavourites = getAppfavourites(app);
-      let percent=(appFavourites / info.installs * 100).toFixed(0);
-      let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
-      if(!info.installs||info.installs<1) {infoTxt.push(`${appFavourites} users favourited`);}
-      else {infoTxt.push(`${appFavourites} users favourited (${percentText})`);}
+      let appFavourites = getAppfavourites(app);
+      if(info.installs&&info.installs>1){
+        let percent=(appFavourites / info.installs * 100).toFixed(0);
+        let percentText=percent>100?"More than 100% of installs":percent+"% of installs";
+        infoTxt.push(`${bold(`${appFavourites} users favourited`)} (${percentText})`);
+      }else{
+        infoTxt.push(bold(`${appFavourites} users favourited`));
+      }
     }
+    if(expanded)infoTxt.push(`${bold("App ID:")} ${app.id}`);
     if (app.supports) {
       const devices = {
         BANGLEJS:"Bangle.js 1",
@@ -599,11 +644,28 @@ function getAppHTML(app, appInstalled, forInterface) {
         BANGLEJS3_COMPAT:"Bangle.js 3 (compatibility mode)"
       };
       if (app.supports.every(s => s in devices))
-        infoTxt.push(`Supports ${app.supports.map(d => devices[d]).join(", ")}`);
+        infoTxt.push(`${bold("Supports:")} ${app.supports.map(d => devices[d]).join(", ")}`);
     }
-    if (infoTxt.length)
-      versionTitle = `title="${infoTxt.join("\n")}"`;
+    if ("object"==typeof info.created && expanded)
+      infoTxt.push(`${bold("Created:")} ${(info.created.toLocaleDateString())}`);
+    if ("object"==typeof info.modified)
+      infoTxt.push(`${bold("Last updated:")} ${(info.modified.toLocaleDateString())}`);
+    if(app.author&&expanded) infoTxt.push(`${bold("Author:")} ${app.author}`);
   }
+  return infoTxt;
+}
+
+function getAppHTML(app, appInstalled, forInterface) {
+  let version = getVersionInfo(app, appInstalled);
+  let versionInfo = version.text;
+  let versionTitle = '';
+  let appFavourites;
+  appFavourites = getAppfavourites(app);
+  let infoTxt= getAppInfo(app,false)
+  if (infoTxt.length) versionTitle = `title="${infoTxt.join("\n")}"`;
+  
+  
+  
   if (versionInfo) versionInfo = ` <small ${versionTitle}>(${versionInfo})</small>`;
   let appurl = window.location.origin + window.location.pathname + "?id=" + encodeURIComponent(app.id);
   let readme = `<a class="c-hand" href="${appurl}&readme" onclick="showReadme(event,'${app.id}')">Read more...</a>`;
@@ -616,7 +678,7 @@ function getAppHTML(app, appInstalled, forInterface) {
     let txt = (n > 999) ? Math.round(n/100)/10+"k" : n;
     return `<span class="fav-count" style="margin-left:-1em;margin-right:0.5em">${txt}</span>`;
   };
-
+  
   let html = `<div class="tile column col-6 col-sm-12 col-xs-12 app-tile ${version.canUpdate?'updateTile':''}">
   <div class="tile-icon">
     <figure class="avatar"><img src="apps/${app.icon?`${app.id}/${app.icon}`:"unknown.png"}" alt="${escapeHtml(app.name)}"></figure>
@@ -680,7 +742,7 @@ function refreshSort(){
   
   if (activeAnchor && sortToggle) {
     sortToggle.innerHTML = '<svg class="inline-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6"><path fill-rule="evenodd" d="M6.97 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.25 4.81V16.5a.75.75 0 0 1-1.5 0V4.81L3.53 8.03a.75.75 0 0 1-1.06-1.06l4.5-4.5Zm9.53 4.28a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V7.5a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" /></svg>';
-    if (activeSort === '') {
+    if (activeSort === ''||!activeSort) {
       sortToggle.innerHTML += `None`;
     } else {
       sortToggle.innerHTML += activeAnchor.textContent;
@@ -1482,6 +1544,7 @@ settingsCheckbox("settings-alwaysAllowEmulator", "alwaysAllowEmulator");
 settingsCheckbox("settings-autoReload", "autoReload");
 settingsCheckbox("settings-nopacket", "noPackets");
 loadSettings();
+refreshSort();
 
 
 function autoAlignMenu(dropdown) {
@@ -1509,15 +1572,33 @@ function autoAlignMenu(dropdown) {
   menu.style.display = prevDisp || '';
 }
 
-// Flip on open
+function closeDropdowns() {
+  document.querySelectorAll('.dropdown.active').forEach(dropdown => {
+    dropdown.classList.remove('active');
+    const toggle = dropdown.querySelector('.dropdown-toggle');
+    if (toggle && document.activeElement === toggle) {
+      requestAnimationFrame(() => toggle.blur());
+    }
+  });
+}
+
+// Toggle dropdowns on header click
 document.addEventListener('click', (e) => {
   const toggle = e.target.closest('.dropdown-toggle');
-  if (!toggle) return;
-  const dropdown = toggle.closest('.dropdown');
-  if (!dropdown) return;
+  if (toggle) {
+    e.preventDefault();
+    const dropdown = toggle.closest('.dropdown');
+    if (!dropdown) return;
+    const shouldOpen = !dropdown.classList.contains('active');
+    closeDropdowns();
+    if (shouldOpen) {
+      dropdown.classList.add('active');
+      requestAnimationFrame(() => autoAlignMenu(dropdown));
+    }
+    return;
+  }
 
-  // Let the framework open the menu, then align
-  requestAnimationFrame(() => autoAlignMenu(dropdown));
+  closeDropdowns();
 });
 
 // Keep alignment on resize
