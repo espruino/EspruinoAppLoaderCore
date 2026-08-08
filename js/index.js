@@ -15,6 +15,7 @@ const DEFAULTSETTINGS = {
   alwaysAllowEmulator : false, //  Always show "emulator" button regardless of whether it's supported by the app
   autoReload: false, //  Automatically reload watch after app App Loader actions (removes "Hold button" prompt)
   noPackets: false,  // Enable File Upload Compatibility mode (disables binary packet upload)
+  theme: "device" // App Loader theme: light, dark, device
 };
 let SETTINGS = JSON.parse(JSON.stringify(DEFAULTSETTINGS)); // clone
 
@@ -25,6 +26,9 @@ let device = {
   connected : false,   // are we connected via BLE right now?
   appsInstalled : []  // list of app {id,version} of installed apps
 };
+
+
+
 // FOR TESTING ONLY
 /*let LANGUAGE = {
   "//":"German language translations",
@@ -110,7 +114,7 @@ function appJSONLoadedHandler() {
  */
 function extractAppNameFromHref(href) {
   if (!href) return null;
-
+  
   try {
     const u = new URL(href);
     href = u.pathname;
@@ -122,7 +126,7 @@ function extractAppNameFromHref(href) {
   // remove leading/trailing slashes
   href = href.replace(/^\/+|\/+$/g, '');
   if (!href) return null; // was just /, throw it out
-
+  
   const parts = href.split('/').filter(p=>p!="");
   // allow './' prefixes by dropping leading '.' segments
   while (parts.length && parts[0] === '.') parts.shift();
@@ -1490,6 +1494,7 @@ connectMyDeviceBtn.addEventListener("click", () => {
 });
 Comms.watchConnectionChange(handleConnectionChange);
 
+// Handle the 'chips'
 let filtersContainer = document.querySelector("#librarycontainer .filter-nav");
 filtersContainer.addEventListener('click', ({ target }) => {
   // Only handle anchor clicks in menu items
@@ -1528,7 +1533,8 @@ function loadSettings() {
     console.error("Invalid settings");
   }
   // upgrade old settings
-  if(!SETTINGS.appsfavouritedThisSession) SETTINGS.appsfavouritedThisSession = [];
+  if(!SETTINGS.appsfavouritedThisSession) SETTINGS.appsfavouritedThisSession = DEFAULTSETTINGS.appsfavouritedThisSession;
+  if(!SETTINGS.theme) SETTINGS.theme = DEFAULTSETTINGS.theme;
 }
 /// Save settings
 function saveSettings() {
@@ -1549,6 +1555,20 @@ function settingsCheckbox(id, name) {
     saveSettings();
   });
 }
+function changeThemeVars(theme){
+  document.documentElement.style.colorScheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+
+}
+function applyTheme(theme){
+  if(theme=="light" || theme=="dark")changeThemeVars(theme);
+  else{
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const computedTheme = prefersDark ? 'dark' : 'light';
+    changeThemeVars(computedTheme);
+  }
+}
+
 settingsCheckbox("settings-pretokenise", "pretokenise");
 settingsCheckbox("settings-minify", "minify");
 settingsCheckbox("settings-settime", "settime");
@@ -1559,7 +1579,23 @@ settingsCheckbox("settings-nopacket", "noPackets");
 loadSettings();
 refreshSort();
 
-
+const selectTheme = document.getElementById("settings-theme");
+// Update theme selector
+selectTheme.value = SETTINGS.theme;
+selectTheme.addEventListener("change",event=>{
+  SETTINGS.theme = event.target.value;
+  saveSettings();
+  applyTheme(event.target.value);
+});
+//apply theme on startup
+applyTheme(SETTINGS.theme);
+//in case system theme changes, add a listener to update site theme if in device mode
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  if(SETTINGS.theme=="device"){
+    const newTheme = e.matches ? 'dark' : 'light';
+    changeThemeVars(newTheme);
+  }
+});
 function autoAlignMenu(dropdown) {
   const menu = dropdown.querySelector('.menu');
   if (!menu) return;

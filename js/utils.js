@@ -59,7 +59,7 @@ let DEVICEINFO = [
     name : "Bangle.js 1",
     features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG"],
     g : { width : 240, height : 240, bpp : 16 },
-    img : "https://www.espruino.com/img/BANGLEJS_thumb.jpg",
+    img : "img/bjs1-thumb.png",
     link : "https://www.espruino.com/Bangle.js",
     emulatorURL : "/emu/emu_banglejs1.html",
     emulatorWin : "innerWidth=290,innerHeight=268,location=0"
@@ -68,7 +68,7 @@ let DEVICEINFO = [
     name : "Bangle.js 2",
     features : ["BLE","BLEHID","GRAPHICS","ACCEL","MAG","PRESSURE","TOUCH"],
     g : { width : 176, height : 176, bpp : 3 },
-    img : "https://www.espruino.com/img/BANGLEJS2_thumb.jpg",
+    img : "img/bjs2-thumb.png",
     link : "https://www.espruino.com/Bangle.js2",
     emulatorURL : "/emu/emu_banglejs2.html",
     emulatorWin : "innerWidth=290,innerHeight=268,location=0"
