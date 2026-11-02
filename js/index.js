@@ -1188,6 +1188,11 @@ function updateApp(app, options) {
   if (app.custom) return customApp(app);
   let appUpdater = () => Comms.getAppInfo(app).then(remove => {
     // remove = from appid.info, app = from apps.json
+    if (!remove) {
+      // The old .info file was corrupt - just overwrite the app's files
+      console.warn(`Could not read ${app.id}.info - overwriting files instead of removing them`);
+      return;
+    }
     if (remove.files===undefined) remove.files="";
     // no need to remove files which will be overwritten anyway
     remove.files = remove.files.split(',')

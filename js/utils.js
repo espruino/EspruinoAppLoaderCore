@@ -211,6 +211,14 @@ function convertStringToISO8859_1(originalStr) {
   return translatedStr;
 }
 
+/// Keep Unicode characters as-is so Bangle.js can use the 'Intl' font
+/// (installed by the font apps) for languages such as Czech that use
+/// characters outside ISO8859-1.
+function convertStringToUnicode(originalStr) {
+  // Most fonts don't contain non-breaking spaces, so use normal ones
+  return originalStr.replace(/[\u00A0\u202F]/g, " ");
+}
+
 function escapeHtml(text) {
   let map = {
     '&': '&amp;',
@@ -551,6 +559,7 @@ let Utils = {
   DEVICEINFO : DEVICEINFO,
   CODEPAGE_CONVERSIONS : CODEPAGE_CONVERSIONS,
   convertStringToISO8859_1 : convertStringToISO8859_1,
+  convertStringToUnicode : convertStringToUnicode,
   escapeHtml : escapeHtml,
   globToRegex : globToRegex,
   htmlToArray : htmlToArray,
