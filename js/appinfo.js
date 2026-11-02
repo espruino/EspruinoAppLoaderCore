@@ -5,23 +5,47 @@ if ("undefined"!=typeof module) {
   heatshrink = require("../../webtools/heatshrink.js");
 }
 
+/// Convert a JS string to a binary string containing UTF-8 bytes
+function stringToUTF8(str) {
+  let out = "";
+  for (let i=0;i<str.length;i++) {
+    let ch = str.charCodeAt(i);
+    if (ch < 0x80)
+      out += String.fromCharCode(ch);
+    else if (ch < 0x800)
+      out += String.fromCharCode(0xC0|(ch>>6), 0x80|(ch&0x3F));
+    else if (ch < 0xD800 || ch >= 0xE000)
+      out += String.fromCharCode(0xE0|(ch>>12), 0x80|((ch>>6)&0x3F), 0x80|(ch&0x3F));
+    else { // surrogate pair
+      let ch2 = str.charCodeAt(++i);
+      let cp = 0x10000 + ((ch&0x3FF)<<10) + (ch2&0x3FF);
+      out += String.fromCharCode(0xF0|(cp>>18), 0x80|((cp>>12)&0x3F), 0x80|((cp>>6)&0x3F), 0x80|(cp&0x3F));
+    }
+  }
+  return out;
+}
+
 // Converts a string into most efficient way to send to Espruino (either json, base64, or compressed base64)
 function asJSExpr(txt, options) {
   /* options = {
     noHeatshrink : bool // don't allow heatshrink - this ensures the result will always be a String (Heatshrink makes an ArrayBuffer)
   }*/
   options = options||{};
-  let isBinary = false;
+  let isBinary = false, hasUnicode = false;
   for (let i=0;i<txt.length;i++) {
     let ch = txt.charCodeAt(i);
     if (ch==0 || ch>127) isBinary=true;
+    if (ch>255) hasUnicode=true;
   }
+  // Strings with unicode characters need encoding as UTF-8 before base64,
+  // otherwise btoa() would just keep the low byte of each character.
+  let binaryTxt = hasUnicode ? stringToUTF8(txt) : txt;
   let json = JSON.stringify(txt);
-  let b64 = "atob("+JSON.stringify(Espruino.Core.Utils.btoa(txt))+")";
+  let b64 = "atob("+JSON.stringify(Espruino.Core.Utils.btoa(binaryTxt))+")";
   let js = (isBinary || (b64.length < json.length)) ? b64 : json;
-  if (txt.length>64 && typeof heatshrink !== "undefined" && !options.noHeatshrink) {
-    let ua = new Uint8Array(txt.length);
-    for (let i=0;i<txt.length;i++)  ua[i] = txt.charCodeAt(i);
+  if (binaryTxt.length>64 && typeof heatshrink !== "undefined" && !options.noHeatshrink) {
+    let ua = new Uint8Array(binaryTxt.length);
+    for (let i=0;i<binaryTxt.length;i++)  ua[i] = binaryTxt.charCodeAt(i);
     let c = heatshrink.compress(ua);
     if (c.length) {
       // FIXME - why can heatshrink fail? Assert at heatshrink_wrapper.c:42 / heatshrink_wrapper.c:36
@@ -39,15 +63,18 @@ function asJSExpr(txt, options) {
 }
 
 function translateString(options, app, value) {
+  // E.showMenu uses the literal '< Back' key to detect the back action, so
+  // it must never be translated.
+  if (value==="< Back") return undefined;
   let language = options.language;
   // strip out formatting at beginning/end
   let match = value.match(/^([.<>\- /\n/]*)([^<>!?]*?)([.<>!?\- /\n/]*)$/);
   let textToTranslate = match ? match[2] : value;
   // now translate
   if (language[app.id] && language[app.id][textToTranslate]) {
-    return match[1]+language[app.id][textToTranslate]+match[3];
+    return match ? match[1]+language[app.id][textToTranslate]+match[3] : language[app.id][textToTranslate];
   } else if (language.GLOBAL[textToTranslate]) {
-    return match[1]+language.GLOBAL[textToTranslate]+match[3];
+    return match ? match[1]+language.GLOBAL[textToTranslate]+match[3] : language.GLOBAL[textToTranslate];
   } else {
     // Unhandled translation...
     //console.log("Untranslated ",tokenString);
@@ -70,8 +97,12 @@ function translateJS(options, app, code) {
       let translation = translateString(options,app, tok.value);
       if (translation!==undefined) {
         // remap any chars that we don't think we can display in Espruino's
-        // built in fonts.
-        translation = Utils.convertStringToISO8859_1(translation);
+        // built in fonts - unless this language uses the Intl font, in which
+        // case we keep Unicode so g.findFont can select the right font.
+        if (options.language["//charset"]==="utf8")
+          translation = Utils.convertStringToUnicode(translation);
+        else
+          translation = Utils.convertStringToISO8859_1(translation);
         tokenString = Utils.toJSString(translation);
       }
     } else if (tok.str.startsWith("`")) {
@@ -277,7 +308,11 @@ let AppInfo = {
             storageFile.cmd = `\x10require('Storage').write(${JSON.stringify(storageFile.name)},${js});`;
           } else {
             storageFile.cmd = AppInfo.getFileUploadCommands(storageFile.name, storageFile.content);
-            storageFile.canUploadPacket = true; // it's just treated as a normal file - so we can upload as packets (faster)
+            storageFile.canUploadPacket = true; // it's just treated like a normal file - so we can upload as packets (faster)
+            // Packet upload sends raw bytes. Convert Unicode text (and .info
+            // files) to UTF-8 bytes so Czech characters survive the upload.
+            if (storageFile.name.endsWith(".info") || /[^\x00-\xFF]/.test(storageFile.content))
+              storageFile.packetContent = stringToUTF8(storageFile.content);
           }
           // if we're not supposed to overwrite this file... this gets set
           // automatically for data files that are loaded
@@ -448,10 +483,17 @@ let AppInfo = {
       }
     }
     // could check provides_widgets here, but hey, why can't the user have 2 battery widgets if they want?
+    // If the selected language needs Unicode, make sure an Intl font is installed
+    let dependencies = app.dependencies;
+    if (uploadOptions.language && uploadOptions.language["//requiresFont"] &&
+        device && device.id!="BANGLEJS" &&
+        !(app.provides_modules && app.provides_modules.includes("font"))) {
+      dependencies = Object.assign({}, dependencies, {font:"module"});
+    }
     // Check for apps which we may need to install
-    if (app.dependencies) {
-      Object.keys(app.dependencies).forEach(dependency=>{
-        let dependencyType = app.dependencies[dependency];
+    if (dependencies) {
+      Object.keys(dependencies).forEach(dependency=>{
+        let dependencyType = dependencies[dependency];
         function handleDependency(dependencyChecker) {
           // now see if we can find one matching our dependency
           let found = appJSONInstalled.find(dependencyChecker);

@@ -279,7 +279,7 @@ const Comms = {
               let progressMin = 0.1 + (0.9*currentBytes / maxBytes);
               let progressMax = 0.1 + (0.9*(currentBytes+f.content.length) / maxBytes);
               Progress.show({ percent: 0, min: progressMin,  max: progressMax }); // Show progress for the actual packet upload
-              return Comms.getConnection().espruinoSendFile(f.name, f.content, { // send the file
+              return Comms.getConnection().espruinoSendFile(f.name, f.packetContent || f.content, { // send the file
                 fs: Const.FILES_IN_FS,
                 chunkSize: Const.PACKET_UPLOAD_CHUNKSIZE,
                 noACK: Const.PACKET_UPLOAD_NOACK
@@ -480,7 +480,9 @@ const Comms = {
               app = null;
               console.log("<COMMS> ERROR Parsing JSON",e.toString());
               console.log("<COMMS> Actual response: ",JSON.stringify(appJSON));
-              throw new Error("Invalid JSON");
+              // Don't fail the whole update just because an old .info file is
+              // corrupt - the new upload will overwrite it.
+              return null;
             }
             return app;
           });
