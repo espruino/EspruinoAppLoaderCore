@@ -91,6 +91,51 @@ function showToast(message, type, timeout) {
   }, timeout || 5000);
 }
 
+/// Open modals, oldest first, as {modal, onBack}. Each one has an entry in the browser history.
+let openModals = [];
+let modalHistoryEntries = 0;
+let removingModalHistoryEntries = false;
+
+function syncModalHistory() {
+  if (removingModalHistoryEntries) return; // history.go() is async - popstate calls this again
+  while (modalHistoryEntries < openModals.length) {
+    history.pushState(null, "");
+    modalHistoryEntries++;
+  }
+  if (modalHistoryEntries > openModals.length) {
+    removingModalHistoryEntries = true;
+    history.go(openModals.length - modalHistoryEntries);
+    modalHistoryEntries = openModals.length;
+  }
+}
+
+/// Add a modal to the page. onBack is called after the back button closes it.
+function showModal(modal, onBack) {
+  document.body.append(modal);
+  openModals.push({modal, onBack});
+  syncModalHistory();
+}
+
+/// Remove a modal from the page
+function hideModal(modal) {
+  modal.remove();
+  openModals = openModals.filter(m => m.modal !== modal);
+  syncModalHistory();
+}
+
+window.addEventListener("popstate", () => {
+  if (removingModalHistoryEntries) {
+    removingModalHistoryEntries = false;
+    syncModalHistory();
+    return;
+  }
+  if (!openModals.length) return;
+  let top = openModals[openModals.length-1];
+  modalHistoryEntries--;
+  hideModal(top.modal);
+  top.onBack();
+});
+
 /// Show a yes/no prompt. resolve for true, reject for false
 function showPrompt(title, text, buttons, shouldEscapeHtml) {
   if (!buttons) buttons={yes:1,no:1};
@@ -121,11 +166,11 @@ function showPrompt(title, text, buttons, shouldEscapeHtml) {
         `:``}
       </div>
     </div>`);
-    document.body.append(modal);
+    showModal(modal, () => reject("User cancelled"));
     modal.querySelector("a[href='#close']").addEventListener("click",event => {
       event.preventDefault();
       reject("User cancelled");
-      modal.remove();
+      hideModal(modal);
     });
     htmlToArray(modal.getElementsByTagName("button")).forEach(button => {
       button.addEventListener("click",event => {
@@ -134,7 +179,7 @@ function showPrompt(title, text, buttons, shouldEscapeHtml) {
         if (isYes) resolve();
         else if (event.target.id=="githubIssue") resolve("githubIssue");
         else reject("User cancelled");
-        modal.remove();
+        hideModal(modal);
       });
     });
   });
@@ -143,5 +188,5 @@ function showPrompt(title, text, buttons, shouldEscapeHtml) {
 /// Remove a model prompt
 function hidePrompt() {
   let modal = document.querySelector(".modal.active");
-  if (modal!==null) modal.remove();
+  if (modal!==null) hideModal(modal);
 }

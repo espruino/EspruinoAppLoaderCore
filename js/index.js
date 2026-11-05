@@ -351,11 +351,13 @@ function getAppDescription(app) {
 function iframeSetup(options) {
   let iframe = options.iframe;
   let modal = options.modal;
-  document.body.append(modal);
+  showModal(modal, () => {
+    if (options.onClose) options.onClose("Window closed");
+  });
   htmlToArray(modal.getElementsByTagName("a")).forEach(button => {
     button.addEventListener("click",event => {
       event.preventDefault();
-      modal.remove();
+      hideModal(modal);
       if (options.onClose) options.onClose("Window closed");
     });
   });
@@ -367,7 +369,7 @@ function iframeSetup(options) {
     iframe.contentWindow.addEventListener("message",function(event) {
       let msg = event.data;
       if (msg.type=="close") {
-        modal.remove();
+        hideModal(modal);
         if (options.onClose) options.onClose("Window closed");
       } else if (msg.type=="eval") {
         Comms.eval(msg.data).then(function(result) {
@@ -506,7 +508,7 @@ function handleCustomApp(appTemplate) {
             app.storage.push(f); // add new
           });
           console.log("Received custom app", app);
-          modal.remove();
+          hideModal(modal);
 
           startOperation({name:"Custom App Upload"}, () => getInstalledApps()
             .then(()=>checkDependencies(app))
@@ -1154,11 +1156,11 @@ function checkDependencies(app, uploadOptions) {
           </div>
         </div>
       </div>`);
-      document.body.append(modal);
+      showModal(modal, () => reject("User cancelled"));
       htmlToArray(modal.getElementsByTagName("a")).forEach(button => {
         button.addEventListener("click",event => {
           event.preventDefault();
-          modal.remove();
+          hideModal(modal);
           if (event.target.classList.contains("btn-replace")) {
             // replace the old one - just remove it
             Comms.removeApp(appToRemove).then(() => {
